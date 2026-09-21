@@ -1,6 +1,11 @@
-use std::path::Path;
+use std::{
+    env,
+    ffi::OsString,
+    fs,
+    path::{Path, PathBuf},
+};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 
@@ -59,6 +64,24 @@ pub enum LocalStateCommand {
 }
 
 impl StateStore {
+    /// Location for per-device state in the operating system's application-data
+    /// directory. This store contains no GitHub credentials.
+    pub fn default_path() -> Result<PathBuf> {
+        Ok(application_data_directory()?
+            .join("review-radar")
+            .join("review-radar-state.sqlite3"))
+    }
+
+    /// Open the per-device state database at its standard application-data path.
+    pub fn open_default() -> Result<Self> {
+        let path = Self::default_path()?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| anyhow!("state database path has no parent directory"))?;
+        fs::create_dir_all(parent)?;
+        Self::open(path)
+    }
+
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let connection = Connection::open(path)?;
         Self::from_connection(connection)
@@ -215,6 +238,51 @@ impl StateStore {
     }
 }
 
+#[cfg(target_os = "linux")]
+fn application_data_directory() -> Result<PathBuf> {
+    linux_data_directory(env::var_os("XDG_DATA_HOME"), env::var_os("HOME"))
+        .ok_or_else(|| anyhow!("cannot determine XDG data directory; set XDG_DATA_HOME or HOME"))
+}
+
+#[cfg(target_os = "linux")]
+fn linux_data_directory(
+    xdg_data_home: Option<OsString>,
+    home: Option<OsString>,
+) -> Option<PathBuf> {
+    xdg_data_home
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            home.filter(|path| !path.is_empty())
+                .map(|path| PathBuf::from(path).join(".local/share"))
+        })
+}
+
+#[cfg(target_os = "macos")]
+fn application_data_directory() -> Result<PathBuf> {
+    env::var_os("HOME")
+        .filter(|path| !path.is_empty())
+        .map(|path| PathBuf::from(path).join("Library/Application Support"))
+        .ok_or_else(|| anyhow!("cannot determine application data directory; set HOME"))
+}
+
+#[cfg(target_os = "windows")]
+fn application_data_directory() -> Result<PathBuf> {
+    env::var_os("APPDATA")
+        .or_else(|| env::var_os("LOCALAPPDATA"))
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+        .ok_or_else(|| anyhow!("cannot determine application data directory; set APPDATA"))
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn application_data_directory() -> Result<PathBuf> {
+    env::var_os("HOME")
+        .filter(|path| !path.is_empty())
+        .map(|path| PathBuf::from(path).join(".local/share"))
+        .ok_or_else(|| anyhow!("cannot determine application data directory; set HOME"))
+}
+
 fn timestamp(value: DateTime<Utc>) -> String {
     value.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
@@ -332,5 +400,21 @@ mod tests {
         let reopened = StateStore::open(&path).unwrap();
         assert!(reopened.is_suppressed("pr-1", "event-1", now()).unwrap());
         fs::remove_file(&path).unwrap();
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_state_path_uses_xdg_data_home_then_home_fallback() {
+        assert_eq!(
+            linux_data_directory(
+                Some("/tmp/review-radar-data".into()),
+                Some("/tmp/home".into())
+            ),
+            Some(PathBuf::from("/tmp/review-radar-data"))
+        );
+        assert_eq!(
+            linux_data_directory(None, Some("/tmp/home".into())),
+            Some(PathBuf::from("/tmp/home/.local/share"))
+        );
     }
 }

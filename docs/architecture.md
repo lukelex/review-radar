@@ -75,4 +75,6 @@ supports a personal action queue without mutating GitHub or conflating browser a
 desktop workflows.
 
 State is stored in the operating system's standard application-data location and
-contains no GitHub access token.
+contains no GitHub access token. `StateStore::open_default()` resolves to
+`$XDG_DATA_HOME/review-radar` (or `~/.local/share/review-radar`) on Linux,
+`~/Library/Application Support/review-radar` on macOS, and `%APPDATA%` on Windows.
