@@ -181,7 +181,9 @@ Combine both participation searches for following candidates and both recent
 searches for recent completions.
 
 - Defaults are 25 PRs/page, at most 4 pages/search (100 results/search), and the
-  latest 20 reviews, issue comments, review threads, and comments per thread.
+  latest 20 reviews, issue comments, review threads, comments per thread, timeline
+  lifecycle items, and commits per PR. Each bounded event/history connection
+  preserves its page flag in the payload.
 - Current review requests and latest-commit check contexts are bounded at 100.
 - Defaults permit at most 25 requests: one viewer query plus six searches of four
   pages. GitHub search itself exposes at most 1,000 results per search.
@@ -218,6 +220,10 @@ searches for recent completions.
   That needs an explicit local-state design, separate from notification baselines.
 - **Current state is not history.** Request/removal times and intermediate CI or
   mergeability transitions between captures are unavailable.
+- **Commit tails are not churn measurements.** The collector preserves bounded
+  commit IDs/dates for later comparison but does not treat cumulative commit totals
+  as per-revision rework. Until targeted parent-diff comparisons provide a
+  baseline and changed-line evidence, friction remains Limited history.
 
 Next: normalize persisted payloads into Rust domain types while preserving unknown
 values, search relationships, and completeness metadata.

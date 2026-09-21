@@ -30,7 +30,22 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
   an authored PR against its immediate predecessor; non-self, non-bot substantive
   feedback must be absent there and occur after its capture time. The first capture
   and missing/incomplete comparisons stay a no-event baseline.
-- [ ] Collect the historical evidence identified by the spike and connect it to
-  live assessments; do not present unavailable metrics as measured values.
+- [x] Collect bounded ready/draft, lifecycle, review, and commit evidence and
+  connect it to live assessments. Pagination and missing churn are explicit; the
+  current normalizer reports Limited history rather than a fabricated level.
+- [ ] Add targeted parent-diff comparisons and a calibration pass before promoting
+  experimental friction levels from synthetic histories to measured production data.
 - [ ] Connect the projected reasons, friction breakdown, and ranking selection to
   the Qt/QML native client when its shell is implemented.
+
+## CI
+
+- [ ] Build and smoke-test the final runtime Docker image in CI, including its
+  expected binaries and startup behavior.
+- [ ] Add lightweight dependency and security checks such as `cargo audit` or
+  `cargo deny`, without introducing paid services.
+- [ ] Add optional coverage generation and retain reports as GitHub artifacts
+  rather than depending on an external coverage service.
+- [ ] Run fixture projection checks for the supported queue views in CI.
+- [ ] Compile the Linux Qt client when `apps/linux-qt` becomes active, ideally
+  only when the client or its build dependencies change.

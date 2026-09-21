@@ -23,6 +23,12 @@ include `reviewFriction` with status, optional level, coverage, measurements,
 contributors/evidence IDs, limitations, and policy version. The domain resolves
 the `highest-friction` ranking ID; the queue CLI exposes it directly.
 
+New collector captures provide bounded timeline/review/commit evidence to this
+contract. The normalizer carries pagination as coverage and deliberately leaves
+code churn unknown: a commit tail is not a diff comparison. Therefore current
+live captures continue to show Limited history until targeted parent-diff evidence
+and calibration are implemented.
+
 The domain also compares the current capture with its predecessor to project a
 conservative `new-feedback` reason for authored PRs. Its event fingerprint enters
 the card's meaningful-event fingerprint, so it can reactivate local acknowledgement

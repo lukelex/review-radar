@@ -114,3 +114,19 @@ fingerprints or creates notification eligibility.
 
 See [the concept](attention-and-review-friction.md) for sort and presentation
 semantics. Native shells consume the projection rather than calculating metrics.
+
+## Implemented bounded collection
+
+The collector now preserves the latest bounded ready-for-review, draft, close, and
+reopen timeline entries; bounded reviews; and a bounded commit tail, each with its
+`hasPreviousPage` flag. The queue normalizes these payload fields into optional
+`reviewHistories` before asking the domain to assess a card. It excludes self,
+bot, and pending reviews from review-round evidence and retains stable source IDs.
+Older captures that predate these fields simply have no normalized history.
+
+The normalizer never derives churn from cumulative commit totals. It supplies no
+baseline diff and no changed-line value, so even otherwise complete bounded
+evidence produces `Limited history` with `unknown-code-churn`. Any pagination,
+invalid field, or event inconsistency becomes partial coverage. This makes live
+projections coverage-aware today without claiming a calibrated pain level. Targeted
+parent-diff comparisons and calibration remain required before production levels.
