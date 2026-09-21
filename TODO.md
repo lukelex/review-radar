@@ -33,11 +33,18 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [x] Collect bounded ready/draft, lifecycle, review, and commit evidence and
   connect it to live assessments. Pagination and missing churn are explicit; the
   current normalizer reports Limited history rather than a fabricated level.
-- [ ] Add targeted parent-diff comparisons and a calibration pass before promoting
-  experimental friction levels from synthetic histories to measured production data.
+- [ ] **Targeted parent-diff collection:** capture bounded, reproducible changed-line
+  evidence between successive PR revisions after review starts; preserve comparison
+  coverage and failures rather than substituting commit totals.
+- [ ] **Friction calibration:** regenerate generalized representative histories and
+  validate the experimental Low/Moderate/High thresholds before calling levels
+  measured production output.
 - [x] Connect the projected reasons, concurrent health, friction breakdown, and
   ranking selection to the Qt/QML native client. Its model renders domain output
   only; Qt does not recalculate classification, friction, or sorting.
+- [ ] **Persistent new-feedback visibility:** retain a detected feedback event as
+  an outstanding local reason until acknowledged or superseded, without changing
+  first-observation notification baselines.
 
 ## CI
 
