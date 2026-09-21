@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860"><title>Action / PR detail — Review Radar wireframe</title><g font-family="DejaVu Sans, sans-serif">
+<rect x="0" y="0" width="1200" height="860" fill="#fafafa" stroke="#fafafa" rx="0"/>
+<text x="26" y="32" font-size="13" font-weight="700" fill="#333">REVIEW RADAR / WIREFRAMES</text>
+<text x="895" y="32" font-size="12" font-weight="400" fill="#777">06 / 06     STATIC CONCEPT</text>
+<rect x="24" y="52" width="1152" height="737" fill="#fff" stroke="#999" rx="6"/>
+<rect x="25" y="53" width="1150" height="62" fill="#f5f5f5" stroke="#ddd" rx="5"/>
+<text x="46" y="91" font-size="20" font-weight="700" fill="#333">Review Radar</text>
+<rect x="278" y="68" width="424" height="31" fill="#fff" stroke="#bbb" rx="4"/>
+<text x="290" y="89" font-size="12" font-weight="400" fill="#777">Search title, repository, or PR number</text>
+<text x="807" y="89" font-size="12" font-weight="400" fill="#666">Updated 2 min ago</text>
+<rect x="970" y="68" width="87" height="31" fill="#fff" stroke="#777" rx="4"/>
+<text x="982" y="89" font-size="12" font-weight="600" fill="#333">Refresh</text>
+<text x="1080" y="89" font-size="12" font-weight="400" fill="#333">user-001</text>
+<rect x="25" y="115" width="226" height="673" fill="#f7f7f7" stroke="#ddd" rx="0"/>
+<text x="44" y="151" font-size="11" font-weight="700" fill="#777">WORKSPACE</text>
+<text x="49" y="194" font-size="14" font-weight="400" fill="#333">Tailored to you</text>
+<text x="210" y="194" font-size="12" font-weight="400" fill="#333">12</text>
+<rect x="37" y="217" width="201" height="40" fill="#dedede" stroke="#aaa" rx="4"/>
+<text x="49" y="243" font-size="14" font-weight="700" fill="#333">Action</text>
+<text x="210" y="243" font-size="12" font-weight="400" fill="#333">5</text>
+<text x="49" y="292" font-size="14" font-weight="400" fill="#333">My PRs</text>
+<text x="210" y="292" font-size="12" font-weight="400" fill="#333">6</text>
+<text x="49" y="341" font-size="14" font-weight="400" fill="#333">Following</text>
+<text x="210" y="341" font-size="12" font-weight="400" fill="#333">4</text>
+<text x="49" y="390" font-size="14" font-weight="400" fill="#333">Recent</text>
+<text x="210" y="390" font-size="12" font-weight="400" fill="#333">7</text>
+<path d="M44 439H231V439" stroke="#ccc" fill="none"/>
+<text x="46" y="471" font-size="13" font-weight="400" fill="#333">Snoozed   2</text>
+<text x="46" y="494" font-size="10" font-weight="400" fill="#777">Return to queue when due</text>
+<text x="46" y="700" font-size="12" font-weight="600" fill="#333">github.com</text>
+<text x="46" y="723" font-size="10" font-weight="400" fill="#777">One account / local state</text>
+<text x="278" y="154" font-size="24" font-weight="700" fill="#333">Action / PR detail</text>
+<text x="278" y="180" font-size="12" font-weight="400" fill="#666">Split view keeps the queue in place while you inspect one PR.</text>
+<rect x="278" y="207" width="278" height="549" fill="#fafafa" stroke="#bbb" rx="4"/>
+<text x="294" y="234" font-size="11" font-weight="700" fill="#333">QUEUE / 5</text>
+<rect x="290" y="253" width="254" height="78" fill="#fff" stroke="#ccc" rx="4"/>
+<text x="302" y="280" font-size="13" font-weight="600" fill="#333">#142  Add pagination</text>
+<text x="302" y="304" font-size="10" font-weight="400" fill="#333">Your review requested</text>
+<rect x="290" y="342" width="254" height="78" fill="#ddd" stroke="#555" rx="4"/>
+<text x="302" y="369" font-size="13" font-weight="600" fill="#333">#87  Keyboard navigation</text>
+<text x="302" y="393" font-size="10" font-weight="400" fill="#333">Changes requested + CI failure</text>
+<rect x="290" y="431" width="254" height="78" fill="#fff" stroke="#ccc" rx="4"/>
+<text x="302" y="458" font-size="13" font-weight="600" fill="#333">#61  Expired sessions</text>
+<text x="302" y="482" font-size="10" font-weight="400" fill="#333">New comment + conflict</text>
+<rect x="572" y="207" width="576" height="549" fill="#fff" stroke="#bbb" rx="4"/>
+<text x="590" y="235" font-size="11" font-weight="600" fill="#666">example/web #87 · OPEN · Authored by you</text>
+<text x="590" y="268" font-size="20" font-weight="700" fill="#333">Improve keyboard navigation</text>
+<rect x="590" y="285" width="139" height="25" fill="#f3f3f3" stroke="#bbb" rx="4"/>
+<text x="600" y="302" font-size="12" font-weight="400" fill="#333">Changes requested</text>
+<rect x="748" y="285" width="132" height="25" fill="#f3f3f3" stroke="#bbb" rx="4"/>
+<text x="758" y="302" font-size="12" font-weight="400" fill="#333">2 checks failing</text>
+<rect x="894" y="285" width="111" height="25" fill="#f3f3f3" stroke="#bbb" rx="4"/>
+<text x="904" y="302" font-size="12" font-weight="400" fill="#333">Merge unknown</text>
+<rect x="590" y="325" width="101" height="31" fill="#fff" stroke="#777" rx="4"/>
+<text x="602" y="346" font-size="12" font-weight="600" fill="#333">Open PR</text>
+<rect x="701" y="325" width="107" height="31" fill="#fff" stroke="#777" rx="4"/>
+<text x="713" y="346" font-size="12" font-weight="600" fill="#333">Mark read</text>
+<rect x="818" y="325" width="106" height="31" fill="#fff" stroke="#777" rx="4"/>
+<text x="830" y="346" font-size="12" font-weight="600" fill="#333">Snooze…</text>
+<rect x="934" y="325" width="101" height="31" fill="#fff" stroke="#777" rx="4"/>
+<text x="946" y="346" font-size="12" font-weight="600" fill="#333">Copy link</text>
+<path d="M590 376H1130V376" stroke="#ccc" fill="none"/>
+<text x="590" y="402" font-size="12" font-weight="700" fill="#333">ACTIVITY</text>
+<text x="950" y="402" font-size="11" font-weight="400" fill="#777">Newest first</text>
+<rect x="593" y="430" width="7" height="7" fill="#777" stroke="#777" rx="4"/>
+<path d="M596 438H596V502" stroke="#ccc" fill="none"/>
+<text x="613" y="437" font-size="11" font-weight="400" fill="#666">18 min ago · user-003</text>
+<text x="613" y="460" font-size="14" font-weight="600" fill="#333">Changes requested</text>
+<text x="613" y="479" font-size="11" font-weight="400" fill="#333">Review feedback received.</text>
+<rect x="593" y="505" width="7" height="7" fill="#777" stroke="#777" rx="4"/>
+<path d="M596 513H596V577" stroke="#ccc" fill="none"/>
+<text x="613" y="512" font-size="11" font-weight="400" fill="#666">35 min ago · Continuous integration</text>
+<text x="613" y="535" font-size="14" font-weight="600" fill="#333">2 checks failed</text>
+<text x="613" y="554" font-size="11" font-weight="400" fill="#333">Unit tests and keyboard checks.</text>
+<rect x="593" y="580" width="7" height="7" fill="#777" stroke="#777" rx="4"/>
+<text x="613" y="587" font-size="11" font-weight="400" fill="#666">1 hour ago · user-001</text>
+<text x="613" y="610" font-size="14" font-weight="600" fill="#333">Updated pull request</text>
+<text x="613" y="629" font-size="11" font-weight="400" fill="#333">New commit pushed.</text>
+<rect x="590" y="663" width="540" height="68" fill="#f3f3f3" stroke="#ccc" rx="4"/>
+<text x="605" y="688" font-size="12" font-weight="600" fill="#333">Partial activity history</text>
+<text x="605" y="711" font-size="11" font-weight="400" fill="#333">Older threads are omitted. Open GitHub for the full discussion.</text>
+<text x="27" y="819" font-size="12" font-weight="400" fill="#555">DESIGN NOTE: One place for all PR actions. The timeline labels incomplete data instead of implying a complete history.</text>
+<text x="27" y="840" font-size="10" font-weight="400" fill="#888">Illustrative data and counts. Grayscale only; labels carry meaning independently of color.</text>
+</g></svg>

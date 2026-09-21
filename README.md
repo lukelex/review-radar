@@ -30,6 +30,9 @@ See [the project plan](docs/project-plan.md) and
 [prototype findings](docs/prototype-findings.md) record which behavior is being
 carried forward from the existing Quickshell implementation.
 
+See the [low-fidelity mockups](docs/mockups/README.md) for the five workspace views
+and the shared PR detail layout.
+
 ## Repository layout
 
 ```text
