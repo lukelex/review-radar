@@ -290,6 +290,9 @@ pub struct PullRequestCard {
     pub action: Action,
     pub action_label: &'static str,
     pub attention_required: bool,
+    /// Stable for unchanged captured signals; changes when the current action,
+    /// review, check, merge, or latest-activity signal changes.
+    pub current_fingerprint: String,
     pub events: Vec<Event>,
 }
 
@@ -390,6 +393,7 @@ fn project(pr: &PullRequest, membership: Option<&BTreeSet<String>>) -> PullReque
             | Action::ReadyToMerge
     );
     let events = events(pr);
+    let current_fingerprint = current_fingerprint(pr, action, checks);
     PullRequestCard {
         id: pr.id.clone(),
         repository: pr.repository.name_with_owner.clone(),
@@ -404,8 +408,22 @@ fn project(pr: &PullRequest, membership: Option<&BTreeSet<String>>) -> PullReque
         action,
         action_label: action.label(),
         attention_required,
+        current_fingerprint,
         events,
     }
+}
+
+fn current_fingerprint(pr: &PullRequest, action: Action, checks: Option<&str>) -> String {
+    format!(
+        "current:{}:{}:{:?}:{:?}:{}:{}:{}",
+        pr.id,
+        pr.updated_at,
+        action,
+        pr.review_decision.as_deref().unwrap_or("none"),
+        checks.unwrap_or("none"),
+        pr.mergeable,
+        pr.merge_state_status,
+    )
 }
 
 fn lifecycle(state: &str) -> Lifecycle {
@@ -563,6 +581,9 @@ mod tests {
         assert!(events
             .iter()
             .all(|event| event.fingerprint.split(':').count() >= 3));
+        assert!(queue
+            .iter()
+            .all(|card| card.current_fingerprint.starts_with("current:")));
     }
 
     #[test]

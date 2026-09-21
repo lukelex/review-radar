@@ -762,6 +762,7 @@ dependencies = [
  "chrono",
  "reqwest",
  "review-radar-domain",
+ "review-radar-state",
  "rusqlite",
  "serde_json",
 ]

@@ -97,6 +97,7 @@ docker compose run --rm queue
 docker compose run --rm queue --view action
 docker compose run --rm queue --view my-prs --capture-id 1
 docker compose run --rm queue --view action --ranking newest-activity
+docker compose run --rm queue --record-attention true
 ```
 
 It prints a stable JSON view model with the selected capture, ranked cards, top
@@ -104,6 +105,16 @@ action, relationship memberships, and ordered review/comment events. The support
 views are `tailored`, `action`, `my-prs`, `following`, and `recent`. The latest
 capture is the default; `--capture-id` makes historical inspection reproducible.
 This command is read-only and reports an error when there is no successful capture.
+
+Queue projection applies the separate local state database at
+`data/review-radar-state.sqlite3`: acknowledged cards and non-expired snoozes are
+omitted, and `suppressedCount` explains the difference from `sourceCount`. Each
+card's `currentFingerprint` covers its latest activity and current health signals,
+so a changed review, check, merge, or action signal reactivates it. The default
+command does not change attention-observation state. Run with
+`--record-attention true` only after a successful capture to baseline or persist
+attention transitions; `notificationEligibleIds` then contains only new
+non-attention → attention transitions.
 
 `tailored` is the default ranking policy: priority bands, then newest activity.
 `newest-activity` is a deliberately separate chronological policy that demonstrates
