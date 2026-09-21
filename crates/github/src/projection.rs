@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use review_radar_domain::PullRequestCard;
 use review_radar_state::StateStore;
 
+/// The queue's local-state result, ready for serialization by a client.
 #[derive(Debug)]
 pub struct StateProjection {
     pub cards: Vec<PullRequestCard>,
