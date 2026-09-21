@@ -1,0 +1,8 @@
+# Build output
+target/
+build/
+
+# Local app state and credentials
+.env
+*.local
+github-pr-dashboard.json
