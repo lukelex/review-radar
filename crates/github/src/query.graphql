@@ -5,7 +5,7 @@ query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: 
     nodes {
       ... on PullRequest {
         id number title url state isDraft createdAt updatedAt closedAt mergedAt
-        author { login }
+        author { login __typename }
         repository { nameWithOwner }
         reviewDecision mergeable mergeStateStatus
         reviewRequests(first: 100) {
@@ -22,12 +22,12 @@ query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: 
         reviews(last: $eventLimit) {
           totalCount
           pageInfo { hasPreviousPage }
-          nodes { id author { login } state submittedAt updatedAt }
+          nodes { id author { login __typename } state submittedAt updatedAt }
         }
         comments(last: $eventLimit) {
           totalCount
           pageInfo { hasPreviousPage }
-          nodes { id author { login } createdAt updatedAt }
+          nodes { id author { login __typename } createdAt updatedAt }
         }
         reviewThreads(last: $eventLimit) {
           totalCount
@@ -37,7 +37,7 @@ query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: 
             comments(last: $eventLimit) {
               totalCount
               pageInfo { hasPreviousPage }
-              nodes { id author { login } createdAt updatedAt }
+              nodes { id author { login __typename } createdAt updatedAt }
             }
           }
         }

@@ -4,7 +4,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use chrono::Utc;
 use review_radar_domain::{PullRequestCard, RankingStrategy, Snapshot, WorkspaceView};
 use review_radar_state::StateStore;
-use rusqlite::{params, Connection, OpenFlags};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde_json::{json, Value};
 
 #[derive(Debug)]
@@ -27,7 +27,9 @@ fn main() -> Result<()> {
     .with_context(|| format!("cannot open {}", config.database.display()))?;
     let capture_id = config.capture_id.unwrap_or(latest_capture_id(&connection)?);
     let (captured_at, snapshot) = load_snapshot(&connection, capture_id)?;
-    let cards = snapshot.view_with_ranking(config.view, ranking.as_ref());
+    let predecessor = load_predecessor_snapshot(&connection, capture_id)?;
+    let cards =
+        snapshot.view_with_ranking_since(config.view, ranking.as_ref(), predecessor.as_ref());
     let state = StateStore::open(&config.state_database)
         .with_context(|| format!("cannot open {}", config.state_database.display()))?;
     let projection = apply_local_state(cards, &state, config.record_attention, Utc::now())?;
@@ -159,11 +161,25 @@ fn load_snapshot(connection: &Connection, capture_id: i64) -> Result<(String, Sn
     let searches = load_searches(connection, capture_id)?;
     let pull_requests = load_pull_requests(connection, capture_id)?;
     let snapshot = Snapshot::from_json(&serde_json::to_string(&json!({
+        "capturedAt": captured_at.clone(),
         "viewer": { "login": viewer_login },
         "searches": searches,
         "pullRequests": pull_requests,
     }))?)?;
     Ok((captured_at, snapshot))
+}
+
+fn load_predecessor_snapshot(connection: &Connection, capture_id: i64) -> Result<Option<Snapshot>> {
+    let predecessor_id = connection
+        .query_row(
+            "SELECT id FROM captures WHERE id < ? ORDER BY id DESC LIMIT 1",
+            [capture_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    predecessor_id
+        .map(|id| load_snapshot(connection, id).map(|(_, snapshot)| snapshot))
+        .transpose()
 }
 
 fn load_searches(connection: &Connection, capture_id: i64) -> Result<Vec<Value>> {

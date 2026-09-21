@@ -107,6 +107,15 @@ views are `tailored`, `action`, `my-prs`, `following`, and `recent`. The latest
 capture is the default; `--capture-id` makes historical inspection reproducible.
 This command is read-only and reports an error when there is no successful capture.
 
+For an authored PR, queue compares review/comment event fingerprints with the
+immediately previous successful capture. A non-self, non-bot substantive review,
+issue comment, or review-thread comment becomes `new-feedback` only when it is
+absent from that predecessor **and** has a source timestamp after the predecessor
+capture. The first capture, a PR absent from its predecessor, and an event at or
+before the predecessor cutoff are a deliberate no-event baseline. Pending reviews
+and bot/self activity do not qualify. This conservative rule prevents a bounded
+event tail from becoming an obligation merely because it was first observed.
+
 Queue projection applies the separate local state database at
 `data/review-radar-state.sqlite3`: acknowledged cards and non-expired snoozes are
 omitted, and `suppressedCount` explains the difference from `sourceCount`. Each
@@ -203,6 +212,10 @@ searches for recent completions.
 - **Bounded event tails can omit relevant activity.** A new reply may belong to an
   older omitted thread. Complete event classification will need targeted pagination
   or timeline retrieval.
+- **Feedback deltas are transient capture comparisons.** The current projection
+  identifies feedback that arrived since the predecessor; it does not yet retain
+  an unacknowledged event as an outstanding queue reason across later captures.
+  That needs an explicit local-state design, separate from notification baselines.
 - **Current state is not history.** Request/removal times and intermediate CI or
   mergeability transitions between captures are unavailable.
 

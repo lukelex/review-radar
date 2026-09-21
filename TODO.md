@@ -25,8 +25,11 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 
 ## Follow-through
 
-- [ ] Compare meaningful reviewer events across captures to classify new feedback
-  without treating all captured comments as new obligations.
+- [x] Compare meaningful reviewer events across captures to classify new feedback
+  without treating all captured comments as new obligations. The projection compares
+  an authored PR against its immediate predecessor; non-self, non-bot substantive
+  feedback must be absent there and occur after its capture time. The first capture
+  and missing/incomplete comparisons stay a no-event baseline.
 - [ ] Collect the historical evidence identified by the spike and connect it to
   live assessments; do not present unavailable metrics as measured values.
 - [ ] Connect the projected reasons, friction breakdown, and ranking selection to

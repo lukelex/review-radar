@@ -23,6 +23,13 @@ include `reviewFriction` with status, optional level, coverage, measurements,
 contributors/evidence IDs, limitations, and policy version. The domain resolves
 the `highest-friction` ranking ID; the queue CLI exposes it directly.
 
+The domain also compares the current capture with its predecessor to project a
+conservative `new-feedback` reason for authored PRs. Its event fingerprint enters
+the card's meaningful-event fingerprint, so it can reactivate local acknowledgement
+or snooze. The first capture is a baseline. See
+[GitHub data spike](github-data-spike.md#ranked-workspace-output) for exact delta
+rules and the limitation that this reason is currently transient across captures.
+
 ## Two questions on every PR
 
 1. **Why does this need my attention?** Explain the user's relationship, the

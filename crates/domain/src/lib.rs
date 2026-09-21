@@ -20,6 +20,10 @@ pub struct Snapshot {
     /// Optional normalized history; raw bounded GitHub snapshots omit it.
     #[serde(default)]
     pub review_histories: BTreeMap<String, friction::ReviewHistory>,
+    /// Capture completion time used only to compare with a predecessor. It is
+    /// absent from fixture-only snapshots, which deliberately yields no delta.
+    #[serde(default)]
+    pub captured_at: Option<String>,
 }
 
 impl Snapshot {
@@ -32,7 +36,27 @@ impl Snapshot {
     }
 
     pub fn ranked(&self, ranking: &dyn RankingStrategy) -> Vec<PullRequestCard> {
+        self.ranked_since(ranking, None)
+    }
+
+    /// Project against the immediately preceding successful capture. Feedback
+    /// must be absent from that predecessor and timestamped after it completed;
+    /// a first capture establishes a baseline instead of flagging its bounded
+    /// event tail as new.
+    pub fn ranked_since(
+        &self,
+        ranking: &dyn RankingStrategy,
+        predecessor: Option<&Snapshot>,
+    ) -> Vec<PullRequestCard> {
         let memberships = self.memberships();
+        let new_feedback = predecessor
+            .and_then(|previous| {
+                previous
+                    .captured_at
+                    .as_deref()
+                    .map(|captured_at| self.new_feedback_since(previous, captured_at))
+            })
+            .unwrap_or_default();
         let mut cards = self
             .pull_requests
             .iter()
@@ -41,6 +65,10 @@ impl Snapshot {
                     pr,
                     memberships.get(&pr.id),
                     self.review_histories.get(&pr.id),
+                    new_feedback
+                        .get(&pr.id)
+                        .map(Vec::as_slice)
+                        .unwrap_or_default(),
                 )
             })
             .collect::<Vec<_>>();
@@ -57,7 +85,16 @@ impl Snapshot {
         view: WorkspaceView,
         ranking: &dyn RankingStrategy,
     ) -> Vec<PullRequestCard> {
-        self.ranked(ranking)
+        self.view_with_ranking_since(view, ranking, None)
+    }
+
+    pub fn view_with_ranking_since(
+        &self,
+        view: WorkspaceView,
+        ranking: &dyn RankingStrategy,
+        predecessor: Option<&Snapshot>,
+    ) -> Vec<PullRequestCard> {
+        self.ranked_since(ranking, predecessor)
             .into_iter()
             .filter(|card| match view {
                 WorkspaceView::Tailored => true,
@@ -79,6 +116,44 @@ impl Snapshot {
                                 .memberships
                                 .contains(&"recent_review_involved".to_owned()))
                 }
+            })
+            .collect()
+    }
+
+    fn new_feedback_since(
+        &self,
+        predecessor: &Snapshot,
+        predecessor_captured_at: &str,
+    ) -> BTreeMap<String, Vec<Event>> {
+        let prior_events = predecessor
+            .pull_requests
+            .iter()
+            .map(|pr| {
+                (
+                    pr.id.as_str(),
+                    events(pr)
+                        .into_iter()
+                        .map(|event| event.fingerprint)
+                        .collect::<BTreeSet<_>>(),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        self.pull_requests
+            .iter()
+            .filter_map(|pr| {
+                let prior = prior_events.get(pr.id.as_str())?;
+                let feedback = events(pr)
+                    .into_iter()
+                    .filter(|event| {
+                        event.actor.is_some()
+                            && event.actor.as_deref() != Some(self.viewer.login.as_str())
+                            && !event.is_bot
+                            && is_substantive_feedback(event)
+                            && event.occurred_at.as_str() > predecessor_captured_at
+                            && !prior.contains(&event.fingerprint)
+                    })
+                    .collect::<Vec<_>>();
+                (!feedback.is_empty()).then(|| (pr.id.clone(), feedback))
             })
             .collect()
     }
@@ -131,6 +206,14 @@ pub struct PullRequest {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Actor {
     pub login: String,
+    #[serde(default, rename = "__typename")]
+    pub typename: Option<String>,
+}
+
+impl Actor {
+    fn is_bot(&self) -> bool {
+        self.typename.as_deref() == Some("Bot")
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -260,6 +343,7 @@ pub enum Relationship {
 pub enum Action {
     ReviewRequested,
     ChangesRequested,
+    NewFeedback,
     ChecksFailing,
     MergeConflict,
     ReadyToMerge,
@@ -275,6 +359,7 @@ impl Action {
         match self {
             Self::ReviewRequested => "Review requested",
             Self::ChangesRequested => "Changes requested",
+            Self::NewFeedback => "New feedback",
             Self::ChecksFailing => "Checks failing",
             Self::MergeConflict => "Merge conflict",
             Self::ReadyToMerge => "Ready to merge",
@@ -327,12 +412,15 @@ pub struct Event {
     pub actor: Option<String>,
     pub state: Option<String>,
     pub occurred_at: String,
+    #[serde(skip)]
+    is_bot: bool,
 }
 
 fn project(
     pr: &PullRequest,
     membership: Option<&BTreeSet<String>>,
     history: Option<&friction::ReviewHistory>,
+    new_feedback: &[Event],
 ) -> PullRequestCard {
     let membership = membership.cloned().unwrap_or_default();
     let authored = membership.contains("authored");
@@ -364,6 +452,8 @@ fn project(
     } else if authored {
         let action = if pr.review_decision.as_deref() == Some("CHANGES_REQUESTED") {
             Action::ChangesRequested
+        } else if !new_feedback.is_empty() {
+            Action::NewFeedback
         } else if checks == Some("FAILURE") || checks == Some("ERROR") {
             Action::ChecksFailing
         } else if pr.mergeable == "CONFLICTING" || pr.merge_state_status == "DIRTY" {
@@ -383,6 +473,7 @@ fn project(
         let requires_action = matches!(
             action,
             Action::ChangesRequested
+                | Action::NewFeedback
                 | Action::ChecksFailing
                 | Action::MergeConflict
                 | Action::ReadyToMerge
@@ -407,12 +498,13 @@ fn project(
         action,
         Action::ReviewRequested
             | Action::ChangesRequested
+            | Action::NewFeedback
             | Action::ChecksFailing
             | Action::MergeConflict
             | Action::ReadyToMerge
     );
     let events = events(pr);
-    let current_fingerprint = current_fingerprint(pr, action, checks);
+    let current_fingerprint = current_fingerprint(pr, action, checks, new_feedback);
     PullRequestCard {
         id: pr.id.clone(),
         repository: pr.repository.name_with_owner.clone(),
@@ -434,16 +526,30 @@ fn project(
     }
 }
 
-fn current_fingerprint(pr: &PullRequest, action: Action, checks: Option<&str>) -> String {
+fn current_fingerprint(
+    pr: &PullRequest,
+    action: Action,
+    checks: Option<&str>,
+    new_feedback: &[Event],
+) -> String {
+    let newest_feedback = new_feedback
+        .iter()
+        .max_by(|left, right| {
+            left.occurred_at
+                .cmp(&right.occurred_at)
+                .then_with(|| left.fingerprint.cmp(&right.fingerprint))
+        })
+        .map(|event| event.fingerprint.as_str())
+        .unwrap_or("none");
     format!(
-        "current:{}:{}:{:?}:{:?}:{}:{}:{}",
+        "current:{}:{:?}:{:?}:{}:{}:{}:{}",
         pr.id,
-        pr.updated_at,
         action,
         pr.review_decision.as_deref().unwrap_or("none"),
         checks.unwrap_or("none"),
         pr.mergeable,
         pr.merge_state_status,
+        newest_feedback,
     )
 }
 
@@ -471,6 +577,7 @@ fn events(pr: &PullRequest) -> Vec<Event> {
             actor: review.author.as_ref().map(|actor| actor.login.clone()),
             state: Some(review.state.clone()),
             occurred_at,
+            is_bot: review.author.as_ref().is_some_and(Actor::is_bot),
         });
     }
     for comment in &pr.comments.nodes {
@@ -489,6 +596,13 @@ fn events(pr: &PullRequest) -> Vec<Event> {
     events
 }
 
+fn is_substantive_feedback(event: &Event) -> bool {
+    match event.kind {
+        EventKind::Review => event.state.as_deref() != Some("PENDING"),
+        EventKind::Comment | EventKind::ReviewComment => true,
+    }
+}
+
 fn comment_event(comment: &Comment, kind: EventKind) -> Event {
     Event {
         fingerprint: fingerprint(kind, &comment.id, &comment.updated_at),
@@ -496,6 +610,7 @@ fn comment_event(comment: &Comment, kind: EventKind) -> Event {
         actor: comment.author.as_ref().map(|actor| actor.login.clone()),
         state: None,
         occurred_at: comment.created_at.clone(),
+        is_bot: comment.author.as_ref().is_some_and(Actor::is_bot),
     }
 }
 
@@ -629,5 +744,107 @@ mod tests {
         assert!(chronological
             .windows(2)
             .all(|pair| pair[0].updated_at >= pair[1].updated_at));
+    }
+
+    #[test]
+    fn new_reviewer_feedback_is_compared_with_the_predecessor_not_inferred_from_a_tail() {
+        let previous = feedback_snapshot("2026-09-21T12:00:00Z", vec![], vec![]);
+        let current = feedback_snapshot(
+            "2026-09-21T12:05:00Z",
+            vec![serde_json::json!({
+                "id": "comment-1", "author": { "login": "reviewer-001" },
+                "createdAt": "2026-09-21T12:01:00Z", "updatedAt": "2026-09-21T12:01:00Z"
+            })],
+            vec![],
+        );
+        let card = current
+            .view_with_ranking_since(WorkspaceView::Action, &TailoredRanking, Some(&previous))
+            .pop()
+            .unwrap();
+        assert_eq!(card.action, Action::NewFeedback);
+        assert!(card.attention_required);
+        assert_eq!(
+            card.explanation.reasons[0].evidence,
+            ["search:authored", "capture-delta"]
+        );
+        assert!(card.current_fingerprint.contains("comment:comment-1"));
+
+        // The same bounded event tail is a baseline when there is no prior
+        // capture, and is not repeatedly classified after it was observed.
+        assert!(current.view(WorkspaceView::Action).is_empty());
+        let observed = feedback_snapshot(
+            "2026-09-21T12:03:00Z",
+            vec![serde_json::json!({
+                "id": "comment-1", "author": { "login": "reviewer-001" },
+                "createdAt": "2026-09-21T12:01:00Z", "updatedAt": "2026-09-21T12:01:00Z"
+            })],
+            vec![],
+        );
+        assert!(current
+            .view_with_ranking_since(WorkspaceView::Action, &TailoredRanking, Some(&observed))
+            .is_empty());
+    }
+
+    #[test]
+    fn only_non_self_substantive_events_after_predecessor_can_be_new_feedback() {
+        let previous = feedback_snapshot("2026-09-21T12:00:00Z", vec![], vec![]);
+        for (comments, reviews) in [
+            (
+                vec![serde_json::json!({
+                    "id": "old-comment", "author": { "login": "reviewer-001" },
+                    "createdAt": "2026-09-21T11:59:00Z", "updatedAt": "2026-09-21T11:59:00Z"
+                })],
+                vec![],
+            ),
+            (
+                vec![serde_json::json!({
+                    "id": "self-comment", "author": { "login": "viewer-001" },
+                    "createdAt": "2026-09-21T12:01:00Z", "updatedAt": "2026-09-21T12:01:00Z"
+                })],
+                vec![],
+            ),
+            (
+                vec![],
+                vec![serde_json::json!({
+                    "id": "pending-review", "author": { "login": "reviewer-001" },
+                    "state": "PENDING", "submittedAt": null, "updatedAt": "2026-09-21T12:01:00Z"
+                })],
+            ),
+            (
+                vec![serde_json::json!({
+                    "id": "bot-comment", "author": { "login": "bot-001", "__typename": "Bot" },
+                    "createdAt": "2026-09-21T12:01:00Z", "updatedAt": "2026-09-21T12:01:00Z"
+                })],
+                vec![],
+            ),
+        ] {
+            let current = feedback_snapshot("2026-09-21T12:05:00Z", comments, reviews);
+            assert!(current
+                .view_with_ranking_since(WorkspaceView::Action, &TailoredRanking, Some(&previous))
+                .is_empty());
+        }
+    }
+
+    fn feedback_snapshot(
+        captured_at: &str,
+        comments: Vec<serde_json::Value>,
+        reviews: Vec<serde_json::Value>,
+    ) -> Snapshot {
+        Snapshot::from_json(
+            &serde_json::json!({
+                "capturedAt": captured_at,
+                "viewer": { "login": "viewer-001" },
+                "searches": [{ "category": "authored", "ids": ["pr-001"] }],
+                "pullRequests": [{
+                    "id": "pr-001", "number": 1, "title": "Example", "url": "https://github.com/example/repository/pull/1",
+                    "state": "OPEN", "isDraft": false, "author": { "login": "viewer-001" },
+                    "repository": { "nameWithOwner": "example/repository" },
+                    "reviewDecision": null, "mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN",
+                    "updatedAt": "2026-09-21T12:05:00Z", "comments": { "nodes": comments }, "reviews": { "nodes": reviews }
+                }]
+            })
+            .to_string(),
+        )
+        .unwrap()
     }
 }

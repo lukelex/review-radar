@@ -98,6 +98,10 @@ fn reason(pr: &PullRequest, code: Action) -> Reason {
             "Changes were requested on your PR. Review and address the feedback.",
             vec!["search:authored", "reviewDecision"], "View feedback", "",
         ),
+        Action::NewFeedback => (
+            "New reviewer feedback was captured after the previous refresh. Read and respond as needed.",
+            vec!["search:authored", "capture-delta"], "View feedback", "",
+        ),
         Action::ChecksFailing => (
             "Checks are failing on your PR. Inspect the failures.",
             vec!["search:authored", "commits.statusCheckRollup.state"], "View checks", "/checks",
