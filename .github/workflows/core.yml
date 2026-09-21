@@ -98,6 +98,11 @@ jobs:
       - name: Run tests
         run: docker run --rm "$BUILDER_IMAGE" cargo test --workspace --locked
 
+      - name: Check fixture projections for every queue view
+        run: >-
+          docker run --rm "$BUILDER_IMAGE" cargo test -p review-radar-domain
+          --lib fixture_projects_every_supported_queue_view --locked
+
   runtime-smoke:
     name: Smoke-test runtime image
     runs-on: ubuntu-latest

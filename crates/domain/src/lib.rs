@@ -766,6 +766,26 @@ mod tests {
     }
 
     #[test]
+    fn fixture_projects_every_supported_queue_view() {
+        let snapshot = Snapshot::from_json(SEED).unwrap();
+        for view in [
+            WorkspaceView::Tailored,
+            WorkspaceView::Action,
+            WorkspaceView::MyPrs,
+            WorkspaceView::Following,
+            WorkspaceView::Recent,
+        ] {
+            let cards = snapshot.view(view);
+            assert!(!cards.is_empty(), "fixture view {view:?} is empty");
+            let json = serde_json::to_value(&cards).unwrap();
+            assert!(json.is_array());
+            assert!(cards
+                .iter()
+                .all(|card| !card.current_fingerprint.is_empty()));
+        }
+    }
+
+    #[test]
     fn events_are_ordered_and_have_stable_source_fingerprints() {
         let snapshot = Snapshot::from_json(SEED).unwrap();
         let queue = snapshot.tailored_queue();
