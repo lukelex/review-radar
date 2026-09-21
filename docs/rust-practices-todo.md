@@ -10,11 +10,11 @@ the change can be reviewed and reverted independently.
   fingerprints, lifecycle, and state values at core boundaries.
 - [x] **Typed crate errors** — introduce crate-owned `thiserror` errors and keep
   `anyhow` at binary/application boundaries.
-- [ ] **Deterministic time** — inject a clock or explicit `now` value into
+- [x] **Deterministic time** — inject a clock or explicit `now` value into
   time-sensitive domain and state operations.
-- [ ] **Atomic capture writes** — make capture persistence transactional and
+- [x] **Atomic capture writes** — make capture persistence transactional and
   prove failed writes do not expose partial captures.
-- [ ] **Versioned migrations** — replace implicit schema setup with explicit,
+- [x] **Versioned migrations** — replace implicit schema setup with explicit,
   tested SQLite migrations.
 - [ ] **Typed serialization boundaries** — reduce unvalidated `serde_json::Value`
   use in GitHub response handling while retaining intentionally raw payloads.
@@ -38,3 +38,14 @@ acceptance check, the relevant architecture/contract documentation is updated,
 and the repository's Docker verification commands pass. Test-only `unwrap()` and
 `expect()` calls are acceptable when their fixture setup makes failure a test
 failure; production paths must return contextual errors.
+
+## Existing implementation notes
+
+- State commands already receive an explicit `DateTime<Utc>` and queue
+  projection receives an explicit observation time; binaries are the clock
+  boundary.
+- Capture persistence already writes the capture, PR rows, searches, and
+  memberships in one SQLite transaction and commits only after validation.
+- The local state database rejects newer schema versions and records its
+  supported version through SQLite `user_version`; future changes should extend
+  that migration path.
