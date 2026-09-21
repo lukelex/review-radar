@@ -40,7 +40,7 @@ impl RankingStrategy for TailoredRanking {
             left.priority
                 .cmp(&right.priority)
                 .then_with(|| right.updated_at.cmp(&left.updated_at))
-                .then_with(|| left.id.cmp(&right.id))
+                .then_with(|| left.id.as_str().cmp(right.id.as_str()))
         });
     }
 }
@@ -85,7 +85,7 @@ impl RankingStrategy for HighestFrictionRanking {
                     }
                 })
                 .then_with(|| right.updated_at.cmp(&left.updated_at))
-                .then_with(|| left.id.cmp(&right.id))
+                .then_with(|| left.id.as_str().cmp(right.id.as_str()))
         });
     }
 }
@@ -100,7 +100,7 @@ impl RankingStrategy for NewestActivityRanking {
             right
                 .updated_at
                 .cmp(&left.updated_at)
-                .then_with(|| left.id.cmp(&right.id))
+                .then_with(|| left.id.as_str().cmp(right.id.as_str()))
         });
     }
 }

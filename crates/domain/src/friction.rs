@@ -373,7 +373,7 @@ mod tests {
             snapshot
                 .tailored_queue()
                 .into_iter()
-                .find(|card| card.id == id)
+                .find(|card| card.id.as_str() == id.as_str())
                 .unwrap()
         };
         let before = card(&snapshot);
@@ -382,7 +382,7 @@ mod tests {
             AssessmentStatus::LimitedHistory
         );
         snapshot.review_histories.insert(
-            id.clone(),
+            id.to_string(),
             ReviewHistory {
                 coverage: Coverage::Complete,
                 started_at: 0,
@@ -395,7 +395,7 @@ mod tests {
         let low = card(&snapshot);
         snapshot
             .review_histories
-            .get_mut(&id)
+            .get_mut(id.as_str())
             .unwrap()
             .observed_until = 14 * 86400;
         let high = card(&snapshot);

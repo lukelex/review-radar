@@ -3,6 +3,36 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+macro_rules! stable_string_id {
+    ($name:ident) => {
+        #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+        #[serde(transparent)]
+        pub struct $name(String);
+
+        impl $name {
+            pub fn as_str(&self) -> &str { &self.0 }
+            pub fn is_empty(&self) -> bool { self.0.is_empty() }
+        }
+
+        impl From<String> for $name {
+            fn from(value: String) -> Self { Self(value) }
+        }
+
+        impl From<&str> for $name {
+            fn from(value: &str) -> Self { Self(value.to_owned()) }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(formatter)
+            }
+        }
+    };
+}
+
+stable_string_id!(PullRequestId);
+stable_string_id!(EventFingerprint);
+
 pub mod attention;
 pub mod friction;
 pub mod ranking;
@@ -80,9 +110,9 @@ impl Snapshot {
             .pull_requests
             .iter()
             .map(|pr| {
-                let mut feedback = detected_feedback.get(&pr.id).cloned().unwrap_or_default();
+                let mut feedback = detected_feedback.get(pr.id.as_str()).cloned().unwrap_or_default();
                 let retained = retained_feedback
-                    .get(&pr.id)
+                    .get(pr.id.as_str())
                     .into_iter()
                     .flat_map(|fingerprints| {
                         events(pr)
@@ -102,7 +132,7 @@ impl Snapshot {
                 // no longer contains the event. Its fingerprint remains the
                 // local evidence and the current PR timestamp is conservative.
                 for fingerprint in retained_feedback
-                    .get(&pr.id)
+                    .get(pr.id.as_str())
                     .into_iter()
                     .flat_map(|set| set.iter())
                 {
@@ -122,8 +152,8 @@ impl Snapshot {
                 }
                 project(
                     pr,
-                    memberships.get(&pr.id),
-                    self.review_histories.get(&pr.id),
+                    memberships.get(pr.id.as_str()),
+                    self.review_histories.get(pr.id.as_str()),
                     &feedback,
                 )
             })
@@ -219,7 +249,7 @@ impl Snapshot {
                             && !prior.contains(&event.fingerprint)
                     })
                     .collect::<Vec<_>>();
-                (!feedback.is_empty()).then(|| (pr.id.clone(), feedback))
+                (!feedback.is_empty()).then(|| (pr.id.as_str().to_owned(), feedback))
             })
             .collect()
     }
@@ -247,7 +277,7 @@ pub struct Search {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequest {
-    pub id: String,
+    pub id: PullRequestId,
     pub number: u64,
     pub title: String,
     pub url: String,
@@ -441,7 +471,7 @@ impl Action {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequestCard {
-    pub id: String,
+    pub id: PullRequestId,
     pub repository: String,
     pub number: u64,
     pub title: String,
@@ -458,9 +488,9 @@ pub struct PullRequestCard {
     pub review_friction: friction::Assessment,
     /// Stable for unchanged captured signals; changes when the current action,
     /// review, check, merge, or latest-activity signal changes.
-    pub current_fingerprint: String,
+    pub current_fingerprint: EventFingerprint,
     #[serde(skip)]
-    pub feedback_fingerprints: Vec<String>,
+    pub feedback_fingerprints: Vec<EventFingerprint>,
     pub events: Vec<Event>,
 }
 
@@ -589,10 +619,10 @@ fn project(
         attention_required,
         explanation: attention::explain(pr, action, authored, attention_required, checks),
         review_friction: friction::assess(history, lifecycle(&pr.state), pr.is_draft),
-        current_fingerprint,
+        current_fingerprint: current_fingerprint.into(),
         feedback_fingerprints: new_feedback
             .iter()
-            .map(|event| event.fingerprint.clone())
+            .map(|event| event.fingerprint.clone().into())
             .collect(),
         events,
     }
@@ -730,7 +760,7 @@ mod tests {
         let queue = snapshot.tailored_queue();
         let memberships = snapshot.memberships();
         for card in queue {
-            let membership = &memberships[&card.id];
+            let membership = &memberships[card.id.as_str()];
             if card.priority == Priority::Recent {
                 continue;
             }
@@ -811,7 +841,7 @@ mod tests {
             .all(|event| event.fingerprint.split(':').count() >= 3));
         assert!(queue
             .iter()
-            .all(|card| card.current_fingerprint.starts_with("current:")));
+            .all(|card| card.current_fingerprint.as_str().starts_with("current:")));
     }
 
     #[test]
@@ -859,7 +889,7 @@ mod tests {
             card.explanation.reasons[0].evidence,
             ["search:authored", "capture-delta"]
         );
-        assert!(card.current_fingerprint.contains("comment:comment-1"));
+        assert!(card.current_fingerprint.as_str().contains("comment:comment-1"));
 
         // The same bounded event tail is a baseline when there is no prior
         // capture, and is not repeatedly classified after it was observed.
@@ -898,7 +928,7 @@ mod tests {
             .unwrap();
         assert_eq!(card.action, Action::NewFeedback);
         assert_eq!(card.feedback_fingerprints.len(), 1);
-        assert!(card.current_fingerprint.contains("comment:comment-1"));
+        assert!(card.current_fingerprint.as_str().contains("comment:comment-1"));
     }
 
     #[test]

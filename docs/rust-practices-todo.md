@@ -6,7 +6,7 @@ the change can be reviewed and reverted independently.
 
 ## Planned commits
 
-- [ ] **Typed domain identifiers and enums** — reduce stringly typed PR IDs,
+- [x] **Typed domain identifiers and enums** — reduce stringly typed PR IDs,
   fingerprints, lifecycle, and state values at core boundaries.
 - [x] **Typed crate errors** — introduce crate-owned `thiserror` errors and keep
   `anyhow` at binary/application boundaries.

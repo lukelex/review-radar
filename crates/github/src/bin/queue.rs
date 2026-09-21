@@ -42,7 +42,7 @@ fn main() -> Result<()> {
     );
     for card in &cards {
         if !card.feedback_fingerprints.is_empty() {
-            state.record_feedback(&card.id, &card.feedback_fingerprints, Utc::now())?;
+            state.record_feedback(card.id.as_str(), &card.feedback_fingerprints.iter().map(|value| value.as_str().to_owned()).collect::<Vec<_>>(), Utc::now())?;
         }
     }
     let projection = apply_local_state(cards, &state, config.record_attention, Utc::now())?;
@@ -125,16 +125,16 @@ fn apply_local_state(
         if record_attention
             && state
                 .observe_attention(
-                    &card.id,
+                    card.id.as_str(),
                     card.attention_required,
-                    &card.current_fingerprint,
+                    card.current_fingerprint.as_str(),
                     now,
                 )?
                 .notification_due
         {
-            notification_eligible_ids.push(card.id.clone());
+            notification_eligible_ids.push(card.id.to_string());
         }
-        if !state.is_suppressed(&card.id, &card.current_fingerprint, now)? {
+        if !state.is_suppressed(card.id.as_str(), card.current_fingerprint.as_str(), now)? {
             visible.push(card);
         }
     }
@@ -496,6 +496,32 @@ mod tests {
         assert_eq!(projection.suppressed_count, 1);
         assert_eq!(projection.cards.len(), 1);
         assert!(projection.notification_eligible_ids.is_empty());
+    }
+
+    #[test]
+    fn projection_notifications_are_baselined_and_deduplicated() {
+        let state = StateStore::in_memory().unwrap();
+        let now = Utc::now();
+
+        let first = apply_local_state(vec![card("pr-1", true, "event-1")], &state, true, now)
+            .unwrap();
+        assert!(first.notification_eligible_ids.is_empty());
+
+        let unchanged =
+            apply_local_state(vec![card("pr-1", true, "event-1")], &state, true, now).unwrap();
+        assert!(unchanged.notification_eligible_ids.is_empty());
+
+        let recovered =
+            apply_local_state(vec![card("pr-1", false, "healthy")], &state, true, now).unwrap();
+        assert!(recovered.notification_eligible_ids.is_empty());
+
+        let reactivated =
+            apply_local_state(vec![card("pr-1", true, "event-2")], &state, true, now).unwrap();
+        assert_eq!(reactivated.notification_eligible_ids, vec!["pr-1"]);
+
+        let duplicate =
+            apply_local_state(vec![card("pr-1", true, "event-2")], &state, true, now).unwrap();
+        assert!(duplicate.notification_eligible_ids.is_empty());
     }
 
     #[test]
