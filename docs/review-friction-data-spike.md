@@ -115,6 +115,21 @@ fingerprints or creates notification eligibility.
 See [the concept](attention-and-review-friction.md) for sort and presentation
 semantics. Native shells consume the projection rather than calculating metrics.
 
+## SimplerQMS calibration traversal
+
+The first bounded calibration traversal covers the 100 most recently merged PRs
+from `SimplerQMS/SimplerQMS` within the requested six-month window. Raw responses
+remain in local temporary storage only. The commit-safe generalized result is
+`tests/fixtures/domain/simplerqms-merged-calibration.json`.
+
+The traversal found 99 PRs with at least one review and 59 with both a review and
+more than one commit (median: 2 reviews and 2 commits; maxima: 20 reviews and 24
+commits). It is sufficient to exercise review-round and elapsed-time analysis, but
+the GitHub CLI response supplies aggregate PR additions/deletions rather than
+first-parent deltas per commit. It therefore cannot calibrate rework ratios or
+promote the experimental Low/Moderate/High thresholds. The fixture deliberately
+omits raw repository, PR, actor, commit, author, URL, and message identities.
+
 ## Implemented bounded collection
 
 The collector now preserves the latest bounded ready-for-review, draft, close, and

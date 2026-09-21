@@ -398,4 +398,22 @@ mod tests {
         assert_eq!(before.explanation, high.explanation);
         assert_eq!(before.events, high.events);
     }
+
+    #[test]
+    fn generalized_calibration_traversal_is_structurally_useful_and_identity_safe() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/domain/simplerqms-merged-calibration.json"
+        ))
+        .unwrap();
+        let pull_requests = fixture["pullRequests"].as_array().unwrap();
+        assert_eq!(pull_requests.len(), 100);
+        assert!(pull_requests.iter().all(|pr| {
+            pr["id"].as_str().is_some_and(|id| id.starts_with("pr-"))
+                && pr["reviews"].as_array().is_some()
+                && pr["commits"].as_array().is_some()
+        }));
+        let serialized = fixture.to_string();
+        assert!(!serialized.contains("SimplerQMS"));
+        assert!(!serialized.contains("github.com"));
+    }
 }

@@ -42,6 +42,9 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [ ] **Friction calibration:** regenerate generalized representative histories and
   validate the experimental Low/Moderate/High thresholds before calling levels
   measured production output.
+  First traversal fixture: 100 generalized merged PRs from the requested repository.
+  It lacks per-commit parent diffs, so rework-ratio calibration remains blocked until
+  the collector traversal supplies those fields.
 - [x] Connect the projected reasons, concurrent health, friction breakdown, and
   ranking selection to the Qt/QML native client. Its model renders domain output
   only; Qt does not recalculate classification, friction, or sorting.
