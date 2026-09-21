@@ -35,3 +35,12 @@
 - Notifications are triggered by newly entering an attention-required state, with deduplication across polling cycles—not by every refresh or event.
 - Default ranking uses priority bands, newest-first within each band; use the exact ordering in `docs/project-plan.md`. Recent closed/merged PRs cover the previous 14 days.
 - V1 targets the authenticated `github.com` account only, refreshing on open and every five minutes while running.
+
+## Commit discipline
+
+- Before creating any commit, always run the repository lint and test checks:
+  `docker run --rm review-radar-builder cargo fmt --all -- --check`,
+  `docker run --rm review-radar-builder cargo clippy --workspace --all-targets --locked -- -D warnings`,
+  and `docker run --rm review-radar-builder cargo test --workspace --locked`.
+  If the builder image does not exist or is stale, build it first with
+  `docker build --target builder -t review-radar-builder .`.
