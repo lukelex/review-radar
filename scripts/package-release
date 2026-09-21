@@ -1,0 +1,44 @@
+#!/bin/sh
+set -eu
+
+repository=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repository"
+
+version=${1:?usage: scripts/package-release VERSION}
+case "$version" in
+    v*) tag=$version; version=${version#v} ;;
+    *) tag="v$version" ;;
+esac
+
+name="review-radar-linux-x86_64-$version"
+release_root="$repository/build/release"
+bundle="$release_root/$name"
+archive="$repository/build/$name.tar.gz"
+
+rm -rf "$bundle"
+mkdir -p "$release_root"
+REVIEW_RADAR_NATIVE_BUILD_DIR="$bundle" ./scripts/build-native
+
+cat > "$bundle/README.md" <<EOF
+# Review Radar $version (Linux x86_64 alpha)
+
+This is an early alpha build for Linux x86_64.
+
+Requirements:
+
+- A graphical Wayland or X11 session.
+- A compatible Linux system graphics/font/display stack.
+- A GitHub token in `GH_TOKEN`.
+
+Run from this directory:
+
+    GH_TOKEN="\$(gh auth token)" ./bin/review-radar
+
+The application stores local data below `\${XDG_DATA_HOME:-\$HOME/.local/share}/review-radar/`.
+The bundle includes the Qt runtime built by the repository Dockerfile. It does
+not include or store your GitHub token.
+EOF
+
+tar -C "$release_root" -czf "$archive" "$name"
+sha256sum "$archive" > "$archive.sha256"
+printf '%s\n' "$tag $archive $archive.sha256"

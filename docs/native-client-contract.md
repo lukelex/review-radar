@@ -175,6 +175,26 @@ navigation, and loading treatments. They must not move GitHub queries,
 classification, ranking, notification deduplication, or local persistence into
 the UI layer.
 
+### Relocatable Linux alpha bundles
+
+The Linux alpha release is published as a relocatable x86_64 archive containing
+the native shell, Rust helper executables, the matching Qt runtime/plugins/QML
+modules, and a launcher that resolves its bundle root at runtime. The archive
+must not embed credentials or depend on the build machine's absolute path. It
+may rely on the host's compatible graphics, font, display, and libc stack.
+
+Acceptance criteria:
+
+- Extracting the archive to a different directory does not require rebuilding
+  or editing the launcher.
+- The launcher uses the bundled Qt ABI rather than an arbitrary host Qt minor
+  version, while leaving host system ABI and graphics libraries host-provided.
+- Every published archive has a SHA-256 companion and alpha/prerelease status.
+- The release documents Linux x86_64 and graphical-session requirements.
+
+Implementation reference: `scripts/package-release` and
+`.github/workflows/release-alpha.yml`.
+
 ## References
 
 - [`architecture.md`](architecture.md) — shared-core and client boundaries.

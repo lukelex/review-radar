@@ -49,7 +49,7 @@ docker cp "$container:/usr/lib/x86_64-linux-gnu/qt6/qml/." "$prefix/qml/"
 cat > "$prefix/bin/review-radar" <<EOF
 #!/bin/sh
 set -eu
-prefix=$(printf '%s' "$prefix" | sed 's/[\\\\&]/\\&/g')
+prefix=\$(CDPATH= cd -- "\$(dirname -- "\$0")/.." && pwd)
 export REVIEW_RADAR_COLLECTOR_COMMAND="\$prefix/bin/review-radar-github"
 export REVIEW_RADAR_QUEUE_COMMAND="\$prefix/bin/review-radar-queue"
 export REVIEW_RADAR_STATE_COMMAND="\$prefix/bin/review-radar-state"
