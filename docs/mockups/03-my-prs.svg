@@ -1,85 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860"><title>My PRs — Review Radar wireframe</title><g font-family="DejaVu Sans, sans-serif">
-<rect x="0" y="0" width="1200" height="860" fill="#fafafa" stroke="#fafafa" rx="0"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1120" viewBox="0 0 1200 1120">
+<title>My PRs — Review Radar wireframe</title><g font-family="DejaVu Sans, sans-serif">
+<rect x="0" y="0" width="1200" height="1120" rx="4" fill="#fafafa" stroke="#fafafa"/>
 <text x="26" y="32" font-size="13" font-weight="700" fill="#333">REVIEW RADAR / WIREFRAMES</text>
-<text x="895" y="32" font-size="12" font-weight="400" fill="#777">03 / 06     STATIC CONCEPT</text>
-<rect x="24" y="52" width="1152" height="737" fill="#fff" stroke="#999" rx="6"/>
-<rect x="25" y="53" width="1150" height="62" fill="#f5f5f5" stroke="#ddd" rx="5"/>
+<text x="875" y="32" font-size="12" font-weight="400" fill="#777">03 / 06    STATIC CONCEPT</text>
+<rect x="24" y="52" width="1152" height="987" rx="4" fill="#fff" stroke="#999"/>
+<rect x="25" y="53" width="1150" height="62" rx="4" fill="#f5f5f5" stroke="#ccc"/>
 <text x="46" y="91" font-size="20" font-weight="700" fill="#333">Review Radar</text>
-<rect x="278" y="68" width="424" height="31" fill="#fff" stroke="#bbb" rx="4"/>
+<rect x="278" y="68" width="424" height="31" rx="4" fill="#fff" stroke="#ccc"/>
 <text x="290" y="89" font-size="12" font-weight="400" fill="#777">Search title, repository, or PR number</text>
 <text x="807" y="89" font-size="12" font-weight="400" fill="#666">Updated 2 min ago</text>
-<rect x="970" y="68" width="87" height="31" fill="#fff" stroke="#777" rx="4"/>
-<text x="982" y="89" font-size="12" font-weight="600" fill="#333">Refresh</text>
+<rect x="970" y="68" width="87" height="30" rx="4" fill="#fff" stroke="#888"/>
+<text x="982" y="88" font-size="12" font-weight="600" fill="#333">Refresh</text>
 <text x="1080" y="89" font-size="12" font-weight="400" fill="#333">user-001</text>
-<rect x="25" y="115" width="226" height="673" fill="#f7f7f7" stroke="#ddd" rx="0"/>
+<rect x="25" y="115" width="226" height="923" rx="4" fill="#f7f7f7" stroke="#ccc"/>
 <text x="44" y="151" font-size="11" font-weight="700" fill="#777">WORKSPACE</text>
 <text x="49" y="194" font-size="14" font-weight="400" fill="#333">Tailored to you</text>
 <text x="210" y="194" font-size="12" font-weight="400" fill="#333">12</text>
 <text x="49" y="243" font-size="14" font-weight="400" fill="#333">Action</text>
 <text x="210" y="243" font-size="12" font-weight="400" fill="#333">5</text>
-<rect x="37" y="266" width="201" height="40" fill="#dedede" stroke="#aaa" rx="4"/>
+<rect x="37" y="266" width="201" height="40" rx="4" fill="#dedede" stroke="#aaa"/>
 <text x="49" y="292" font-size="14" font-weight="700" fill="#333">My PRs</text>
 <text x="210" y="292" font-size="12" font-weight="400" fill="#333">6</text>
 <text x="49" y="341" font-size="14" font-weight="400" fill="#333">Following</text>
 <text x="210" y="341" font-size="12" font-weight="400" fill="#333">4</text>
 <text x="49" y="390" font-size="14" font-weight="400" fill="#333">Recent</text>
 <text x="210" y="390" font-size="12" font-weight="400" fill="#333">7</text>
-<path d="M44 439H231V439" stroke="#ccc" fill="none"/>
 <text x="46" y="471" font-size="13" font-weight="400" fill="#333">Snoozed   2</text>
 <text x="46" y="494" font-size="10" font-weight="400" fill="#777">Return to queue when due</text>
-<text x="46" y="700" font-size="12" font-weight="600" fill="#333">github.com</text>
-<text x="46" y="723" font-size="10" font-weight="400" fill="#777">One account / local state</text>
+<text x="46" y="950" font-size="12" font-weight="600" fill="#333">github.com</text>
+<text x="46" y="973" font-size="10" font-weight="400" fill="#777">One account / local state</text>
 <text x="278" y="154" font-size="24" font-weight="700" fill="#333">My PRs</text>
-<text x="278" y="180" font-size="12" font-weight="400" fill="#666">All your open PRs, including drafts. Health stays visible after acknowledgement.</text>
-<rect x="278" y="202" width="125" height="25" fill="#f3f3f3" stroke="#bbb" rx="4"/>
-<text x="288" y="219" font-size="12" font-weight="400" fill="#333">Needs action  3</text>
-<rect x="411" y="202" width="146" height="25" fill="#f3f3f3" stroke="#bbb" rx="4"/>
-<text x="421" y="219" font-size="12" font-weight="400" fill="#333">Awaiting review  2</text>
-<rect x="565" y="202" width="83" height="25" fill="#f3f3f3" stroke="#bbb" rx="4"/>
-<text x="575" y="219" font-size="12" font-weight="400" fill="#333">Drafts  1</text>
-<rect x="278" y="250" width="870" height="37" fill="#eee" stroke="#ccc" rx="4"/>
-<text x="294" y="274" font-size="11" font-weight="700" fill="#333">PULL REQUEST</text>
-<text x="642" y="274" font-size="11" font-weight="700" fill="#333">REVIEW</text>
-<text x="814" y="274" font-size="11" font-weight="700" fill="#333">CHECKS / MERGE</text>
-<text x="1049" y="274" font-size="11" font-weight="700" fill="#333">ACTIVITY</text>
-<rect x="278" y="287" width="870" height="65" fill="#fff" stroke="#ddd" rx="0"/>
-<text x="294" y="312" font-size="13" font-weight="600" fill="#333">#87  Improve keyboard navigation</text>
-<text x="294" y="333" font-size="11" font-weight="400" fill="#777">example/web · Open</text>
-<text x="642" y="322" font-size="12" font-weight="400" fill="#333">Changes requested</text>
-<text x="814" y="322" font-size="12" font-weight="400" fill="#333">2 failing / Unknown</text>
-<text x="1080" y="322" font-size="12" font-weight="400" fill="#333">18m</text>
-<rect x="278" y="352" width="870" height="65" fill="#fafafa" stroke="#ddd" rx="0"/>
-<text x="294" y="377" font-size="13" font-weight="600" fill="#333">#61  Handle expired sessions</text>
-<text x="294" y="398" font-size="11" font-weight="400" fill="#777">example/core · Open</text>
-<text x="642" y="387" font-size="12" font-weight="400" fill="#333">New comment</text>
-<text x="814" y="387" font-size="12" font-weight="400" fill="#333">Passing / Conflict</text>
-<text x="1080" y="387" font-size="12" font-weight="400" fill="#333">42m</text>
-<rect x="278" y="417" width="870" height="65" fill="#fff" stroke="#ddd" rx="0"/>
-<text x="294" y="442" font-size="13" font-weight="600" fill="#333">#52  Simplify request handling</text>
-<text x="294" y="463" font-size="11" font-weight="400" fill="#777">example/api · Open</text>
-<text x="642" y="452" font-size="12" font-weight="400" fill="#333">Approved</text>
-<text x="814" y="452" font-size="12" font-weight="400" fill="#333">Passing / Ready*</text>
-<text x="1080" y="452" font-size="12" font-weight="400" fill="#333">1h</text>
-<rect x="278" y="482" width="870" height="65" fill="#fafafa" stroke="#ddd" rx="0"/>
-<text x="294" y="507" font-size="13" font-weight="600" fill="#333">#139  Document response fields</text>
-<text x="294" y="528" font-size="11" font-weight="400" fill="#777">example/api · Open</text>
-<text x="642" y="517" font-size="12" font-weight="400" fill="#333">Awaiting review</text>
-<text x="814" y="517" font-size="12" font-weight="400" fill="#333">Passing / Mergeable</text>
-<text x="1080" y="517" font-size="12" font-weight="400" fill="#333">2h</text>
-<rect x="278" y="547" width="870" height="65" fill="#fff" stroke="#ddd" rx="0"/>
-<text x="294" y="572" font-size="13" font-weight="600" fill="#333">#120  Add cache metrics</text>
-<text x="294" y="593" font-size="11" font-weight="400" fill="#777">example/core · Open</text>
-<text x="642" y="582" font-size="12" font-weight="400" fill="#333">Awaiting review</text>
-<text x="814" y="582" font-size="12" font-weight="400" fill="#333">Pending / Unknown</text>
-<text x="1080" y="582" font-size="12" font-weight="400" fill="#333">5h</text>
-<rect x="278" y="612" width="870" height="65" fill="#fafafa" stroke="#ddd" rx="0"/>
-<text x="294" y="637" font-size="13" font-weight="600" fill="#333">#94  Explore search shortcuts</text>
-<text x="294" y="658" font-size="11" font-weight="400" fill="#777">example/web · Draft</text>
-<text x="642" y="647" font-size="12" font-weight="400" fill="#333">Not requested</text>
-<text x="814" y="647" font-size="12" font-weight="400" fill="#333">No checks / Unknown</text>
-<text x="1080" y="647" font-size="12" font-weight="400" fill="#333">1d</text>
-<text x="294" y="712" font-size="11" font-weight="400" fill="#666">* Ready is a provisional signal, not a guarantee of merge permission.</text>
-<text x="294" y="739" font-size="11" font-weight="400" fill="#666">Select a row to inspect its full activity and actions.</text>
-<text x="27" y="819" font-size="12" font-weight="400" fill="#555">DESIGN NOTE: A compact health table supports comparison; review, CI, and mergeability remain independent columns.</text>
-<text x="27" y="840" font-size="10" font-weight="400" fill="#888">Illustrative data and counts. Grayscale only; labels carry meaning independently of color.</text>
+<text x="278" y="181" font-size="12" font-weight="400" fill="#666">All your open PRs. Highest friction surfaces work that may need help getting unstuck.</text>
+<rect x="278" y="200" width="250" height="30" rx="4" fill="#fff" stroke="#888"/>
+<text x="290" y="220" font-size="12" font-weight="600" fill="#333">Sort: Highest friction ▾</text>
+<text x="548" y="220" font-size="12" font-weight="400" fill="#666">Also available: Default view order</text>
+<text x="278" y="252" font-size="11" font-weight="400" fill="#666">6 PRs · Known levels first; limited history last · This sort crosses the usual groups</text>
+<rect x="278" y="267" width="870" height="32" rx="4" fill="#ededed" stroke="#ccc"/>
+<text x="294" y="288" font-size="10" font-weight="700" fill="#333">PULL REQUEST / WHY THIS IS HERE</text>
+<text x="800" y="288" font-size="10" font-weight="700" fill="#333">HEALTH / REVIEW FRICTION</text>
+<rect x="278" y="299" width="870" height="109" rx="4" fill="#fff" stroke="#ccc"/>
+<text x="294" y="323" font-size="14" font-weight="600" fill="#333">#139 Document response fields</text>
+<text x="294" y="344" font-size="11" font-weight="400" fill="#666">example/api · Open · Latest activity 2h ago</text>
+<text x="294" y="374" font-size="12" font-weight="600" fill="#333">Waiting for review; no action needed from you now.</text>
+<text x="800" y="323" font-size="11" font-weight="400" fill="#333">Awaiting review · Checks passing</text>
+<text x="800" y="350" font-size="12" font-weight="700" fill="#333">High · 3 rounds · 16 days</text>
+<text x="800" y="374" font-size="11" font-weight="400" fill="#666">Waiting 6 days</text>
+<rect x="278" y="408" width="870" height="109" rx="4" fill="#fafafa" stroke="#ccc"/>
+<text x="294" y="432" font-size="14" font-weight="600" fill="#333">#87 Improve keyboard navigation</text>
+<text x="294" y="453" font-size="11" font-weight="400" fill="#666">example/web · Open · Latest activity 18m ago</text>
+<text x="294" y="483" font-size="12" font-weight="600" fill="#333">user-003 requested changes. Address the feedback.</text>
+<text x="800" y="432" font-size="11" font-weight="400" fill="#333">Changes requested · 2 checks failing</text>
+<text x="800" y="459" font-size="12" font-weight="700" fill="#333">High · 4 rounds · 12 days</text>
+<text x="800" y="483" font-size="11" font-weight="400" fill="#666">Substantial rework</text>
+<rect x="278" y="517" width="870" height="109" rx="4" fill="#fff" stroke="#ccc"/>
+<text x="294" y="541" font-size="14" font-weight="600" fill="#333">#61 Handle expired sessions</text>
+<text x="294" y="562" font-size="11" font-weight="400" fill="#666">example/core · Open · Latest activity 42m ago</text>
+<text x="294" y="592" font-size="12" font-weight="600" fill="#333">New comment to read; a conflict also needs resolution.</text>
+<text x="800" y="541" font-size="11" font-weight="400" fill="#333">New comment · Conflict</text>
+<text x="800" y="568" font-size="12" font-weight="700" fill="#333">Moderate · 2 rounds · 5 days</text>
+<text x="800" y="592" font-size="11" font-weight="400" fill="#666">Some rework</text>
+<rect x="278" y="626" width="870" height="109" rx="4" fill="#fafafa" stroke="#ccc"/>
+<text x="294" y="650" font-size="14" font-weight="600" fill="#333">#52 Simplify request handling</text>
+<text x="294" y="671" font-size="11" font-weight="400" fill="#666">example/api · Open · Latest activity 1h ago</text>
+<text x="294" y="701" font-size="12" font-weight="600" fill="#333">Approved and checks pass. Confirm merge requirements.</text>
+<text x="800" y="650" font-size="11" font-weight="400" fill="#333">Approved · Passing · Ready*</text>
+<text x="800" y="677" font-size="12" font-weight="700" fill="#333">Low · 1 round · 2 days</text>
+<text x="800" y="701" font-size="11" font-weight="400" fill="#666">Little rework</text>
+<rect x="278" y="735" width="870" height="109" rx="4" fill="#fff" stroke="#ccc"/>
+<text x="294" y="759" font-size="14" font-weight="600" fill="#333">#120 Add cache metrics</text>
+<text x="294" y="780" font-size="11" font-weight="400" fill="#666">example/core · Open · Latest activity 5h ago</text>
+<text x="294" y="810" font-size="12" font-weight="600" fill="#333">Waiting for review and checks; monitor progress.</text>
+<text x="800" y="759" font-size="11" font-weight="400" fill="#333">Awaiting review · Checks pending</text>
+<text x="800" y="786" font-size="12" font-weight="700" fill="#333">Limited history</text>
+<text x="800" y="810" font-size="11" font-weight="400" fill="#666">Review start and churn unknown</text>
+<rect x="278" y="844" width="870" height="109" rx="4" fill="#fafafa" stroke="#ccc"/>
+<text x="294" y="868" font-size="14" font-weight="600" fill="#333">#94 Explore search shortcuts</text>
+<text x="294" y="889" font-size="11" font-weight="400" fill="#666">example/web · Draft · Latest activity 1d ago</text>
+<text x="294" y="919" font-size="12" font-weight="600" fill="#333">Your draft is here to track work before review.</text>
+<text x="800" y="868" font-size="11" font-weight="400" fill="#333">Draft · No checks · Merge unknown</text>
+<text x="800" y="895" font-size="12" font-weight="700" fill="#333">Not assessed</text>
+<text x="800" y="919" font-size="11" font-weight="400" fill="#666">Review has not started</text>
+<text x="294" y="981" font-size="11" font-weight="400" fill="#666">* Readiness is provisional. Open the selected PR to confirm GitHub requirements.</text>
+<text x="294" y="1005" font-size="11" font-weight="400" fill="#666">High ties use longest review time, then newest activity. Select a row for evidence and actions.</text>
+<text x="27" y="1070" font-size="12" font-weight="400" fill="#555">Friction is independent of urgency: a waiting PR can rank above a PR needing action in this explicit alternate sort.</text>
+<text x="27" y="1093" font-size="10" font-weight="400" fill="#777">Illustrative data. Friction levels and history are design targets, not computed metrics. Labels work without color.</text>
 </g></svg>

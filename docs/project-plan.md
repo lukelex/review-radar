@@ -33,6 +33,14 @@ state, concise health, latest event, and relative age. Expanding the card reveal
 ordered child events: review requests, reviews, comments, CI changes, and
 mergeability changes.
 
+Every card prominently explains **why this needs your attention**, or **why this
+is here** for waiting and informational items, with a matching next action.
+**Review friction** expresses accumulated difficulty through review rounds,
+rework, and time in review, with visible contributors and explicit missing-history
+states. An opt-in **Highest friction** sort complements the default ordering.
+See [attention explanations and review friction](attention-and-review-friction.md)
+for the design, measurement decisions, and future implementation criteria.
+
 ### Actions
 
 Each pull request supports:
