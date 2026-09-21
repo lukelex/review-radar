@@ -164,6 +164,10 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
         const auto result = response.object();
         const auto cards = result.value("pullRequests").toArray();
         model_.replace(cards);
+        if (stale_) {
+            stale_ = false;
+            emit staleChanged();
+        }
         sourceCount_ = result.value("sourceCount").toInt();
         suppressedCount_ = result.value("suppressedCount").toInt();
         emit countsChanged();
@@ -200,6 +204,7 @@ void QueueController::setRanking(const QString &ranking) {
 QString QueueController::status() const { return status_; }
 bool QueueController::loading() const { return loading_; }
 bool QueueController::refreshing() const { return refreshing_; }
+bool QueueController::stale() const { return stale_; }
 int QueueController::sourceCount() const { return sourceCount_; }
 int QueueController::suppressedCount() const { return suppressedCount_; }
 
@@ -217,6 +222,10 @@ void QueueController::startCollection() {
     if (refreshing_ || qEnvironmentVariableIsSet("REVIEW_RADAR_SKIP_COLLECTION")) return;
     refreshing_ = true;
     emit refreshingChanged();
+    if (!stale_) {
+        stale_ = true;
+        emit staleChanged();
+    }
     setStatus("Refreshing GitHub in the background…");
     collectorProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_COLLECTOR_COMMAND", "review-radar-github"));
     collectorProcess_.setArguments({"--database", captureDatabase()});

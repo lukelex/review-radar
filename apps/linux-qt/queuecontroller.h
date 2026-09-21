@@ -44,6 +44,7 @@ class QueueController final : public QObject {
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(bool refreshing READ refreshing NOTIFY refreshingChanged)
+    Q_PROPERTY(bool stale READ stale NOTIFY staleChanged)
     Q_PROPERTY(int sourceCount READ sourceCount NOTIFY countsChanged)
     Q_PROPERTY(int suppressedCount READ suppressedCount NOTIFY countsChanged)
 
@@ -57,6 +58,7 @@ public:
     QString status() const;
     bool loading() const;
     bool refreshing() const;
+    bool stale() const;
     int sourceCount() const;
     int suppressedCount() const;
 
@@ -74,6 +76,7 @@ signals:
     void statusChanged();
     void loadingChanged();
     void refreshingChanged();
+    void staleChanged();
     void countsChanged();
 
 private:
@@ -97,6 +100,7 @@ private:
     QString status_ = QStringLiteral("Loading workspace…");
     bool loading_ = false;
     bool refreshing_ = false;
+    bool stale_ = false;
     bool collectAfterProjection_ = false;
     int sourceCount_ = 0;
     int suppressedCount_ = 0;

@@ -85,7 +85,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.margins: 16
                 text: queue.status
-                color: queue.status.startsWith("Could not") ? "#9c2a2a" : "#666"
+                color: queue.stale ? "#9a5900" : (queue.status.startsWith("Could not") ? "#9c2a2a" : "#666")
                 wrapMode: Text.Wrap
             }
             ScrollView {
