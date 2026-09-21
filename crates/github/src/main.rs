@@ -122,9 +122,9 @@ fn main() -> Result<()> {
 fn parse_config(args: impl Iterator<Item = String>) -> Result<Config> {
     let mut config = Config {
         database: "data/review-radar.sqlite3".into(),
-            // Rich nested connections make larger pages time out at GitHub's
-            // GraphQL edge. Keep every response below the verified threshold.
-            page_size: 10,
+        // Rich nested connections make larger pages time out at GitHub's
+        // GraphQL edge. Keep every response below the verified threshold.
+        page_size: 10,
         max_pages: 4,
         event_limit: 20,
     };
