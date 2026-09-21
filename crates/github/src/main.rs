@@ -11,6 +11,7 @@ use chrono::{Duration as ChronoDuration, SecondsFormat, Utc};
 use reqwest::blocking::Client;
 use rusqlite::{params, Connection};
 use serde_json::{json, Value};
+use serde::Deserialize;
 
 const API_URL: &str = "https://api.github.com/graphql";
 const SEARCH_QUERY: &str = include_str!("search.graphql");
@@ -39,6 +40,34 @@ struct SearchWork {
     search: SearchResult,
     pull_requests: BTreeMap<String, Value>,
     github: GitHub,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchData {
+    search: SearchConnection,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchConnection {
+    issue_count: u64,
+    page_info: PageInfo,
+    nodes: Vec<Option<SearchNode>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchNode {
+    id: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PageInfo {
+    has_next_page: bool,
+    end_cursor: Option<String>,
 }
 
 #[derive(Debug)]
@@ -443,7 +472,7 @@ fn collect_search(
     base_query: String,
 ) -> Result<(usize, SearchWork)> {
     let query = format!("{base_query} sort:updated-desc");
-    let mut cursor = Value::Null;
+    let mut cursor: Option<String> = None;
     let mut ids = Vec::new();
     let mut seen_ids = HashSet::new();
     let mut pull_requests = BTreeMap::new();
@@ -460,17 +489,18 @@ fn collect_search(
                 "eventLimit": config.event_limit,
             }),
         )?;
-        let search = required(&data, "search")?;
-        reported_count = required_u64(search, "issueCount")?;
-        for node in required_array(search, "nodes")? {
-            if node.is_null() {
-                continue;
-            }
-            let id = required_str(node, "id")?.to_owned();
+        let response: SearchData = serde_json::from_value(data)
+            .context("GitHub search response did not match the expected schema")?;
+        let search = response.search;
+        reported_count = search.issue_count;
+        for node in search.nodes.into_iter().flatten() {
+            let id = node.id;
             if seen_ids.insert(id.clone()) {
                 ids.push(id.clone());
             }
-            pull_requests.entry(id).or_insert_with(|| node.clone());
+            pull_requests
+                .entry(id.clone())
+                .or_insert_with(|| json!({"id": id, "updatedAt": node.updated_at}));
         }
         pages_fetched += 1;
         report_progress(format!(
@@ -481,16 +511,14 @@ fn collect_search(
             pages_fetched,
             config.max_pages
         ));
-        let page_info = required(search, "pageInfo")?;
-        has_next_page = required_bool(page_info, "hasNextPage")?;
+        has_next_page = search.page_info.has_next_page;
         if !has_next_page {
             break;
         }
-        cursor = page_info
-            .get("endCursor")
-            .cloned()
-            .filter(|v| !v.is_null())
-            .ok_or_else(|| anyhow!("GitHub reported another page without a cursor"))?;
+        cursor = search.page_info.end_cursor;
+        if cursor.is_none() {
+            return Err(anyhow!("GitHub reported another page without a cursor"));
+        }
     }
     let truncated = has_next_page || reported_count > ids.len() as u64;
     Ok((

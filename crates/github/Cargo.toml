@@ -14,6 +14,7 @@ reqwest.workspace = true
 review-radar-domain = { path = "../domain" }
 review-radar-state = { path = "../state" }
 rusqlite.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 
 [[bin]]

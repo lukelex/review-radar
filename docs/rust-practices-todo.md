@@ -16,7 +16,7 @@ the change can be reviewed and reverted independently.
   prove failed writes do not expose partial captures.
 - [x] **Versioned migrations** — replace implicit schema setup with explicit,
   tested SQLite migrations.
-- [ ] **Typed serialization boundaries** — reduce unvalidated `serde_json::Value`
+- [x] **Typed serialization boundaries** — reduce unvalidated `serde_json::Value`
   use in GitHub response handling while retaining intentionally raw payloads.
 - [ ] **Property-based invariants** — test ranking, membership deduplication,
   fingerprints, acknowledgement, and reactivation properties.

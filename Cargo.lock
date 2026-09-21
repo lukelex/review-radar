@@ -764,6 +764,7 @@ dependencies = [
  "review-radar-domain",
  "review-radar-state",
  "rusqlite",
+ "serde",
  "serde_json",
 ]
 
