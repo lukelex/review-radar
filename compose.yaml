@@ -15,3 +15,10 @@ services:
       # SQLite WAL readers may need to create shared-memory sidecar files.
       - ./data:/data
       - ./tests/fixtures/github:/fixtures
+
+  queue:
+    build: .
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["review-radar-queue"]
+    volumes:
+      - ./data:/data

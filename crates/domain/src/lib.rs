@@ -32,6 +32,33 @@ impl Snapshot {
         cards
     }
 
+    pub fn view(&self, view: WorkspaceView) -> Vec<PullRequestCard> {
+        self.tailored_queue()
+            .into_iter()
+            .filter(|card| match view {
+                WorkspaceView::Tailored => true,
+                WorkspaceView::Action => card.attention_required,
+                WorkspaceView::MyPrs => {
+                    card.memberships.contains(&"authored".to_owned())
+                        && card.lifecycle == Lifecycle::Open
+                }
+                WorkspaceView::Following => {
+                    card.lifecycle == Lifecycle::Open
+                        && !card.memberships.contains(&"authored".to_owned())
+                        && (card.memberships.contains(&"involved".to_owned())
+                            || card.memberships.contains(&"review_involved".to_owned()))
+                }
+                WorkspaceView::Recent => {
+                    (card.lifecycle == Lifecycle::Merged || card.lifecycle == Lifecycle::Closed)
+                        && (card.memberships.contains(&"recent".to_owned())
+                            || card
+                                .memberships
+                                .contains(&"recent_review_involved".to_owned()))
+                }
+            })
+            .collect()
+    }
+
     fn memberships(&self) -> BTreeMap<String, BTreeSet<String>> {
         let mut memberships = BTreeMap::<String, BTreeSet<String>>::new();
         for search in &self.searches {
@@ -155,6 +182,46 @@ pub enum Priority {
     Recent,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum WorkspaceView {
+    Tailored,
+    Action,
+    MyPrs,
+    Following,
+    Recent,
+}
+
+impl WorkspaceView {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "tailored" => Some(Self::Tailored),
+            "action" => Some(Self::Action),
+            "my-prs" => Some(Self::MyPrs),
+            "following" => Some(Self::Following),
+            "recent" => Some(Self::Recent),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Tailored => "tailored",
+            Self::Action => "action",
+            Self::MyPrs => "my-prs",
+            Self::Following => "following",
+            Self::Recent => "recent",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Lifecycle {
+    Open,
+    Merged,
+    Closed,
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Relationship {
@@ -205,6 +272,8 @@ pub struct PullRequestCard {
     pub title: String,
     pub url: String,
     pub updated_at: String,
+    pub lifecycle: Lifecycle,
+    pub memberships: Vec<String>,
     pub priority: Priority,
     pub relationship: Relationship,
     pub action: Action,
@@ -317,12 +386,22 @@ fn project(pr: &PullRequest, membership: Option<&BTreeSet<String>>) -> PullReque
         title: pr.title.clone(),
         url: pr.url.clone(),
         updated_at: pr.updated_at.clone(),
+        lifecycle: lifecycle(&pr.state),
+        memberships: membership.into_iter().collect(),
         priority,
         relationship,
         action,
         action_label: action.label(),
         attention_required,
         events,
+    }
+}
+
+fn lifecycle(state: &str) -> Lifecycle {
+    match state {
+        "MERGED" => Lifecycle::Merged,
+        "CLOSED" => Lifecycle::Closed,
+        _ => Lifecycle::Open,
     }
 }
 
@@ -427,6 +506,32 @@ mod tests {
                 assert_eq!(card.relationship, Relationship::Following);
             }
         }
+    }
+
+    #[test]
+    fn workspace_views_are_filtered_from_membership_not_top_relationship() {
+        let snapshot = Snapshot::from_json(SEED).unwrap();
+        let action = snapshot.view(WorkspaceView::Action);
+        let authored = snapshot.view(WorkspaceView::MyPrs);
+        let following = snapshot.view(WorkspaceView::Following);
+        let recent = snapshot.view(WorkspaceView::Recent);
+
+        assert!(action.iter().all(|card| card.attention_required));
+        assert!(authored.iter().all(|card| card.lifecycle == Lifecycle::Open
+            && card.memberships.contains(&"authored".into())));
+        assert!(following.iter().all(|card| {
+            card.lifecycle == Lifecycle::Open
+                && !card.memberships.contains(&"authored".into())
+                && (card.memberships.contains(&"involved".into())
+                    || card.memberships.contains(&"review_involved".into()))
+        }));
+        assert!(recent.iter().all(|card| {
+            matches!(card.lifecycle, Lifecycle::Merged | Lifecycle::Closed)
+                && (card.memberships.contains(&"recent".into())
+                    || card.memberships.contains(&"recent_review_involved".into()))
+        }));
+        assert!(WorkspaceView::parse("my-prs").is_some());
+        assert!(WorkspaceView::parse("unknown").is_none());
     }
 
     #[test]

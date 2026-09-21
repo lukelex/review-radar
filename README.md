@@ -72,3 +72,9 @@ query bounds, and unresolved data gaps.
 
 A generalized version of the real capture is committed at
 `tests/fixtures/github/github-snapshot.json` for deterministic offline tests.
+
+Render a ranked JSON workspace from the latest local capture:
+
+```sh
+docker compose run --rm queue --view tailored
+```

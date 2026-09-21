@@ -86,6 +86,24 @@ docker run --rm -v "$PWD/data:/data" keinos/sqlite3 \
   'select id, captured_at, request_count, graphql_cost from captures order by id desc limit 5;'
 ```
 
+## Ranked workspace output
+
+The queue command reads a successful capture without making a GitHub request. It
+reconstructs the normalized snapshot from SQLite payloads and search memberships,
+then delegates filtering and ranking to `crates/domain`.
+
+```sh
+docker compose run --rm queue
+docker compose run --rm queue --view action
+docker compose run --rm queue --view my-prs --capture-id 1
+```
+
+It prints a stable JSON view model with the selected capture, ranked cards, top
+action, relationship memberships, and ordered review/comment events. The supported
+views are `tailored`, `action`, `my-prs`, `following`, and `recent`. The latest
+capture is the default; `--capture-id` makes historical inspection reproducible.
+This command is read-only and reports an error when there is no successful capture.
+
 ## Queries and bounds
 
 The field selection is in `crates/github/src/query.graphql`. Every search sorts by

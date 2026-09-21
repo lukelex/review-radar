@@ -9,6 +9,7 @@ license.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
+review-radar-domain = { path = "../domain" }
 rusqlite.workspace = true
 serde_json.workspace = true
 
@@ -19,3 +20,7 @@ path = "src/main.rs"
 [[bin]]
 name = "review-radar-seed-export"
 path = "src/bin/seed_export.rs"
+
+[[bin]]
+name = "review-radar-queue"
+path = "src/bin/queue.rs"
