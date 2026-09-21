@@ -1,6 +1,9 @@
 #include "queuecontroller.h"
 
 #include <QClipboard>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusReply>
 #include <QDesktopServices>
 #include <QDir>
 #include <QGuiApplication>
@@ -92,6 +95,10 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
     refreshTimer_.setInterval(5 * 60 * 1000);
     connect(&refreshTimer_, &QTimer::timeout, this, &QueueController::refresh);
     refreshTimer_.start();
+    QDBusConnection::sessionBus().connect(
+        "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+        "org.freedesktop.Notifications", "ActionInvoked", this,
+        SLOT(notificationActionInvoked(uint,QString)));
     connect(&collectorProcess_, &QProcess::finished, this,
             [this](int exitCode, QProcess::ExitStatus exitStatus) {
         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
@@ -116,10 +123,12 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
             return;
         }
         const auto result = response.object();
-        model_.replace(result.value("pullRequests").toArray());
+        const auto cards = result.value("pullRequests").toArray();
+        model_.replace(cards);
         sourceCount_ = result.value("sourceCount").toInt();
         suppressedCount_ = result.value("suppressedCount").toInt();
         emit countsChanged();
+        sendNotifications(cards, result.value("notificationEligibleIds").toArray());
         setStatus("Updated " + result.value("capturedAt").toString());
     });
     connect(&stateProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
@@ -195,5 +204,38 @@ void QueueController::runStateCommand(const QStringList &arguments) {
     stateProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_STATE_COMMAND", "review-radar-state"));
     stateProcess_.setArguments(full);
     stateProcess_.start();
+}
+void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds) {
+    QDBusInterface notifications("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                                 "org.freedesktop.Notifications", QDBusConnection::sessionBus());
+    if (!notifications.isValid()) return;
+    for (const auto &eligibleId : eligibleIds) {
+        const auto id = eligibleId.toString();
+        QJsonObject card;
+        for (const auto &candidate : cards) {
+            if (candidate.toObject().value("id").toString() == id) {
+                card = candidate.toObject();
+                break;
+            }
+        }
+        if (card.isEmpty()) continue;
+        const auto reasons = card.value("explanation").toObject().value("reasons").toArray();
+        const auto reason = reasons.isEmpty() ? QString{} : reasons.first().toObject().value("summary").toString();
+        const auto title = card.value("actionLabel").toString();
+        const auto body = QStringLiteral("%1 #%2\n%3")
+                              .arg(card.value("repository").toString())
+                              .arg(card.value("number").toInt())
+                              .arg(reason);
+        const QStringList actions{"open", "Open pull request"};
+        QVariantMap hints{{"desktop-entry", "review-radar-linux"}};
+        QDBusReply<uint> reply = notifications.call("Notify", "Review Radar", 0U, QString(),
+                                                     title, body, actions, hints, -1);
+        if (reply.isValid()) notificationUrls_.insert(reply.value(), card.value("url").toString());
+    }
+}
+void QueueController::notificationActionInvoked(uint notificationId, const QString &action) {
+    if (action == "open" && notificationUrls_.contains(notificationId)) {
+        openUrl(notificationUrls_.take(notificationId));
+    }
 }
 void QueueController::setStatus(const QString &status) { if (status_ != status) { status_ = status; emit statusChanged(); } }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QHash>
 #include <QJsonArray>
 #include <QProcess>
 #include <QTimer>
@@ -76,8 +77,13 @@ private:
     QString commandFromEnvironment(const char *name, const QString &fallback) const;
     void loadProjection();
     void runStateCommand(const QStringList &arguments);
+    void sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds);
     void setStatus(const QString &status);
 
+private slots:
+    void notificationActionInvoked(uint notificationId, const QString &action);
+
+private:
     PullRequestModel model_;
     QString view_ = QStringLiteral("tailored");
     QString ranking_ = QStringLiteral("tailored");
@@ -89,4 +95,5 @@ private:
     QProcess collectorProcess_;
     QProcess stateProcess_;
     QTimer refreshTimer_;
+    QHash<uint, QString> notificationUrls_;
 };

@@ -74,6 +74,10 @@ It sends acknowledgement and snooze commands back to the state executable. Its
 QML layer only presents cards and client-side text search; it does not duplicate
 GitHub, domain, ranking, or SQLite behavior.
 
+On Linux, notification delivery uses `org.freedesktop.Notifications`. The client
+receives only the queue projection's persisted `notificationEligibleIds`, and
+opens the relevant PR in the browser from the notification action.
+
 ## Local state
 
 Local state is deliberately independent of GitHub's notification-read state. It

@@ -14,6 +14,12 @@ directory; `REVIEW_RADAR_CAPTURE_DATABASE` can override the capture path.
 `REVIEW_RADAR_SKIP_COLLECTION=true` to inspect an existing capture without a
 GitHub refresh.
 
+On a Linux session that implements `org.freedesktop.Notifications`, the client
+sends an alert only for IDs in the queue response's `notificationEligibleIds`.
+Those IDs originate from persisted attention transitions, so polling does not
+repeat alerts. The notification's **Open pull request** action opens the PR URL
+in the default browser.
+
 ```sh
 cmake -S apps/linux-qt -B build/linux-qt
 cmake --build build/linux-qt
