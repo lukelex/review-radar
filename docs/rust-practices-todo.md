@@ -20,15 +20,17 @@ the change can be reviewed and reverted independently.
   use in GitHub response handling while retaining intentionally raw payloads.
 - [x] **Property-based invariants** — test ranking, membership deduplication,
   fingerprints, acknowledgement, and reactivation properties.
-- [ ] **Structured diagnostics** — add `tracing` spans and fields for capture,
+- [x] **Structured diagnostics** — add `tracing` spans and fields for capture,
   request, cache, hydration, and projection work without logging secrets.
-- [ ] **Resilient networking** — add bounded retries/backoff, explicit timeout
-  categories, rate-limit behavior, and cancellation-safe refresh boundaries.
+- [x] **Resilient networking** — add bounded retries/backoff, explicit timeout
+  categories, rate-limit behavior, and process-boundary cancellation-safe
+  refreshes.
 - [x] **CI quality policy** — enforce formatting, clippy policy, unsafe-code
   policy, dependency advisories, and license checks.
-- [ ] **Library-first core** — move reusable collector, queue, and configuration
-  logic out of binary-only modules for future clients and focused tests.
-- [ ] **Documentation and review gates** — keep core invariants, error semantics,
+- [x] **Library-first core** — move reusable collector and configuration logic
+  out of binary-only modules for future clients and focused tests; queue
+  projection diagnostics now expose an explicit projection boundary.
+- [x] **Documentation and review gates** — keep core invariants, error semantics,
   and testing commands current as each practice lands.
 
 ## Completion rule
@@ -49,3 +51,12 @@ failure; production paths must return contextual errors.
 - The local state database rejects newer schema versions and records its
   supported version through SQLite `user_version`; future changes should extend
   that migration path.
+
+- Collector retries are bounded to three attempts with 250/500 ms backoff
+  for transport timeouts and retryable HTTP statuses (408, 429, and 5xx).
+  A collector run is a process boundary: cancellation terminates the process,
+  and persistence occurs only after a complete capture, so no partial refresh
+  can become visible.
+- `review-radar-github` exposes `parse_config`, `collect_with_token`, and the
+  complete `Capture` model from its library target; binaries remain thin
+  application boundaries.

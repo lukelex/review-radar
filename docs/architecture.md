@@ -26,6 +26,8 @@ environment while remaining suitable for a standalone desktop application.
 - Snapshot queries and pagination.
 - Conversion from GitHub responses into domain models.
 - Rate-limit and retry policy.
+- Reusable `collect_with_token` and queue `projection` library boundaries for
+  native clients; binaries provide only persistence and process-facing wiring.
 
 ### `crates/state`
 

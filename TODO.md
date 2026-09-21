@@ -85,8 +85,9 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [x] **View-targeted detail rendering:** retain complete shared snapshots while
   deferring expensive activity-detail rendering until a PR is opened. See the
   native-client contract and the Linux detail panel implementation.
-- [ ] **Adaptive hydration batches:** tune batch size from measured GraphQL cost
-  and latency while retaining the verified timeout guardrails.
+- [x] **Adaptive hydration batches:** tune batch size from measured GraphQL cost
+  and latency while retaining the verified timeout guardrails. Hydration starts
+  conservatively, adapts within each capture, and leaves rate-limit headroom.
 
 Native Linux notifications are complete: the Qt shell sends only the
 state-deduplicated attention transitions, includes an activation action, and
