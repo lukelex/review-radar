@@ -33,11 +33,12 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [x] Collect bounded ready/draft, lifecycle, review, and commit evidence and
   connect it to live assessments. Pagination and missing churn are explicit; the
   current normalizer reports Limited history rather than a fabricated level.
-- [ ] **Targeted parent-diff collection:** capture bounded, reproducible changed-line
+- [x] **Targeted parent-diff collection:** capture bounded, reproducible changed-line
   evidence between successive PR revisions after review starts; preserve comparison
   coverage and failures rather than substituting commit totals. In progress: the
   collector now requests each bounded commit's first-parent additions/deletions;
-  the normalizer and baseline policy still need implementation.
+  the normalizer establishes an initial-review change-volume baseline only when
+  complete parent-diff evidence is available; calibration remains separate.
 - [ ] **Friction calibration:** regenerate generalized representative histories and
   validate the experimental Low/Moderate/High thresholds before calling levels
   measured production output.

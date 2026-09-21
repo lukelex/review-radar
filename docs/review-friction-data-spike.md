@@ -130,3 +130,12 @@ evidence produces `Limited history` with `unknown-code-churn`. Any pagination,
 invalid field, or event inconsistency becomes partial coverage. This makes live
 projections coverage-aware today without claiming a calibrated pain level. Targeted
 parent-diff comparisons and calibration remain required before production levels.
+
+First-parent additions/deletions are now collected for every bounded commit. When
+the entire commit connection is present, every relevant commit has a parent diff,
+and a substantive review is observed, the normalizer uses the sum of pre-review
+commit deltas as an **initial-review change-volume** baseline. It sums post-review
+parent deltas as rework. This is explicitly not a net pull-request diff: repeated
+edits remain visible. Missing parent/counter evidence leaves the baseline or
+rework unknown. Threshold calibration against representative histories remains
+required before presenting these experimental measurements as production truth.

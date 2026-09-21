@@ -315,6 +315,7 @@ fn normalize_review_history(
     if !valid {
         complete = false;
     }
+    let initial_review_diff_lines = initial_review_change_volume(&events);
     Some((
         id,
         ReviewHistory {
@@ -326,12 +327,35 @@ fn normalize_review_history(
             started_at,
             observed_until,
             initially_draft,
-            // Cumulative commit totals are not revision diffs. Leave churn
-            // unknown until targeted parent comparisons can establish it.
-            initial_review_diff_lines: None,
+            initial_review_diff_lines,
             events,
         },
     ))
+}
+
+/// Sum complete first-parent commit deltas through the first substantive review.
+/// This is an auditable initial-review *change-volume* baseline, not a net PR
+/// diff: repeated pre-review edits remain visible rather than being cancelled.
+fn initial_review_change_volume(events: &[HistoryEvent]) -> Option<u64> {
+    let first_review_at = events
+        .iter()
+        .find(|event| matches!(event.kind, HistoryEventKind::Review))?
+        .at;
+    let revisions = events
+        .iter()
+        .filter(|event| {
+            event.at <= first_review_at && matches!(event.kind, HistoryEventKind::Revision { .. })
+        })
+        .collect::<Vec<_>>();
+    (!revisions.is_empty()).then_some(())?;
+    revisions
+        .into_iter()
+        .try_fold(0_u64, |total, event| match event.kind {
+            HistoryEventKind::Revision {
+                changed_lines: Some(lines),
+            } => total.checked_add(lines),
+            _ => None,
+        })
 }
 
 /// GitHub's Commit additions/deletions are calculated against the commit's
@@ -469,7 +493,8 @@ mod tests {
                 { "id": "review-1", "author": { "login": "reviewer-001", "__typename": "User" }, "state": "COMMENTED", "submittedAt": "2026-09-06T00:00:00Z", "updatedAt": "2026-09-06T00:00:00Z" }
             ] },
             "commits": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
-                { "commit": { "oid": "commit-1", "committedDate": "2026-09-07T00:00:00Z" } }
+                { "commit": { "oid": "commit-1", "committedDate": "2026-09-02T00:00:00Z", "additions": 40, "deletions": 10, "parents": { "nodes": [{ "oid": "base" }] } } },
+                { "commit": { "oid": "commit-2", "committedDate": "2026-09-07T00:00:00Z", "additions": 30, "deletions": 20, "parents": { "nodes": [{ "oid": "commit-1" }] } } }
             ] }
         });
         let (_, history) = normalize_review_history(
@@ -480,7 +505,7 @@ mod tests {
         .unwrap();
         assert_eq!(history.coverage, Coverage::Complete);
         assert!(history.initially_draft);
-        assert_eq!(history.initial_review_diff_lines, None);
+        assert_eq!(history.initial_review_diff_lines, Some(50));
         assert!(history
             .events
             .iter()
@@ -488,7 +513,7 @@ mod tests {
         assert!(history.events.iter().any(|event| matches!(
             event.kind,
             HistoryEventKind::Revision {
-                changed_lines: None
+                changed_lines: Some(50)
             }
         )));
         let assessment = review_radar_domain::friction::assess(
@@ -498,9 +523,12 @@ mod tests {
         );
         assert_eq!(
             assessment.status,
-            review_radar_domain::friction::AssessmentStatus::LimitedHistory
+            review_radar_domain::friction::AssessmentStatus::Assessed
         );
-        assert!(assessment.limitations.contains(&"unknown-code-churn"));
+        assert_eq!(
+            assessment.level,
+            Some(review_radar_domain::friction::Level::Moderate)
+        );
     }
 
     #[test]
