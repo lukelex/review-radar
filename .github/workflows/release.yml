@@ -1,0 +1,138 @@
+name: Release Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version must be a tag such as v0.1.0 or v0.1.0-alpha.1: $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Ensure tag does not already exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag already exists: $VERSION" >&2
+            exit 1
+          fi
+
+  core-ci:
+    name: Core CI
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build Rust CI image
+        run: docker build --target builder --tag review-radar-builder:release .
+
+      - name: Check formatting
+        run: docker run --rm review-radar-builder:release cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: docker run --rm review-radar-builder:release cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Run tests
+        run: docker run --rm review-radar-builder:release cargo test --workspace --locked
+
+  linux-qt-ci:
+    name: Linux Qt CI
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Qt build dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          cmake g++ make qt6-base-dev qt6-declarative-dev qt6-qpa-plugins libqt6svg6 qt6-svg-plugins
+          qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts
+          qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+
+      - name: Build desktop client
+        run: cmake -S apps/linux-qt -B build/linux-qt -DCMAKE_BUILD_TYPE=Release && cmake --build build/linux-qt --parallel
+
+      - name: Lint QML
+        run: /usr/lib/qt6/bin/qmllint apps/linux-qt/qml/*.qml
+
+      - name: Run desktop tests
+        run: ctest --test-dir build/linux-qt --output-on-failure
+
+  release:
+    name: Build and publish release
+    needs: [core-ci, linux-qt-ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build production native bundle
+        env:
+          VERSION: ${{ inputs.version }}
+        run: ./scripts/package-release "$VERSION"
+
+      - name: Verify archive and checksum
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION#v}"
+          archive="build/review-radar-linux-x86_64-$version.tar.gz"
+          sha256sum --check "$archive.sha256"
+          tar -tzf "$archive" | grep -E '/bin/review-radar$'
+          tar -xzf "$archive" -C /tmp
+          test -x "/tmp/review-radar-linux-x86_64-$version/bin/review-radar"
+
+      - name: Create and push release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$VERSION" "$GITHUB_SHA"
+          git push origin "$VERSION"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION#v}"
+          archive="build/review-radar-linux-x86_64-$version.tar.gz"
+          prerelease=()
+          case "$VERSION" in
+            *-* ) prerelease+=(--prerelease) ;;
+          esac
+          gh release create "$VERSION" "$archive" "$archive.sha256" \
+            --title "Review Radar $VERSION" \
+            --notes "Linux x86_64 native alpha release. See the bundled README for requirements and launch instructions." \
+            "${prerelease[@]}" \
+            --verify-tag "$VERSION"
