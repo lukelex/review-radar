@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+repository=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repository"
+
+: "${GH_TOKEN:=$(gh auth token)}"
+export GH_TOKEN
+export USER_ID="$(id -u)"
+export GROUP_ID="$(id -g)"
+
+host_xauthority=${XAUTHORITY:-"${HOME:-/tmp}/.Xauthority"}
+temporary_xauthority=
+if [ -r "$host_xauthority" ]; then
+    export XAUTHORITY="$host_xauthority"
+else
+    temporary_xauthority=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/review-radar-xauthority.XXXXXX")
+    export XAUTHORITY="$temporary_xauthority"
+fi
+
+cleanup() {
+    [ -z "$temporary_xauthority" ] || rm -f "$temporary_xauthority"
+}
+trap cleanup EXIT HUP INT TERM
+
+docker compose run --rm desktop "$@"

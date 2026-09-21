@@ -32,3 +32,23 @@ Qt is intentionally a native Linux build; Docker CI continues to verify the Rust
 core. Quickshell may launch this binary or show an attention count, but is not
 required by the dashboard. The Qt build was verified locally with the same CMake
 commands above; runtime GitHub access still requires `GH_TOKEN`.
+
+## Docker desktop session
+
+The Docker target builds the Qt app and Rust executables together. Start it from a
+graphical host session:
+
+```sh
+./scripts/desktop
+```
+
+Compose mounts the host's runtime directory, X11 socket, and Xauthority cookie.
+The container chooses Wayland when `$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY` is a socket
+(Hyprland), otherwise it selects XCB when `$DISPLAY` has a matching X11 socket
+(i3). It mounts the repository's `data/` directory for both the capture and the
+local state database. Set `QT_QPA_PLATFORM=wayland` or `QT_QPA_PLATFORM=xcb` to
+force a backend while diagnosing a host-specific issue. The script invokes Docker
+Compose from the repository root, provides `GH_TOKEN` from `gh auth token` unless
+it is already exported, and maps the container to your host UID/GID. For a
+Wayland-only session without an Xauthority file, it creates and cleans up an empty
+one so the optional X11 bind mount remains valid.

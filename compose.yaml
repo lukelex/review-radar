@@ -29,3 +29,23 @@ services:
     entrypoint: ["review-radar-state"]
     volumes:
       - ./data:/data
+
+  desktop:
+    build:
+      context: .
+      target: linux-desktop
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    environment:
+      GH_TOKEN: ${GH_TOKEN:-}
+      REVIEW_RADAR_CAPTURE_DATABASE: /data/review-radar.sqlite3
+      REVIEW_RADAR_STATE_DATABASE: /data/review-radar-state.sqlite3
+      XDG_RUNTIME_DIR: /host-runtime
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-0}
+      DISPLAY: ${DISPLAY:-}
+      XAUTHORITY: /host-xauthority
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      - ./data:/data
+      - ${XDG_RUNTIME_DIR:-/tmp}:/host-runtime
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ${XAUTHORITY:-${HOME}/.Xauthority}:/host-xauthority:ro

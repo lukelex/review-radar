@@ -26,7 +26,39 @@ RUN touch crates/domain/src/lib.rs crates/github/src/main.rs crates/github/src/b
     && cargo build --release --locked -p review-radar-github \
     && cargo build --release --locked -p review-radar-state --bin review-radar-state
 
-FROM debian:bookworm-slim
+FROM debian:trixie AS linux-desktop
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        cmake \
+        g++ \
+        libgl1-mesa-dri \
+        make \
+        qt6-base-dev \
+        qt6-declarative-dev \
+        qt6-qpa-plugins \
+        qml6-module-qtquick \
+        qml6-module-qtquick-controls \
+        qml6-module-qtquick-layouts \
+        qml6-module-qtquick-templates \
+        qml6-module-qtqml-workerscript \
+        xdg-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 1000 review-radar
+COPY --from=builder /app/target/release/review-radar-github /usr/local/bin/review-radar-github
+COPY --from=builder /app/target/release/review-radar-seed-export /usr/local/bin/review-radar-seed-export
+COPY --from=builder /app/target/release/review-radar-queue /usr/local/bin/review-radar-queue
+COPY --from=builder /app/target/release/review-radar-state /usr/local/bin/review-radar-state
+COPY apps/linux-qt /src/apps/linux-qt
+RUN cmake -S /src/apps/linux-qt -B /tmp/review-radar-linux-build \
+    && cmake --build /tmp/review-radar-linux-build --parallel \
+    && cmake --install /tmp/review-radar-linux-build --prefix /usr/local \
+    && install -m 755 /src/apps/linux-qt/docker-entrypoint.sh /usr/local/bin/review-radar-desktop
+USER review-radar
+WORKDIR /app
+ENTRYPOINT ["review-radar-desktop"]
+
+FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

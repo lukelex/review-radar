@@ -7,8 +7,12 @@ include(CTest)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core DBus Gui Qml Quick)
 
 qt_standard_project_setup(REQUIRES 6.4)
-qt_policy(SET QTP0001 NEW)
-qt_policy(SET QTP0004 NEW)
+
+# `qt_policy` was introduced after the minimum supported Qt release.
+if(COMMAND qt_policy)
+    qt_policy(SET QTP0001 NEW)
+    qt_policy(SET QTP0004 NEW)
+endif()
 
 qt_add_executable(review-radar-linux
     main.cpp
@@ -19,6 +23,7 @@ qt_add_executable(review-radar-linux
 qt_add_qml_module(review-radar-linux
     URI ReviewRadar
     VERSION 1.0
+    RESOURCE_PREFIX "/"
     QML_FILES qml/Main.qml
 )
 

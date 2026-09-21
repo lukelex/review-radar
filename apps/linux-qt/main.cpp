@@ -14,12 +14,12 @@ int main(int argc, char *argv[]) {
     QueueController queue;
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("queue"), &queue);
-    engine.loadFromModule("ReviewRadar", "Main");
+    engine.load(QUrl(QStringLiteral("qrc:/ReviewRadar/qml/Main.qml")));
     if (engine.rootObjects().isEmpty()) {
         return 1;
     }
     if (QCoreApplication::arguments().contains(QStringLiteral("--smoke-test"))) {
-        QTimer::singleShot(0, &app, &QCoreApplication::quit);
+        QTimer::singleShot(0, &app, [&app] { app.quit(); });
     } else {
         queue.refresh();
     }

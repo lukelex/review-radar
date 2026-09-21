@@ -55,8 +55,8 @@ QString frictionSummary(const QJsonObject &friction) {
 
 QDateTime snoozeUntil(const QString &preset) {
     const auto now = QDateTime::currentDateTimeUtc();
-    if (preset == "tomorrow") return QDateTime(now.date().addDays(1), QTime(9, 0), QTimeZone::UTC);
-    if (preset == "next-week") return QDateTime(now.date().addDays(7), QTime(9, 0), QTimeZone::UTC);
+    if (preset == "tomorrow") return QDateTime(now.date().addDays(1), QTime(9, 0), QTimeZone::utc());
+    if (preset == "next-week") return QDateTime(now.date().addDays(7), QTime(9, 0), QTimeZone::utc());
     return now.addSecs(4 * 60 * 60);
 }
 } // namespace
@@ -203,7 +203,7 @@ void QueueController::loadProjection() {
     setStatus("Loading workspace…");
     queueProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_QUEUE_COMMAND", "review-radar-queue"));
     queueProcess_.setArguments({"--database", captureDatabase(),
-                                "--state-database", applicationDataFile("review-radar-state.sqlite3"),
+                                "--state-database", stateDatabase(),
                                 "--view", view_, "--ranking", ranking_,
                                 "--record-attention", "true"});
     queueProcess_.start();
@@ -228,13 +228,17 @@ QString QueueController::captureDatabase() const {
     const auto configured = qEnvironmentVariable("REVIEW_RADAR_CAPTURE_DATABASE");
     return configured.isEmpty() ? applicationDataFile("review-radar.sqlite3") : configured;
 }
+QString QueueController::stateDatabase() const {
+    const auto configured = qEnvironmentVariable("REVIEW_RADAR_STATE_DATABASE");
+    return configured.isEmpty() ? applicationDataFile("review-radar-state.sqlite3") : configured;
+}
 QString QueueController::commandFromEnvironment(const char *name, const QString &fallback) const {
     const auto configured = qEnvironmentVariable(name);
     return configured.isEmpty() ? fallback : configured;
 }
 void QueueController::runStateCommand(const QStringList &arguments) {
     if (stateProcess_.state() != QProcess::NotRunning) return;
-    QStringList full{"--database", applicationDataFile("review-radar-state.sqlite3")};
+    QStringList full{"--database", stateDatabase()};
     full.append(arguments);
     stateProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_STATE_COMMAND", "review-radar-state"));
     stateProcess_.setArguments(full);

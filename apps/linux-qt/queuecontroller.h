@@ -75,6 +75,7 @@ signals:
 private:
     QString applicationDataFile(const QString &name) const;
     QString captureDatabase() const;
+    QString stateDatabase() const;
     QString commandFromEnvironment(const char *name, const QString &fallback) const;
     void loadProjection();
     void runStateCommand(const QStringList &arguments);

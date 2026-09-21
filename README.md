@@ -81,3 +81,20 @@ Render a ranked JSON workspace from the latest local capture:
 ```sh
 docker compose run --rm queue --view tailored
 ```
+
+## Desktop app in Docker
+
+Run the Qt/QML app in Docker while it renders through your host desktop session:
+
+```sh
+./scripts/desktop
+```
+
+The `desktop` service uses the host Wayland socket when available (including
+Hyprland) and otherwise uses the mounted X11 socket (including i3). It keeps
+captures and local state in the gitignored `data/` directory. Run the command
+from the graphical session so `XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`, and/or
+`DISPLAY` are available. The script obtains the authenticated GitHub token and
+passes your host UID/GID to the container; an already-exported `GH_TOKEN` wins.
+It also supplies an empty temporary Xauthority file for Wayland-only sessions
+that do not have `~/.Xauthority`.
