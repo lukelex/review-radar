@@ -66,13 +66,35 @@ impl GitHub {
     }
 
     fn query(&mut self, query: &str, variables: Value) -> Result<Value> {
+        if self.requests > 0 && self.remaining == 0 {
+            bail!(
+                "GitHub rate limit exhausted; retry after {}",
+                if self.reset_at.is_empty() {
+                    "the reset time"
+                } else {
+                    &self.reset_at
+                }
+            );
+        }
         let response = self
             .client
             .post(API_URL)
             .bearer_auth(&self.token)
             .json(&json!({ "query": query, "variables": variables }))
             .send()
-            .context("GitHub request failed")?
+            .context("GitHub request failed")?;
+        if matches!(response.status().as_u16(), 403 | 429) {
+            bail!(
+                "GitHub rate limit request rejected (HTTP {}); retry after {}",
+                response.status(),
+                if self.reset_at.is_empty() {
+                    "the reset time"
+                } else {
+                    &self.reset_at
+                }
+            );
+        }
+        let response = response
             .error_for_status()
             .context("GitHub returned an HTTP error")?;
         self.requests += 1;
@@ -113,8 +135,8 @@ fn main() -> Result<()> {
         );
     }
     println!(
-        "  {} requests; GraphQL cost {}; {} points remaining",
-        capture.request_count, capture.graphql_cost, capture.remaining
+        "  {} requests; GraphQL cost {}; {} points remaining (reset {})",
+        capture.request_count, capture.graphql_cost, capture.remaining, capture.reset_at
     );
     Ok(())
 }
@@ -330,6 +352,17 @@ mod tests {
         assert!(parse_config(["--max-pages".into(), "0".into()].into_iter()).is_err());
         let config = parse_config(["--event-limit".into(), "5".into()].into_iter()).unwrap();
         assert_eq!(config.event_limit, 5);
+    }
+
+    #[test]
+    fn exhausted_rate_limit_stops_follow_up_requests_with_retry_guidance() {
+        let mut github = GitHub::new("token".into()).unwrap();
+        github.requests = 1;
+        github.remaining = 0;
+        github.reset_at = "2026-09-21T23:00:00Z".into();
+        let error = github.query("query", json!({})).unwrap_err().to_string();
+        assert!(error.contains("rate limit exhausted"));
+        assert!(error.contains("2026-09-21T23:00:00Z"));
     }
 
     #[test]
