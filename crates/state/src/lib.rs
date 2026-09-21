@@ -136,8 +136,9 @@ impl StateStore {
             params![pull_request_id, newest_event_fingerprint, timestamp(now)],
         )?;
         self.connection.execute(
-            "DELETE FROM outstanding_feedback WHERE pull_request_id = ?",
-            [pull_request_id],
+            "DELETE FROM outstanding_feedback
+             WHERE pull_request_id = ? AND instr(?, feedback_fingerprint) > 0",
+            params![pull_request_id, newest_event_fingerprint],
         )?;
         Ok(())
     }
@@ -444,7 +445,13 @@ mod tests {
             .record_feedback("pr-1", &["comment:1:v1".into()], now())
             .unwrap();
         assert!(store.outstanding_feedback().unwrap()["pr-1"].contains("comment:1:v1"));
-        store.acknowledge("pr-1", "current:pr-1", now()).unwrap();
+        store
+            .acknowledge("pr-1", "current:pr-1:comment:2:v2", now())
+            .unwrap();
+        assert!(store.outstanding_feedback().unwrap()["pr-1"].contains("comment:1:v1"));
+        store
+            .acknowledge("pr-1", "current:pr-1:comment:1:v1", now())
+            .unwrap();
         assert!(store.outstanding_feedback().unwrap().is_empty());
     }
 
