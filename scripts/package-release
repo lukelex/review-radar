@@ -20,21 +20,21 @@ mkdir -p "$release_root"
 REVIEW_RADAR_NATIVE_BUILD_DIR="$bundle" ./scripts/build-native
 
 cat > "$bundle/README.md" <<EOF
-# Review Radar $version (Linux x86_64 alpha)
+# Review Radar $version (Linux x86_64)
 
-This is an early alpha build for Linux x86_64.
+This is a Linux x86_64 build.
 
 Requirements:
 
 - A graphical Wayland or X11 session.
 - A compatible Linux system graphics/font/display stack.
-- A GitHub token in `GH_TOKEN`.
+- A GitHub token in GH_TOKEN.
 
 Run from this directory:
 
     GH_TOKEN="\$(gh auth token)" ./bin/review-radar
 
-The application stores local data below `\${XDG_DATA_HOME:-\$HOME/.local/share}/review-radar/`.
+The application stores local data below \${XDG_DATA_HOME:-\$HOME/.local/share}/review-radar/.
 The bundle includes the Qt runtime built by the repository Dockerfile. It does
 not include or store your GitHub token.
 EOF
