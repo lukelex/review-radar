@@ -1,0 +1,67 @@
+#!/bin/sh
+set -eu
+
+repository=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repository"
+
+build_root=${REVIEW_RADAR_NATIVE_BUILD_DIR:-"$repository/build/native"}
+prefix="$build_root"
+
+for command in docker; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        echo "Missing required host command: $command" >&2
+        exit 1
+    fi
+done
+
+image=${REVIEW_RADAR_NATIVE_IMAGE:-review-radar-native-build:local}
+echo "Building linux-desktop stage from Dockerfile…"
+docker build --target linux-desktop -t "$image" .
+
+container=$(docker create "$image")
+cleanup() { docker rm -f "$container" >/dev/null 2>&1 || true; }
+trap cleanup EXIT HUP INT TERM
+mkdir -p "$prefix/bin"
+for executable in review-radar-linux review-radar-github review-radar-seed-export review-radar-queue review-radar-state; do
+    docker cp "$container:/usr/local/bin/$executable" "$prefix/bin/$executable"
+    chmod 755 "$prefix/bin/$executable"
+done
+
+# The image is built with its own Qt version. Bundle only Qt's libraries so the
+# host does not resolve the executable against a different Qt ABI (for example
+# when the host and Debian image have different Qt minor versions). Do not copy
+# Debian's libc, libstdc++, graphics stack, or other system libraries: forcing
+# those onto the host is unsafe and can cause immediate startup crashes.
+rm -rf "$prefix/lib" "$prefix/plugins" "$prefix/qml"
+mkdir -p "$prefix/lib" "$prefix/plugins" "$prefix/qml"
+docker run --rm --entrypoint sh "$image" -c \
+    "find /usr/lib/x86_64-linux-gnu -maxdepth 1 -name 'libQt6*.so*' -printf '%f\\n' | tar -C /usr/lib/x86_64-linux-gnu -cf - -T -" \
+    | tar -C "$prefix/lib" -xf -
+# Qt in the Debian build is linked to its ICU SONAME; include ICU when the host
+# distribution ships a different major ICU version. Other system libraries stay
+# host-provided to avoid crossing the host's libc/graphics ABI boundary.
+docker run --rm --entrypoint sh "$image" -c \
+    "find /usr/lib/x86_64-linux-gnu -maxdepth 1 -name 'libicu*.so*' -printf '%f\\n' | tar -C /usr/lib/x86_64-linux-gnu -cf - -T -" \
+    | tar -C "$prefix/lib" -xf -
+docker cp "$container:/usr/lib/x86_64-linux-gnu/qt6/plugins/." "$prefix/plugins/"
+docker cp "$container:/usr/lib/x86_64-linux-gnu/qt6/qml/." "$prefix/qml/"
+
+cat > "$prefix/bin/review-radar" <<EOF
+#!/bin/sh
+set -eu
+prefix=$(printf '%s' "$prefix" | sed 's/[\\\\&]/\\&/g')
+export REVIEW_RADAR_COLLECTOR_COMMAND="\$prefix/bin/review-radar-github"
+export REVIEW_RADAR_QUEUE_COMMAND="\$prefix/bin/review-radar-queue"
+export REVIEW_RADAR_STATE_COMMAND="\$prefix/bin/review-radar-state"
+export LD_LIBRARY_PATH="\$prefix/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+export QT_PLUGIN_PATH="\$prefix/plugins"
+export QML2_IMPORT_PATH="\$prefix/qml"
+exec "\$prefix/bin/review-radar-linux" "\$@"
+EOF
+chmod 755 "$prefix/bin/review-radar"
+
+echo
+echo "Built executable: $prefix/bin/review-radar"
+echo "The executable uses the Qt runtime bundled from the Docker image and the host display session."
+echo "Run it from a graphical Linux session with GH_TOKEN set:"
+echo "  GH_TOKEN=\"\$(gh auth token)\" $prefix/bin/review-radar"

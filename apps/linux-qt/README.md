@@ -28,6 +28,33 @@ cmake --build build/linux-qt
 ./build/linux-qt/review-radar-linux
 ```
 
+To create a directly usable host bundle containing the Qt app and all Rust
+executables it launches, use the repository script:
+
+```sh
+./scripts/build-native
+GH_TOKEN="$(gh auth token)" ./build/native/bin/review-radar
+```
+
+The script builds the existing root `Dockerfile`'s `linux-desktop` stage and
+extracts the resulting application and Rust helpers under `build/native/bin/`.
+The extracted application runs directly on the host with the Qt runtime, plugins,
+and QML modules bundled from the Docker image; Docker is only used to compile and
+assemble it. It does not copy credentials into the build output. Set
+`REVIEW_RADAR_NATIVE_BUILD_DIR` to choose another output directory or
+`REVIEW_RADAR_NATIVE_IMAGE` to choose the temporary Docker image tag. The host
+only needs a graphical Wayland or X11 session and compatible system graphics,
+font, and display libraries.
+
+On Linux, native capture and local-state files are stored in
+`$XDG_DATA_HOME/review-radar/` (normally `~/.local/share/review-radar/`).
+
+The Compose desktop launcher applies a shared resource budget to the Qt shell
+and its helper processes: 2 CPUs, 1 GiB of memory, and 256 processes by
+default. Override these limits with `REVIEW_RADAR_DESKTOP_CPUS`,
+`REVIEW_RADAR_DESKTOP_MEMORY`, and `REVIEW_RADAR_DESKTOP_PIDS`; these are Docker
+cgroup limits and do not change ranking or refresh semantics.
+
 Qt is intentionally a native Linux build; Docker CI continues to verify the Rust
 core. Quickshell may launch this binary or show an attention count, but is not
 required by the dashboard. The Qt build was verified locally with the same CMake

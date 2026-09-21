@@ -164,7 +164,14 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
              setStatus("Could not refresh GitHub: " + QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed());
              return;
          }
-        loadProjection();
+         loadProjection();
+     });
+     connect(&collectorProcess_, &QProcess::readyReadStandardOutput, this, [this]() {
+         const auto output = QString::fromUtf8(collectorProcess_.readAllStandardOutput());
+         const auto lines = output.split('\n', Qt::SkipEmptyParts);
+         for (const auto &line : lines) {
+             if (line.startsWith("Progress: ")) setStatus(line);
+         }
      });
      connect(&queueProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
          loading_ = false;
@@ -282,7 +289,10 @@ void QueueController::snooze(const QString &id, const QString &fingerprint, cons
 }
 
 QString QueueController::applicationDataFile(const QString &name) const {
-    const auto directory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    // Keep Linux aligned with the shared local-state contract instead of Qt's
+    // organization/application nesting ("Review Radar/Review Radar").
+    const auto dataRoot = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    const auto directory = QDir(dataRoot).filePath(QStringLiteral("review-radar"));
     QDir().mkpath(directory);
     return QDir(directory).filePath(name);
 }
