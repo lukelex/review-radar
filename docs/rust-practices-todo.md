@@ -18,7 +18,7 @@ the change can be reviewed and reverted independently.
   tested SQLite migrations.
 - [x] **Typed serialization boundaries** — reduce unvalidated `serde_json::Value`
   use in GitHub response handling while retaining intentionally raw payloads.
-- [ ] **Property-based invariants** — test ranking, membership deduplication,
+- [x] **Property-based invariants** — test ranking, membership deduplication,
   fingerprints, acknowledgement, and reactivation properties.
 - [ ] **Structured diagnostics** — add `tracing` spans and fields for capture,
   request, cache, hydration, and projection work without logging secrets.

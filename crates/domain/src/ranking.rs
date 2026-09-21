@@ -113,6 +113,7 @@ mod tests {
         Snapshot, WorkspaceView,
     };
     use std::collections::BTreeSet;
+    use proptest::prelude::*;
 
     #[test]
     fn friction_order_crosses_bands_and_handles_unknowns_and_stable_ties() {
@@ -214,5 +215,28 @@ mod tests {
         }
         assert_eq!(by_id("highest-friction").unwrap().id(), "highest-friction");
         assert!(by_id("unknown").is_none());
+    }
+
+    proptest! {
+        #[test]
+        fn tailored_ranking_is_deterministic_and_preserves_cards(ids in prop::collection::vec("[a-z]{1,12}", 1..24)) {
+            let snapshot = Snapshot::from_json(include_str!(
+                "../../../tests/fixtures/github/github-snapshot.json"
+            )).unwrap();
+            let template = snapshot.tailored_queue().remove(0);
+            let mut cards = ids.into_iter().map(|id| {
+                let mut card = template.clone();
+                card.id = id.into();
+                card
+            }).collect::<Vec<_>>();
+            let mut ranked_again = cards.clone();
+            TailoredRanking.rank(&mut cards);
+            TailoredRanking.rank(&mut ranked_again);
+            prop_assert_eq!(&cards, &ranked_again);
+            prop_assert_eq!(
+                cards.iter().map(|card| card.id.clone()).collect::<BTreeSet<_>>(),
+                ranked_again.iter().map(|card| card.id.clone()).collect::<BTreeSet<_>>()
+            );
+        }
     }
 }
