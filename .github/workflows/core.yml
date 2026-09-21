@@ -271,14 +271,20 @@ jobs:
       - name: Delete temporary GHCR image
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          package_name="${GITHUB_REPOSITORY#*/}/review-radar-builder"
+          package_path="${package_name//\//%2F}"
           version_id="$(gh api --paginate \
-            "/user/packages/container/review-radar-builder/versions?per_page=100" \
+            "/user/packages/container/$package_path/versions?per_page=100" \
             --jq '.[] | select(.metadata.container.tags[]? == "'"$IMAGE_TAG"'") | .id' \
-            | head -n 1)"
+            | head -n 1)" || {
+              echo "Temporary GHCR package was not available for cleanup; continuing."
+              exit 0
+            }
 
           if [ -n "$version_id" ]; then
             gh api --method DELETE \
-              "/user/packages/container/review-radar-builder/versions/$version_id"
+              "/user/packages/container/$package_path/versions/$version_id"
           fi
