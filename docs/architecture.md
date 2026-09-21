@@ -68,6 +68,12 @@ GitHub API -> github -> domain + state -> client view model -> native UI
 | macOS | SwiftUI | Menu bar and Notification Center |
 | Windows | WinUI 3 | System tray and Windows notifications |
 
+The initial Linux app in `apps/linux-qt` refreshes the Rust collector on open and
+every five minutes, then maps the ranked queue response into a fixed Qt model.
+It sends acknowledgement and snooze commands back to the state executable. Its
+QML layer only presents cards and client-side text search; it does not duplicate
+GitHub, domain, ranking, or SQLite behavior.
+
 ## Local state
 
 Local state is deliberately independent of GitHub's notification-read state. It

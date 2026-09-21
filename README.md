@@ -52,7 +52,9 @@ tests/fixtures/   GitHub snapshot fixtures shared by all clients
 ## Status
 
 The GitHub collector, ranked domain projection, local acknowledgement/snooze
-state, and platform-effect contracts are implemented. Native clients are pending.
+state, and platform-effect contracts are implemented. An initial standalone Linux
+Qt/QML client is available; Quickshell integration and native notifications are
+pending.
 
 ## GitHub data spike
 
