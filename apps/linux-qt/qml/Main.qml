@@ -15,21 +15,49 @@ ApplicationWindow {
     palette.windowText: Style.ink
     palette.highlight: Style.accent
     palette.base: "white"
+    FocusScope {
+        id: workspaceFocus
+        anchors.fill: parent
+        focus: true
+        z: -1
+        Shortcut { sequence: "Ctrl+K"; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
+        Shortcut { sequence: "Ctrl+R"; onActivated: queue.refresh() }
+        Shortcut { sequence: "Ctrl+N"; onActivated: root.nextWorkspace() }
+    Shortcut { sequence: "Ctrl+1"; context: Qt.ApplicationShortcut; onActivated: root.selectWorkspace(0) }
+    Shortcut { sequence: "Ctrl+2"; context: Qt.ApplicationShortcut; onActivated: root.selectWorkspace(1) }
+    Shortcut { sequence: "Ctrl+3"; context: Qt.ApplicationShortcut; onActivated: root.selectWorkspace(2) }
+    Shortcut { sequence: "Ctrl+4"; context: Qt.ApplicationShortcut; onActivated: root.selectWorkspace(3) }
+    Shortcut { sequence: "Ctrl+5"; context: Qt.ApplicationShortcut; onActivated: root.selectWorkspace(4) }
+        Shortcut { sequence: "Escape"; onActivated: root.resetWorkspaceFocus() }
+        Shortcut { sequence: "/"; enabled: !searchField.activeFocus; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
+        Shortcut { sequence: "Ctrl+D"; enabled: !searchField.activeFocus; onActivated: root.pageList(1) }
+        Shortcut { sequence: "Ctrl+U"; enabled: !searchField.activeFocus; onActivated: root.pageList(-1) }
+        Shortcut { sequence: "j"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(1) }
+        Shortcut { sequence: "k"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(-1) }
+        Shortcut { sequence: "l"; enabled: !searchField.activeFocus; onActivated: root.openNavigationDetails() }
+        Shortcut { sequence: "h"; enabled: !searchField.activeFocus && !!root.selected; onActivated: root.selected = null }
+        Shortcut { sequence: "o"; enabled: !searchField.activeFocus && !!root.selected; onActivated: queue.openUrl(root.selected.url) }
+        Shortcut { sequence: "a"; enabled: !searchField.activeFocus && !!root.selected; onActivated: acknowledgeDialog.open() }
+        Shortcut { sequence: "s"; enabled: !searchField.activeFocus && !!root.selected; onActivated: detailLoader.item.openSnoozeMenu() }
+        Shortcut { sequence: "y"; enabled: !searchField.activeFocus && !!root.selected; onActivated: queue.copyText(root.selected.url) }
+        Shortcut { sequence: "?"; enabled: !searchField.activeFocus; onActivated: shortcutsDialog.open() }
+    }
     property string search: searchField.text.trim().toLowerCase()
     property var selected: null
     property int revision: 0
     property int navigationIndex: -1
     property int matchingCount: { revision; return queue.pullRequests.matchingCount(search) }
     property var views: [
-        { key: "tailored", label: "Tailored to you", icon: "◎", subtitle: "Your next move, in focus." },
-        { key: "action", label: "Action", icon: "⚑", subtitle: "The work that needs you." },
-        { key: "my-prs", label: "My PRs", icon: "◇", subtitle: "Your work, from draft to done." },
-        { key: "following", label: "Following", icon: "◉", subtitle: "Stay close to the conversation." },
-        { key: "recent", label: "Recent", icon: "◷", subtitle: "A little perspective on what shipped. The last 14 days." }
+        { key: "tailored", label: "Tailored to you", icon: "◎", shortcut: "1", subtitle: "Your next move, in focus." },
+        { key: "action", label: "Action", icon: "⚑", shortcut: "2", subtitle: "The work that needs you." },
+        { key: "my-prs", label: "My PRs", icon: "◇", shortcut: "3", subtitle: "Your work, from draft to done." },
+        { key: "following", label: "Following", icon: "◉", shortcut: "4", subtitle: "Stay close to the conversation." },
+        { key: "recent", label: "Recent", icon: "◷", shortcut: "5", subtitle: "A little perspective on what shipped. The last 14 days." }
     ]
     property var activeView: views.filter(v => v.key === queue.view)[0] || views[0]
     property bool narrow: width < 1250
     property bool showSkeleton: queue.pullRequests.matchingCount("") === 0 && !root.search && (queue.loading || queue.refreshing)
+    property bool ctrlHeld: !!queue.controlHeld
     property var shortcutGroups: [
         { title: "Move around", items: [
             { keys: ["J"], label: "Next pull request", description: "Move down the queue" },
@@ -86,6 +114,9 @@ ApplicationWindow {
         const index = root.views.findIndex(view => view.key === queue.view)
         queue.view = root.views[(index + 1) % root.views.length].key
     }
+    function selectWorkspace(index) {
+        if (index >= 0 && index < root.views.length) queue.view = root.views[index].key
+    }
 
     function switchWorkspace(index) {
         if (index >= 0 && index < root.views.length) queue.view = root.views[index].key
@@ -97,27 +128,11 @@ ApplicationWindow {
         cards.contentY = Math.max(0, Math.min(maximum, cards.contentY + direction * page))
     }
 
-    Shortcut { sequence: "Ctrl+K"; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
-    Shortcut { sequence: "Ctrl+R"; onActivated: queue.refresh() }
-    Shortcut { sequence: "Ctrl+N"; onActivated: root.nextWorkspace() }
-    Shortcut { sequence: "Ctrl+1"; onActivated: root.switchWorkspace(0) }
-    Shortcut { sequence: "Ctrl+2"; onActivated: root.switchWorkspace(1) }
-    Shortcut { sequence: "Ctrl+3"; onActivated: root.switchWorkspace(2) }
-    Shortcut { sequence: "Ctrl+4"; onActivated: root.switchWorkspace(3) }
-    Shortcut { sequence: "Ctrl+5"; onActivated: root.switchWorkspace(4) }
-    Shortcut { sequence: "Escape"; onActivated: { if (root.selected) root.selected = null; else searchField.clear() } }
-    Shortcut { sequence: "/"; enabled: !searchField.activeFocus; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
-    Shortcut { sequence: "Ctrl+D"; enabled: !searchField.activeFocus; onActivated: root.pageList(1) }
-    Shortcut { sequence: "Ctrl+U"; enabled: !searchField.activeFocus; onActivated: root.pageList(-1) }
-    Shortcut { sequence: "j"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(1) }
-    Shortcut { sequence: "k"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(-1) }
-    Shortcut { sequence: "l"; enabled: !searchField.activeFocus; onActivated: root.openNavigationDetails() }
-    Shortcut { sequence: "h"; enabled: !searchField.activeFocus && !!root.selected; onActivated: root.selected = null }
-    Shortcut { sequence: "o"; enabled: !searchField.activeFocus && !!root.selected; onActivated: queue.openUrl(root.selected.url) }
-    Shortcut { sequence: "a"; enabled: !searchField.activeFocus && !!root.selected; onActivated: acknowledgeDialog.open() }
-    Shortcut { sequence: "s"; enabled: !searchField.activeFocus && !!root.selected; onActivated: detailLoader.item.openSnoozeMenu() }
-    Shortcut { sequence: "y"; enabled: !searchField.activeFocus && !!root.selected; onActivated: queue.copyText(root.selected.url) }
-    Shortcut { sequence: "?"; enabled: !searchField.activeFocus; onActivated: shortcutsDialog.open() }
+    function resetWorkspaceFocus() {
+        if (root.selected) root.selected = null
+        searchField.clear()
+        workspaceFocus.forceActiveFocus()
+    }
 
     Dialog {
         id: acknowledgeDialog
@@ -259,9 +274,18 @@ ApplicationWindow {
                         Accessible.role: Accessible.PageTab
                         onClicked: queue.view = modelData.key
                         background: Rectangle { radius: 8; color: nav.current ? "#e5e3fa" : nav.hovered ? "#e9ecf3" : "transparent"; border.color: nav.activeFocus ? Style.accent : "transparent" }
-                        contentItem: RowLayout {
-                            spacing: 12
-                            Label { text: nav.modelData.icon; color: nav.current ? Style.accent : Style.muted; font.pixelSize: 18; Layout.leftMargin: 8 }
+                         contentItem: RowLayout {
+                             spacing: 12
+                             Label {
+                                 Layout.preferredWidth: 18
+                                 text: nav.modelData.shortcut
+                                 color: nav.current ? Style.accent : Style.muted
+                                 font.pixelSize: 11
+                                 font.weight: Font.DemiBold
+                                 horizontalAlignment: Text.AlignHCenter
+                                 opacity: root.ctrlHeld ? 0.9 : 0
+                             }
+                             Label { text: nav.modelData.icon; color: nav.current ? Style.accent : Style.muted; font.pixelSize: 18; Layout.leftMargin: 8 }
                             Label { Layout.fillWidth: true; text: nav.modelData.label; color: nav.current ? Style.accent : Style.secondary; font.pixelSize: 12; font.weight: nav.current ? Font.DemiBold : Font.Normal }
                         }
                     }
