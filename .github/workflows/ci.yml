@@ -2,8 +2,12 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - '**/*.md'
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
 
 permissions:
   contents: read
@@ -13,33 +17,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build Rust toolchain image
-        run: docker build --target builder --tag review-radar-builder .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: builder
+          tags: review-radar-builder:ci
+          load: true
+          cache-from: type=gha,scope=review-radar-builder
+          cache-to: type=gha,mode=max,scope=review-radar-builder
 
       - name: Check formatting
-        run: docker run --rm review-radar-builder cargo fmt --all -- --check
+        run: docker run --rm review-radar-builder:ci cargo fmt --all -- --check
 
       - name: Run Clippy
         run: >-
-          docker run --rm review-radar-builder
+          docker run --rm review-radar-builder:ci
           cargo clippy --workspace --all-targets --locked -- -D warnings
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Build Rust toolchain image
-        run: docker build --target builder --tag review-radar-builder .
-
       - name: Run tests
-        run: docker run --rm review-radar-builder cargo test --workspace --locked
+        run: docker run --rm review-radar-builder:ci cargo test --workspace --locked
