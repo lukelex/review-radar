@@ -26,7 +26,7 @@ RUN touch crates/domain/src/lib.rs crates/github/src/main.rs crates/github/src/b
     && cargo build --release --locked -p review-radar-github \
     && cargo build --release --locked -p review-radar-state --bin review-radar-state
 
-FROM debian:bookworm-slim
+FROM debian:trixie
 
 USER root
 RUN apt-get update \
@@ -40,6 +40,7 @@ RUN apt-get update \
         qt6-base-dev \
         qt6-declarative-dev \
         qt6-qpa-plugins \
+        qt6-svg-plugins \
         qt6-wayland \
         qml6-module-qtquick \
         qml6-module-qtquick-controls \
