@@ -48,8 +48,21 @@ impl Snapshot {
         ranking: &dyn RankingStrategy,
         predecessor: Option<&Snapshot>,
     ) -> Vec<PullRequestCard> {
+        self.ranked_since_with_feedback(ranking, predecessor, &BTreeMap::new())
+    }
+
+    /// Project a capture while retaining feedback that a local client has not
+    /// acknowledged yet. Local feedback is deliberately separate from the
+    /// capture delta: bounded event windows may stop reporting an event after
+    /// it was first observed.
+    pub fn ranked_since_with_feedback(
+        &self,
+        ranking: &dyn RankingStrategy,
+        predecessor: Option<&Snapshot>,
+        retained_feedback: &BTreeMap<String, BTreeSet<String>>,
+    ) -> Vec<PullRequestCard> {
         let memberships = self.memberships();
-        let new_feedback = predecessor
+        let detected_feedback = predecessor
             .and_then(|previous| {
                 previous
                     .captured_at
@@ -61,14 +74,51 @@ impl Snapshot {
             .pull_requests
             .iter()
             .map(|pr| {
+                let mut feedback = detected_feedback.get(&pr.id).cloned().unwrap_or_default();
+                let retained = retained_feedback
+                    .get(&pr.id)
+                    .into_iter()
+                    .flat_map(|fingerprints| {
+                        events(pr)
+                            .into_iter()
+                            .filter(|event| fingerprints.contains(&event.fingerprint))
+                            .collect::<Vec<_>>()
+                    });
+                for event in retained {
+                    if !feedback
+                        .iter()
+                        .any(|existing| existing.fingerprint == event.fingerprint)
+                    {
+                        feedback.push(event);
+                    }
+                }
+                // Preserve the reason even when a bounded current event window
+                // no longer contains the event. Its fingerprint remains the
+                // local evidence and the current PR timestamp is conservative.
+                for fingerprint in retained_feedback
+                    .get(&pr.id)
+                    .into_iter()
+                    .flat_map(|set| set.iter())
+                {
+                    if !feedback
+                        .iter()
+                        .any(|event| &event.fingerprint == fingerprint)
+                    {
+                        feedback.push(Event {
+                            fingerprint: fingerprint.clone(),
+                            kind: EventKind::Comment,
+                            actor: None,
+                            state: None,
+                            occurred_at: pr.updated_at.clone(),
+                            is_bot: false,
+                        });
+                    }
+                }
                 project(
                     pr,
                     memberships.get(&pr.id),
                     self.review_histories.get(&pr.id),
-                    new_feedback
-                        .get(&pr.id)
-                        .map(Vec::as_slice)
-                        .unwrap_or_default(),
+                    &feedback,
                 )
             })
             .collect::<Vec<_>>();
@@ -94,7 +144,17 @@ impl Snapshot {
         ranking: &dyn RankingStrategy,
         predecessor: Option<&Snapshot>,
     ) -> Vec<PullRequestCard> {
-        self.ranked_since(ranking, predecessor)
+        self.view_with_ranking_since_and_feedback(view, ranking, predecessor, &BTreeMap::new())
+    }
+
+    pub fn view_with_ranking_since_and_feedback(
+        &self,
+        view: WorkspaceView,
+        ranking: &dyn RankingStrategy,
+        predecessor: Option<&Snapshot>,
+        retained_feedback: &BTreeMap<String, BTreeSet<String>>,
+    ) -> Vec<PullRequestCard> {
+        self.ranked_since_with_feedback(ranking, predecessor, retained_feedback)
             .into_iter()
             .filter(|card| match view {
                 WorkspaceView::Tailored => true,
@@ -393,6 +453,8 @@ pub struct PullRequestCard {
     /// Stable for unchanged captured signals; changes when the current action,
     /// review, check, merge, or latest-activity signal changes.
     pub current_fingerprint: String,
+    #[serde(skip)]
+    pub feedback_fingerprints: Vec<String>,
     pub events: Vec<Event>,
 }
 
@@ -522,6 +584,10 @@ fn project(
         explanation: attention::explain(pr, action, authored, attention_required, checks),
         review_friction: friction::assess(history, lifecycle(&pr.state), pr.is_draft),
         current_fingerprint,
+        feedback_fingerprints: new_feedback
+            .iter()
+            .map(|event| event.fingerprint.clone())
+            .collect(),
         events,
     }
 }
@@ -783,6 +849,30 @@ mod tests {
         assert!(current
             .view_with_ranking_since(WorkspaceView::Action, &TailoredRanking, Some(&observed))
             .is_empty());
+    }
+
+    #[test]
+    fn locally_retained_feedback_survives_a_bounded_event_window() {
+        let current = feedback_snapshot("2026-09-21T12:05:00Z", vec![], vec![]);
+        let mut retained = BTreeMap::new();
+        retained.insert(
+            "pr-001".into(),
+            ["comment:comment-1:2026-09-21T12:01:00Z".into()]
+                .into_iter()
+                .collect(),
+        );
+        let card = current
+            .view_with_ranking_since_and_feedback(
+                WorkspaceView::Action,
+                &TailoredRanking,
+                None,
+                &retained,
+            )
+            .pop()
+            .unwrap();
+        assert_eq!(card.action, Action::NewFeedback);
+        assert_eq!(card.feedback_fingerprints.len(), 1);
+        assert!(card.current_fingerprint.contains("comment:comment-1"));
     }
 
     #[test]

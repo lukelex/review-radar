@@ -29,6 +29,13 @@ CREATE TABLE IF NOT EXISTS attention_observations (
   last_emitted_fingerprint TEXT,
   last_emitted_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS outstanding_feedback (
+  pull_request_id TEXT NOT NULL,
+  feedback_fingerprint TEXT NOT NULL,
+  detected_at TEXT NOT NULL,
+  PRIMARY KEY (pull_request_id, feedback_fingerprint)
+);
 "#;
 
 #[derive(Debug)]
@@ -128,7 +135,51 @@ impl StateStore {
                acknowledged_at = excluded.acknowledged_at",
             params![pull_request_id, newest_event_fingerprint, timestamp(now)],
         )?;
+        self.connection.execute(
+            "DELETE FROM outstanding_feedback WHERE pull_request_id = ?",
+            [pull_request_id],
+        )?;
         Ok(())
+    }
+
+    /// Retain feedback discovered by a capture independently of the capture's
+    /// bounded event window. Repeated observations are idempotent.
+    pub fn record_feedback(
+        &self,
+        pull_request_id: &str,
+        fingerprints: &[String],
+        now: DateTime<Utc>,
+    ) -> Result<()> {
+        for fingerprint in fingerprints {
+            self.connection.execute(
+                "INSERT OR IGNORE INTO outstanding_feedback
+                 (pull_request_id, feedback_fingerprint, detected_at)
+                 VALUES (?, ?, ?)",
+                params![pull_request_id, fingerprint, timestamp(now)],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn outstanding_feedback(
+        &self,
+    ) -> Result<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>> {
+        let mut statement = self.connection.prepare(
+            "SELECT pull_request_id, feedback_fingerprint
+             FROM outstanding_feedback ORDER BY pull_request_id, feedback_fingerprint",
+        )?;
+        let rows = statement.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        let mut feedback = std::collections::BTreeMap::new();
+        for row in rows {
+            let (pull_request_id, fingerprint) = row?;
+            feedback
+                .entry(pull_request_id)
+                .or_insert_with(std::collections::BTreeSet::new)
+                .insert(fingerprint);
+        }
+        Ok(feedback)
     }
 
     pub fn snooze_until(
@@ -384,6 +435,17 @@ mod tests {
             .unwrap();
         assert!(store.is_suppressed("pr-1", "event-1", now()).unwrap());
         assert!(!store.is_suppressed("pr-1", "event-2", now()).unwrap());
+    }
+
+    #[test]
+    fn outstanding_feedback_survives_refresh_and_is_cleared_by_acknowledgement() {
+        let store = StateStore::in_memory().unwrap();
+        store
+            .record_feedback("pr-1", &["comment:1:v1".into()], now())
+            .unwrap();
+        assert!(store.outstanding_feedback().unwrap()["pr-1"].contains("comment:1:v1"));
+        store.acknowledge("pr-1", "current:pr-1", now()).unwrap();
+        assert!(store.outstanding_feedback().unwrap().is_empty());
     }
 
     #[test]

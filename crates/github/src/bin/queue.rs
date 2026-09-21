@@ -31,10 +31,20 @@ fn main() -> Result<()> {
     let capture_id = config.capture_id.unwrap_or(latest_capture_id(&connection)?);
     let (captured_at, snapshot) = load_snapshot(&connection, capture_id)?;
     let predecessor = load_predecessor_snapshot(&connection, capture_id)?;
-    let cards =
-        snapshot.view_with_ranking_since(config.view, ranking.as_ref(), predecessor.as_ref());
     let state = StateStore::open(&config.state_database)
         .with_context(|| format!("cannot open {}", config.state_database.display()))?;
+    let retained_feedback = state.outstanding_feedback()?;
+    let cards = snapshot.view_with_ranking_since_and_feedback(
+        config.view,
+        ranking.as_ref(),
+        predecessor.as_ref(),
+        &retained_feedback,
+    );
+    for card in &cards {
+        if !card.feedback_fingerprints.is_empty() {
+            state.record_feedback(&card.id, &card.feedback_fingerprints, Utc::now())?;
+        }
+    }
     let projection = apply_local_state(cards, &state, config.record_attention, Utc::now())?;
     println!(
         "{}",
@@ -527,7 +537,9 @@ mod tests {
         );
         assert_eq!(
             assessment.level,
-            Some(review_radar_domain::friction::Level::Moderate)
+            // One moderate duration signal plus one moderate rework signal
+            // combines to a high overall assessment under review-friction-v1.
+            Some(review_radar_domain::friction::Level::High)
         );
     }
 
@@ -604,6 +616,7 @@ mod tests {
                 },
             },
             current_fingerprint: current_fingerprint.into(),
+            feedback_fingerprints: Vec::new(),
             events: Vec::new(),
         }
     }
