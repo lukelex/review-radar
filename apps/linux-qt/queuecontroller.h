@@ -16,6 +16,7 @@ public:
         ActionLabelRole, AttentionRequiredRole, FingerprintRole, ExplanationHeadingRole,
         ReasonsRole, HealthRole, NextActionLabelRole, NextActionUrlRole, FrictionStatusRole,
         FrictionLevelRole, FrictionDetailRole, EventsRole,
+        LifecycleRole, UpdatedAtRole,
     };
 
     explicit PullRequestModel(QObject *parent = nullptr);
@@ -23,6 +24,8 @@ public:
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
     void replace(const QJsonArray &cards);
+    Q_INVOKABLE QVariantMap get(int index) const;
+    Q_INVOKABLE int matchingCount(const QString &search) const;
 
 private:
     struct Card {
@@ -32,6 +35,7 @@ private:
         bool attentionRequired = false;
         QStringList reasons;
         QVariantList events;
+        QString lifecycle, updatedAt;
     };
     QList<Card> cards_;
 };

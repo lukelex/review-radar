@@ -30,12 +30,12 @@ QStringList reasonList(const QJsonArray &source) {
 
 QString healthSummary(const QJsonObject &health) {
     QStringList healthSignals;
-    const auto review = health.value("reviewDecision").toString();
-    const auto checks = health.value("checks").toString();
+    const auto review = health.value("reviewDecision").toString().toLower().replace('_', ' ');
+    const auto checks = health.value("checks").toString().toLower().replace('-', ' ');
     if (!review.isEmpty()) healthSignals.append("Review: " + review);
     else if (health.value("isDraft").toBool()) healthSignals.append("Draft");
     if (!checks.isEmpty()) healthSignals.append("Checks: " + checks);
-    const auto mergeable = health.value("mergeable").toString();
+    const auto mergeable = health.value("mergeable").toString().toLower().replace('_', ' ');
     if (!mergeable.isEmpty()) healthSignals.append("Merge: " + mergeable);
     return healthSignals.join(" · ");
 }
@@ -88,6 +88,8 @@ QVariant PullRequestModel::data(const QModelIndex &index, int role) const {
     case FrictionLevelRole: return card.frictionLevel;
     case FrictionDetailRole: return card.frictionDetail;
     case EventsRole: return card.events;
+    case LifecycleRole: return card.lifecycle;
+    case UpdatedAtRole: return card.updatedAt;
     default: return {};
     }
 }
@@ -100,7 +102,26 @@ QHash<int, QByteArray> PullRequestModel::roleNames() const {
             {NextActionLabelRole, "nextActionLabel"}, {NextActionUrlRole, "nextActionUrl"},
              {FrictionStatusRole, "frictionStatus"}, {FrictionLevelRole, "frictionLevel"},
              {FrictionDetailRole, "frictionDetail"},
-            {EventsRole, "events"}};
+            {EventsRole, "events"}, {LifecycleRole, "lifecycle"}, {UpdatedAtRole, "updatedAt"}};
+}
+
+QVariantMap PullRequestModel::get(int row) const {
+    QVariantMap result;
+    if (row < 0 || row >= cards_.size()) return result;
+    const auto roles = roleNames();
+    for (auto it = roles.cbegin(); it != roles.cend(); ++it)
+        result.insert(QString::fromUtf8(it.value()), data(index(row), it.key()));
+    return result;
+}
+
+int PullRequestModel::matchingCount(const QString &search) const {
+    int count = 0;
+    for (const auto &card : cards_) {
+        if (card.title.contains(search, Qt::CaseInsensitive)
+            || card.repository.contains(search, Qt::CaseInsensitive)
+            || QString::number(card.number).contains(search)) ++count;
+    }
+    return count;
 }
 
 void PullRequestModel::replace(const QJsonArray &cards) {
@@ -121,7 +142,8 @@ void PullRequestModel::replace(const QJsonArray &cards) {
                          friction.value("status").toString(), friction.value("level").toString(),
                          frictionSummary(friction), object.value("number").toInt(),
                          object.value("attentionRequired").toBool(), reasonList(reasons),
-                         eventList(object.value("events").toArray())});
+                         eventList(object.value("events").toArray()),
+                         object.value("lifecycle").toString(), object.value("updatedAt").toString()});
     }
     endResetModel();
 }

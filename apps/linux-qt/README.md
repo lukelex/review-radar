@@ -33,10 +33,36 @@ core. Quickshell may launch this binary or show an attention count, but is not
 required by the dashboard. The Qt build was verified locally with the same CMake
 commands above; runtime GitHub access still requires `GH_TOKEN`.
 
+## Workspace design
+
+The high-fidelity references and rendered Qt screenshots live in
+[`docs/mockups/high`](../../docs/mockups/high/README.md). The workspace uses
+shared QML style tokens, cards, badges, and controls. Select a card to open its
+health, friction, and captured activity in the detail panel; narrow windows show
+details in place of the list. Selection follows the PR identity across model
+refreshes and clears when the PR leaves the current dataset.
+
+- **Ctrl+K**: focus local search.
+- **Ctrl+R**: refresh GitHub.
+- **Escape**: close details, then clear search.
+- Browser, mark-read, snooze, and copy-link actions are available in details.
+
+Run `ctest --test-dir build/linux-qt --output-on-failure` after building to check
+startup and the populated workspace. The UI test uses isolated illustrative data
+and checks search, selection, actions, narrow layout, and model replacement.
+With the Docker desktop image, use:
+
+```sh
+docker run --rm --user 0 --entrypoint ctest review-radar-ui-check \
+  --test-dir /tmp/review-radar-linux-build --output-on-failure
+```
+
+Build the split images with `docker compose build`.
+
 ## Docker desktop session
 
-The Docker target builds the Qt app and Rust executables together. Start it from a
-graphical host session:
+The split Docker images build the Rust core and Qt app separately. Start the
+desktop image from a graphical host session:
 
 ```sh
 ./scripts/desktop

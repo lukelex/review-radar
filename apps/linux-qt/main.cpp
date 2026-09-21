@@ -1,5 +1,6 @@
 #include <QGuiApplication>
 #include <QCoreApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QTimer>
@@ -10,6 +11,7 @@ int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("Review Radar"));
     app.setOrganizationName(QStringLiteral("Review Radar"));
+    app.setWindowIcon(QIcon(QStringLiteral(":/assets/logo.svg")));
 
     QueueController queue;
     QQmlApplicationEngine engine;

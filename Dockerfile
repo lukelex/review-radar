@@ -33,10 +33,12 @@ RUN apt-get update \
         cmake \
         g++ \
         libgl1-mesa-dri \
+        libqt6svg6 \
         make \
         qt6-base-dev \
         qt6-declarative-dev \
         qt6-qpa-plugins \
+        qt6-svg-plugins \
         qt6-wayland \
         qml6-module-qtquick \
         qml6-module-qtquick-controls \
@@ -52,6 +54,7 @@ COPY --from=builder /app/target/release/review-radar-seed-export /usr/local/bin/
 COPY --from=builder /app/target/release/review-radar-queue /usr/local/bin/review-radar-queue
 COPY --from=builder /app/target/release/review-radar-state /usr/local/bin/review-radar-state
 COPY apps/linux-qt /src/apps/linux-qt
+COPY docs/assets/logo.svg /src/docs/assets/logo.svg
 RUN cmake -S /src/apps/linux-qt -B /tmp/review-radar-linux-build \
     && cmake --build /tmp/review-radar-linux-build --parallel \
     && cmake --install /tmp/review-radar-linux-build --prefix /usr/local \

@@ -1,5 +1,8 @@
 # Low-fidelity mockups
 
+The [high-fidelity references and Qt implementation screenshots](high/README.md)
+build on these wireframes.
+
 Static design proposals, using illustrative data. Each screen is available as a
 PNG and an editable SVG of the same name. Counts describe the full view; list
 screens show only a visible subset. These are proposed UI behaviors, not a record

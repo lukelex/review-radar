@@ -20,16 +20,42 @@ qt_add_executable(review-radar-linux
     queuecontroller.h
 )
 
+set_source_files_properties(qml/Style.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
+set(brand_assets "${CMAKE_CURRENT_SOURCE_DIR}/../../docs/assets")
+qt_add_resources(review-radar-linux brand
+    PREFIX "/assets" BASE "${brand_assets}" FILES "${brand_assets}/logo.svg"
+)
+
+set(workspace_qml qml/Main.qml qml/Style.qml qml/RadarButton.qml qml/Badge.qml
+                  qml/PrCard.qml qml/DetailPanel.qml)
+
 qt_add_qml_module(review-radar-linux
     URI ReviewRadar
     VERSION 1.0
     RESOURCE_PREFIX "/"
-    QML_FILES qml/Main.qml
+    QML_FILES ${workspace_qml}
 )
 
 target_link_libraries(review-radar-linux PRIVATE Qt6::Core Qt6::DBus Qt6::Gui Qt6::Qml Qt6::Quick)
 
 if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    qt_add_executable(review-radar-ui-test tests/workspace.cpp queuecontroller.cpp queuecontroller.h)
+    qt_add_resources(review-radar-ui-test brand
+        PREFIX "/assets" BASE "${brand_assets}" FILES "${brand_assets}/logo.svg"
+    )
+    target_include_directories(review-radar-ui-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(review-radar-ui-test PRIVATE Qt6::Test Qt6::Core Qt6::DBus Qt6::Gui Qt6::Qml Qt6::Quick)
+    qt_add_qml_module(review-radar-ui-test
+        URI ReviewRadarTest VERSION 1.0 RESOURCE_PREFIX "/"
+        OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/test-qml
+        QML_FILES ${workspace_qml}
+    )
+    add_test(NAME review-radar-workspace COMMAND review-radar-ui-test)
+    set_tests_properties(review-radar-workspace PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+    )
     add_test(NAME review-radar-linux-starts COMMAND review-radar-linux --smoke-test)
     set_tests_properties(review-radar-linux-starts PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
