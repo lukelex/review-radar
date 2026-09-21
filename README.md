@@ -26,7 +26,9 @@ The shared core owns GitHub data, ranking, event transitions, acknowledgement,
 and snoozing. Platform shells own only presentation and OS integration.
 
 See [the project plan](docs/project-plan.md) and
-[the architecture](docs/architecture.md).
+[the architecture](docs/architecture.md). The
+[prototype findings](docs/prototype-findings.md) record which behavior is being
+carried forward from the existing Quickshell implementation.
 
 ## Repository layout
 
