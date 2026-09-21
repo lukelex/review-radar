@@ -1,5 +1,6 @@
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
+use review_radar_domain::{ranking::by_id, Snapshot, WorkspaceView};
 use serde_json::Value;
 
 fn seed() -> Value {
@@ -52,6 +53,33 @@ fn generalized_seed_retains_real_capture_shape() {
 #[test]
 fn every_identity_field_is_generalized() {
     visit(&seed(), "");
+}
+
+#[test]
+fn fixture_projects_each_supported_workspace_view() {
+    let snapshot = Snapshot::from_json(&fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/github/github-snapshot.json"),
+    )
+    .unwrap())
+    .unwrap();
+    let ranking = by_id("tailored").unwrap();
+
+    for view in [
+        WorkspaceView::Tailored,
+        WorkspaceView::Action,
+        WorkspaceView::MyPrs,
+        WorkspaceView::Following,
+        WorkspaceView::Recent,
+    ] {
+        let cards = snapshot.view_with_ranking(view, ranking.as_ref());
+        let ids = cards.iter().map(|card| &card.id).collect::<BTreeSet<_>>();
+        assert_eq!(ids.len(), cards.len(), "duplicate cards in {view:?}");
+        assert!(!cards.iter().any(|card| card.id.is_empty()));
+        if view == WorkspaceView::Action {
+            assert!(cards.iter().all(|card| card.attention_required));
+        }
+    }
 }
 
 fn visit(value: &Value, key: &str) {

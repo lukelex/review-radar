@@ -102,8 +102,9 @@ opens the associated pull request in the browser. The remaining roadmap is:
   and reject databases created by a newer release.
 - [ ] **Hardening:** audit keyboard navigation, screen-reader labels, and color
   contrast in the Qt/QML shell.
-- [ ] **Hardening:** add fixture-driven end-to-end projection and notification
-  deduplication tests.
+- [x] **Hardening:** add fixture-driven end-to-end projection and notification
+  deduplication tests. The Qt workspace test also covers the Vim navigation
+  contract.
 - [ ] **Quickshell integration:** provide a bar/status adapter without moving
   collection, ranking, or notification state into QML.
 - [ ] **macOS client:** implement the SwiftUI shell against the shared core.

@@ -102,6 +102,33 @@ void WorkspaceTest::workspace() {
         search->setProperty("text", "");
         QTRY_COMPARE(window->property("matchingCount").toInt(), 3);
 
+        // Basic Vim navigation follows the filtered list without stealing
+        // keystrokes from the search field.
+        QCOMPARE(window->property("navigationIndex").toInt(), -1);
+        QTest::keyClick(window, Qt::Key_J);
+        QTRY_COMPARE(window->property("navigationIndex").toInt(), 0);
+        QTest::keyClick(window, Qt::Key_J);
+        QTRY_COMPARE(window->property("navigationIndex").toInt(), 1);
+        QTest::keyClick(window, Qt::Key_K);
+        QTRY_COMPARE(window->property("navigationIndex").toInt(), 0);
+        QTest::keyClick(window, Qt::Key_L);
+        QTRY_VERIFY(window->findChild<QObject *>("detail-panel"));
+        QCOMPARE(window->findChild<QObject *>("detail-panel")
+                     ->property("entry").toMap().value("pullRequestId").toString(),
+                 QString("pr-142"));
+        QTest::keyClick(window, Qt::Key_J);
+        QTRY_COMPARE(window->findChild<QObject *>("detail-panel")
+                         ->property("entry").toMap().value("pullRequestId").toString(),
+                     QString("pr-87"));
+        QTest::keyClick(window, Qt::Key_H);
+        QTRY_VERIFY(!window->findChild<QObject *>("detail-panel"));
+
+        search->setProperty("text", "WEB");
+        QMetaObject::invokeMethod(search, "forceActiveFocus");
+        QTest::keyClick(window, Qt::Key_J);
+        QCOMPARE(window->property("navigationIndex").toInt(), 1);
+        search->setProperty("text", "");
+
         auto screenshot = [window](const QString &name) {
             const auto directory = qEnvironmentVariable("UI_SCREENSHOT_DIR");
             if (directory.isEmpty()) return;
@@ -121,6 +148,8 @@ void WorkspaceTest::workspace() {
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
                           open->mapToScene(QPointF(open->width() / 2, open->height() / 2)).toPoint());
         QCOMPARE(queue.opened, QString("https://github.com/example/api/pull/142/files"));
+        QTest::keyClick(window, Qt::Key_O);
+        QCOMPARE(queue.opened, QString("https://github.com/example/api/pull/142"));
         auto *read = window->findChild<QQuickItem *>("detail-read");
         QVERIFY(read);
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
