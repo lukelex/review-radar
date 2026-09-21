@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Rust toolchain image
+        run: docker build --target builder --tag review-radar-builder .
+
+      - name: Check formatting
+        run: docker run --rm review-radar-builder cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: >-
+          docker run --rm review-radar-builder
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Rust toolchain image
+        run: docker build --target builder --tag review-radar-builder .
+
+      - name: Run tests
+        run: docker run --rm review-radar-builder cargo test --workspace --locked

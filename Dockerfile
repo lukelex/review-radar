@@ -1,6 +1,6 @@
 FROM rust:1.90-bookworm AS builder
 WORKDIR /app
-RUN rustup component add rustfmt
+RUN rustup component add clippy rustfmt
 COPY Cargo.toml Cargo.lock ./
 COPY crates/domain/Cargo.toml crates/domain/Cargo.toml
 COPY crates/github/Cargo.toml crates/github/Cargo.toml
