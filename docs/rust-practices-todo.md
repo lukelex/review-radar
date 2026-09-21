@@ -24,7 +24,7 @@ the change can be reviewed and reverted independently.
   request, cache, hydration, and projection work without logging secrets.
 - [ ] **Resilient networking** — add bounded retries/backoff, explicit timeout
   categories, rate-limit behavior, and cancellation-safe refresh boundaries.
-- [ ] **CI quality policy** — enforce formatting, clippy policy, unsafe-code
+- [x] **CI quality policy** — enforce formatting, clippy policy, unsafe-code
   policy, dependency advisories, and license checks.
 - [ ] **Library-first core** — move reusable collector, queue, and configuration
   logic out of binary-only modules for future clients and focused tests.
