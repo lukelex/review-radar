@@ -102,6 +102,20 @@ void WorkspaceTest::workspace() {
         search->setProperty("text", "");
         QTRY_COMPARE(window->property("matchingCount").toInt(), 3);
 
+        QTest::keyClick(window, Qt::Key_3, Qt::ControlModifier);
+        QTRY_COMPARE(queue.view, QString("my-prs"));
+        QTest::keyClick(window, Qt::Key_1, Qt::ControlModifier);
+        QTRY_COMPARE(queue.view, QString("tailored"));
+
+        auto *list = window->findChild<QQuickItem *>("pull-request-list");
+        QVERIFY(list);
+        const auto initialContentY = list->property("contentY").toReal();
+        QTest::keyClick(window, Qt::Key_D, Qt::ControlModifier);
+        QTRY_VERIFY(list->property("contentY").toReal() > initialContentY);
+        const auto pagedContentY = list->property("contentY").toReal();
+        QTest::keyClick(window, Qt::Key_U, Qt::ControlModifier);
+        QTRY_VERIFY(list->property("contentY").toReal() < pagedContentY);
+
         // Basic Vim navigation follows the filtered list without stealing
         // keystrokes from the search field.
         QCOMPARE(window->property("navigationIndex").toInt(), -1);

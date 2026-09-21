@@ -30,6 +30,25 @@ ApplicationWindow {
     property var activeView: views.filter(v => v.key === queue.view)[0] || views[0]
     property bool narrow: width < 1250
     property bool showSkeleton: queue.pullRequests.matchingCount("") === 0 && !root.search && (queue.loading || queue.refreshing)
+    property var shortcutGroups: [
+        { title: "Move around", items: [
+            { keys: ["J"], label: "Next pull request", description: "Move down the queue" },
+            { keys: ["K"], label: "Previous pull request", description: "Move up the queue" },
+            { keys: ["L"], label: "Open details", description: "Inspect the selected pull request" },
+            { keys: ["H"], label: "Close details", description: "Return to the queue" }
+        ]},
+        { title: "Take action", items: [
+            { keys: ["O"], label: "Open in browser", description: "Open the selected pull request" },
+            { keys: ["A"], label: "Mark as read", description: "Quiet this pull request" },
+            { keys: ["S"], label: "Snooze", description: "Choose a later reminder" },
+            { keys: ["Y"], label: "Copy link", description: "Copy the pull request URL" }
+        ]},
+        { title: "Workspace", items: [
+            { keys: ["/"], label: "Focus search", description: "Search the current workspace" },
+            { keys: ["Ctrl", "N"], label: "Next workspace", description: "Move to the next view" },
+            { keys: ["Esc"], label: "Close or clear", description: "Close details, then clear search" }
+        ]}
+    ]
 
     function matches(index) {
         const entry = queue.pullRequests.get(index)
@@ -68,11 +87,28 @@ ApplicationWindow {
         queue.view = root.views[(index + 1) % root.views.length].key
     }
 
+    function switchWorkspace(index) {
+        if (index >= 0 && index < root.views.length) queue.view = root.views[index].key
+    }
+
+    function pageList(direction) {
+        const page = Math.max(1, cards.height * 0.85)
+        const maximum = Math.max(0, cards.contentHeight - cards.height)
+        cards.contentY = Math.max(0, Math.min(maximum, cards.contentY + direction * page))
+    }
+
     Shortcut { sequence: "Ctrl+K"; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
     Shortcut { sequence: "Ctrl+R"; onActivated: queue.refresh() }
     Shortcut { sequence: "Ctrl+N"; onActivated: root.nextWorkspace() }
+    Shortcut { sequence: "Ctrl+1"; onActivated: root.switchWorkspace(0) }
+    Shortcut { sequence: "Ctrl+2"; onActivated: root.switchWorkspace(1) }
+    Shortcut { sequence: "Ctrl+3"; onActivated: root.switchWorkspace(2) }
+    Shortcut { sequence: "Ctrl+4"; onActivated: root.switchWorkspace(3) }
+    Shortcut { sequence: "Ctrl+5"; onActivated: root.switchWorkspace(4) }
     Shortcut { sequence: "Escape"; onActivated: { if (root.selected) root.selected = null; else searchField.clear() } }
     Shortcut { sequence: "/"; enabled: !searchField.activeFocus; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
+    Shortcut { sequence: "Ctrl+D"; enabled: !searchField.activeFocus; onActivated: root.pageList(1) }
+    Shortcut { sequence: "Ctrl+U"; enabled: !searchField.activeFocus; onActivated: root.pageList(-1) }
     Shortcut { sequence: "j"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(1) }
     Shortcut { sequence: "k"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(-1) }
     Shortcut { sequence: "l"; enabled: !searchField.activeFocus; onActivated: root.openNavigationDetails() }
@@ -98,21 +134,81 @@ ApplicationWindow {
 
     Dialog {
         id: shortcutsDialog
-        title: "Keyboard shortcuts"
         modal: true
-        standardButtons: Dialog.Ok
-        Column {
-            spacing: 8
-            Label { text: "j / k   Move between pull requests" }
-            Label { text: "l       Open details" }
-            Label { text: "o       Open PR in browser" }
-            Label { text: "a       Mark as read" }
-            Label { text: "s       Snooze" }
-            Label { text: "y       Copy PR link" }
-            Label { text: "/       Focus search" }
-            Label { text: "Ctrl+N  Next workspace" }
-            Label { text: "Esc     Close details or clear search" }
+        width: Math.min(parent.width - 40, 540)
+        padding: 0
+        topPadding: 0
+        bottomPadding: 0
+        leftPadding: 0
+        rightPadding: 0
+        contentItem: ColumnLayout {
+            spacing: 0
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: 96
+                color: Style.tint
+                topLeftRadius: 14
+                topRightRadius: 14
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 24
+                    anchors.rightMargin: 24
+                    spacing: 14
+                    Rectangle {
+                        implicitWidth: 38
+                        implicitHeight: 38
+                        radius: 10
+                        color: "white"
+                        Image {
+                            anchors.centerIn: parent
+                            width: 30; height: 30
+                            source: "qrc:/assets/logo.svg"
+                            sourceSize: Qt.size(60, 60)
+                            fillMode: Image.PreserveAspectFit
+                            Accessible.ignored: true
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 3
+                        Label { text: "Keyboard shortcuts"; color: Style.ink; font.pixelSize: 18; font.weight: Font.Bold }
+                        Label { text: "Move through your workspace without leaving the queue."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
+                    }
+                }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 18
+                Layout.margins: 24
+                Repeater {
+                    model: root.shortcutGroups
+                    delegate: ColumnLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 8
+                        Label { text: modelData.title.toUpperCase(); color: Style.muted; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1 }
+                        Repeater {
+                            model: modelData.items
+                            delegate: ShortcutRow {
+                                required property var modelData
+                                keys: modelData.keys
+                                label: modelData.label
+                                description: modelData.description
+                            }
+                        }
+                    }
+                }
+            }
+            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Style.line }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.margins: 18
+                spacing: 10
+                Label { Layout.fillWidth: true; text: "Press ? anytime to open this guide"; color: Style.muted; font.pixelSize: 11 }
+                RadarButton { text: "Done"; primary: true; onClicked: shortcutsDialog.close() }
+            }
         }
+        background: Rectangle { color: "white"; radius: 14; border.color: Style.line; border.width: 1 }
     }
     Connections {
         target: queue.pullRequests
@@ -242,8 +338,9 @@ ApplicationWindow {
                     Item {
                         Layout.fillWidth: true; Layout.fillHeight: true
                         visible: !root.selected || !root.narrow
-                        ListView {
-                            id: cards
+                         ListView {
+                             id: cards
+                             objectName: "pull-request-list"
                             anchors.fill: parent; clip: true
                             model: queue.pullRequests
                             boundsBehavior: Flickable.StopAtBounds
