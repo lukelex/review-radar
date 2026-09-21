@@ -1,0 +1,21 @@
+[package]
+name = "review-radar-github"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+rusqlite.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "review-radar-github"
+path = "src/main.rs"
+
+[[bin]]
+name = "review-radar-seed-export"
+path = "src/bin/seed_export.rs"

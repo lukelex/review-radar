@@ -1,0 +1,67 @@
+query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: Int!) {
+  search(query: $search, type: ISSUE, first: $pageSize, after: $cursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+        id number title url state isDraft createdAt updatedAt closedAt mergedAt
+        author { login }
+        repository { nameWithOwner }
+        reviewDecision mergeable mergeStateStatus
+        reviewRequests(first: 100) {
+          totalCount
+          pageInfo { hasNextPage }
+          nodes {
+            requestedReviewer {
+              __typename
+              ... on User { login }
+              ... on Team { slug organization { login } }
+            }
+          }
+        }
+        reviews(last: $eventLimit) {
+          totalCount
+          pageInfo { hasPreviousPage }
+          nodes { id author { login } state submittedAt updatedAt }
+        }
+        comments(last: $eventLimit) {
+          totalCount
+          pageInfo { hasPreviousPage }
+          nodes { id author { login } createdAt updatedAt }
+        }
+        reviewThreads(last: $eventLimit) {
+          totalCount
+          pageInfo { hasPreviousPage }
+          nodes {
+            id isResolved
+            comments(last: $eventLimit) {
+              totalCount
+              pageInfo { hasPreviousPage }
+              nodes { id author { login } createdAt updatedAt }
+            }
+          }
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              oid committedDate
+              statusCheckRollup {
+                state
+                contexts(first: 100) {
+                  totalCount
+                  pageInfo { hasNextPage }
+                  nodes {
+                    __typename
+                    ... on CheckRun { id name status conclusion startedAt completedAt }
+                    ... on StatusContext { id context state createdAt }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  rateLimit { cost remaining resetAt }
+}

@@ -46,4 +46,24 @@ tests/fixtures/   GitHub snapshot fixtures shared by all clients
 
 ## Status
 
-Planning and repository scaffolding. No production implementation exists yet.
+GitHub data spike implemented; the Rust core and native clients are not implemented yet.
+
+## GitHub data spike
+
+The first Rust component collects bounded GitHub snapshots into SQLite. Docker is
+the supported development and execution environment; an authenticated
+[GitHub CLI](https://cli.github.com/) supplies the token.
+
+```sh
+mkdir -p data
+GH_TOKEN="$(gh auth token)" docker compose run --rm collector
+docker build --target builder -t review-radar-builder .
+docker run --rm review-radar-builder cargo test --workspace --locked
+```
+
+The collector writes private local data to `data/review-radar.sqlite3`, which is
+gitignored. See [the data-spike notes](docs/github-data-spike.md) for the schema,
+query bounds, and unresolved data gaps.
+
+A generalized version of the real capture is committed at
+`tests/fixtures/github/github-snapshot.json` for deterministic offline tests.

@@ -6,3 +6,4 @@ build/
 .env
 *.local
 github-pr-dashboard.json
+data/

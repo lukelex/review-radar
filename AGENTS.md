@@ -2,9 +2,12 @@
 
 ## Current state
 
-- This is a planning scaffold: `apps/`, `crates/`, and `tests/fixtures/` contain only placeholders. There are no build manifests, lockfiles, CI workflows, or build/test/lint commands yet; do not assume a Cargo workspace exists.
+- The Cargo workspace currently contains only the Rust GitHub collector in `crates/github`; native apps and the other core crates remain placeholders.
 - Read `docs/architecture.md` for component contracts, `docs/project-plan.md` for product semantics and delivery phases, and `docs/decisions/0001-native-shells.md` for the accepted UI decision. These describe intended behavior, not implemented features.
-- The first planned milestone is bounded GitHub queries and snapshot fixtures in `tests/fixtures/`, before the domain core and Linux UI.
+- Docker is the supported toolchain. Run the collector with `GH_TOKEN="$(gh auth token)" docker compose run --rm collector`; it appends private, unsanitized captures to the gitignored `data/review-radar.sqlite3`.
+- Verify with `docker build --target builder -t review-radar-builder .` then `docker run --rm review-radar-builder cargo test --workspace --locked` and `docker run --rm review-radar-builder cargo fmt --all -- --check`.
+- Read `docs/github-data-spike.md` before changing `crates/github/src/query.graphql` or `schema.sql`; collection is intentionally bounded, nested truncation is retained in JSON payloads, and search memberships must remain explicit.
+- `tests/fixtures/github/github-snapshot.json` is a generalized real capture. Regenerate it only with `docker compose run --rm seed-export`; never copy or commit `data/review-radar.sqlite3`. Fixture replacement can renumber all pseudonyms and must pass the identity-field tests.
 
 ## Implementation boundaries
 

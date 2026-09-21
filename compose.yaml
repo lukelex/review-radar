@@ -1,0 +1,17 @@
+services:
+  collector:
+    build: .
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      GH_TOKEN: ${GH_TOKEN:-}
+    volumes:
+      - ./data:/data
+
+  seed-export:
+    build: .
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["review-radar-seed-export"]
+    volumes:
+      # SQLite WAL readers may need to create shared-memory sidecar files.
+      - ./data:/data
+      - ./tests/fixtures/github:/fixtures
