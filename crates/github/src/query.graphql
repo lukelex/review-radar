@@ -60,7 +60,8 @@ query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: 
           pageInfo { hasPreviousPage }
           nodes {
             commit {
-              oid committedDate
+              oid committedDate additions deletions
+              parents(first: 1) { nodes { oid } }
               statusCheckRollup {
                 state
                 contexts(first: 100) {

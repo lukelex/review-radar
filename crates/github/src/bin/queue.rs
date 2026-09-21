@@ -283,6 +283,7 @@ fn normalize_review_history(
     }
     for node in connection_nodes(commits)? {
         let commit = node.get("commit")?;
+        let changed_lines = parent_diff_lines(commit);
         let Some(event) = source_event(
             format!(
                 "commit:{}",
@@ -292,9 +293,7 @@ fn normalize_review_history(
                     .unwrap_or_default()
             ),
             commit.get("committedDate").and_then(Value::as_str),
-            HistoryEventKind::Revision {
-                changed_lines: None,
-            },
+            HistoryEventKind::Revision { changed_lines },
         ) else {
             valid = false;
             continue;
@@ -333,6 +332,17 @@ fn normalize_review_history(
             events,
         },
     ))
+}
+
+/// GitHub's Commit additions/deletions are calculated against the commit's
+/// first parent. Missing parent or counters mean this is not a reproducible
+/// parent diff and must remain unknown rather than be counted as zero.
+fn parent_diff_lines(commit: &Value) -> Option<u64> {
+    let parent = commit.get("parents")?.get("nodes")?.as_array()?.first()?;
+    parent.get("oid")?.as_str()?;
+    let additions = commit.get("additions")?.as_u64()?;
+    let deletions = commit.get("deletions")?.as_u64()?;
+    additions.checked_add(deletions)
 }
 
 fn connection_nodes(connection: &Value) -> Option<&Vec<Value>> {
@@ -514,6 +524,26 @@ mod tests {
         .unwrap();
         assert_eq!(history.coverage, Coverage::Partial);
         assert!(history.events.is_empty());
+    }
+
+    #[test]
+    fn parent_diff_requires_a_parent_and_explicit_counters() {
+        assert_eq!(
+            parent_diff_lines(&json!({
+                "parents": { "nodes": [{ "oid": "parent-1" }] }, "additions": 12, "deletions": 8
+            })),
+            Some(20)
+        );
+        assert_eq!(
+            parent_diff_lines(&json!({ "additions": 12, "deletions": 8 })),
+            None
+        );
+        assert_eq!(
+            parent_diff_lines(&json!({
+                "parents": { "nodes": [{ "oid": "parent-1" }] }, "additions": 12
+            })),
+            None
+        );
     }
 
     fn card(id: &str, attention_required: bool, current_fingerprint: &str) -> PullRequestCard {
