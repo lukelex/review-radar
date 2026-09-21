@@ -35,8 +35,9 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
   current normalizer reports Limited history rather than a fabricated level.
 - [ ] Add targeted parent-diff comparisons and a calibration pass before promoting
   experimental friction levels from synthetic histories to measured production data.
-- [ ] Connect the projected reasons, friction breakdown, and ranking selection to
-  the Qt/QML native client when its shell is implemented.
+- [x] Connect the projected reasons, concurrent health, friction breakdown, and
+  ranking selection to the Qt/QML native client. Its model renders domain output
+  only; Qt does not recalculate classification, friction, or sorting.
 
 ## CI
 

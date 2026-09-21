@@ -108,11 +108,13 @@ ApplicationWindow {
                         required property bool attentionRequired
                         required property string currentFingerprint
                         required property string explanationHeading
-                        required property string reason
+                        required property var reasons
+                        required property string health
                         required property string nextActionLabel
                         required property string nextActionUrl
                         required property string frictionStatus
                         required property string frictionLevel
+                        required property string frictionDetail
                         required property string pullRequestId
                         required property var events
                         property bool expanded: false
@@ -139,10 +141,21 @@ ApplicationWindow {
                             }
                             Label { Layout.fillWidth: true; text: title; font.pixelSize: 16; wrapMode: Text.Wrap }
                             Label { Layout.fillWidth: true; text: explanationHeading; font.bold: true; color: "#555" }
-                            Label { Layout.fillWidth: true; text: reason; wrapMode: Text.Wrap; color: "#333" }
+                            Repeater {
+                                model: reasons
+                                delegate: Label {
+                                    required property string modelData
+                                    Layout.fillWidth: true
+                                    text: modelData
+                                    wrapMode: Text.Wrap
+                                    color: "#333"
+                                }
+                            }
+                            Label { visible: health.length > 0; Layout.fillWidth: true; text: health; wrapMode: Text.Wrap; color: "#666" }
                             Label {
                                 visible: frictionStatus.length > 0
                                 text: "Review friction: " + (frictionLevel.length > 0 ? frictionLevel : frictionStatus)
+                                      + (frictionDetail.length > 0 ? " · " + frictionDetail : "")
                                 color: "#666"
                             }
                             RowLayout {

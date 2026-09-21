@@ -14,8 +14,8 @@ public:
     enum Role {
         IdRole = Qt::UserRole + 1, RepositoryRole, NumberRole, TitleRole, UrlRole,
         ActionLabelRole, AttentionRequiredRole, FingerprintRole, ExplanationHeadingRole,
-        ReasonRole, NextActionLabelRole, NextActionUrlRole, FrictionStatusRole,
-        FrictionLevelRole, EventsRole,
+        ReasonsRole, HealthRole, NextActionLabelRole, NextActionUrlRole, FrictionStatusRole,
+        FrictionLevelRole, FrictionDetailRole, EventsRole,
     };
 
     explicit PullRequestModel(QObject *parent = nullptr);
@@ -26,10 +26,11 @@ public:
 
 private:
     struct Card {
-        QString id, repository, title, url, actionLabel, fingerprint, explanationHeading, reason;
-        QString nextActionLabel, nextActionUrl, frictionStatus, frictionLevel;
+        QString id, repository, title, url, actionLabel, fingerprint, explanationHeading, health;
+        QString nextActionLabel, nextActionUrl, frictionStatus, frictionLevel, frictionDetail;
         int number = 0;
         bool attentionRequired = false;
+        QStringList reasons;
         QVariantList events;
     };
     QList<Card> cards_;

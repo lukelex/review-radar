@@ -22,6 +22,37 @@ QVariantList eventList(const QJsonArray &source) {
     return result;
 }
 
+QStringList reasonList(const QJsonArray &source) {
+    QStringList result;
+    for (const auto &reason : source) result.append(reason.toObject().value("summary").toString());
+    return result;
+}
+
+QString healthSummary(const QJsonObject &health) {
+    QStringList healthSignals;
+    const auto review = health.value("reviewDecision").toString();
+    const auto checks = health.value("checks").toString();
+    if (!review.isEmpty()) healthSignals.append("Review: " + review);
+    else if (health.value("isDraft").toBool()) healthSignals.append("Draft");
+    if (!checks.isEmpty()) healthSignals.append("Checks: " + checks);
+    const auto mergeable = health.value("mergeable").toString();
+    if (!mergeable.isEmpty()) healthSignals.append("Merge: " + mergeable);
+    return healthSignals.join(" · ");
+}
+
+QString frictionSummary(const QJsonObject &friction) {
+    QStringList facts;
+    for (const auto &contributor : friction.value("contributors").toArray()) {
+        const auto object = contributor.toObject();
+        facts.append(object.value("signal").toString() + ": "
+                     + QString::number(object.value("value").toVariant().toLongLong()) + " "
+                     + object.value("unit").toString());
+    }
+    for (const auto &limitation : friction.value("limitations").toArray())
+        facts.append(limitation.toString().replace('-', ' '));
+    return facts.join(" · ");
+}
+
 QDateTime snoozeUntil(const QString &preset) {
     const auto now = QDateTime::currentDateTimeUtc();
     if (preset == "tomorrow") return QDateTime(now.date().addDays(1), QTime(9, 0), QTimeZone::UTC);
@@ -49,11 +80,13 @@ QVariant PullRequestModel::data(const QModelIndex &index, int role) const {
     case AttentionRequiredRole: return card.attentionRequired;
     case FingerprintRole: return card.fingerprint;
     case ExplanationHeadingRole: return card.explanationHeading;
-    case ReasonRole: return card.reason;
+    case ReasonsRole: return card.reasons;
+    case HealthRole: return card.health;
     case NextActionLabelRole: return card.nextActionLabel;
     case NextActionUrlRole: return card.nextActionUrl;
     case FrictionStatusRole: return card.frictionStatus;
     case FrictionLevelRole: return card.frictionLevel;
+    case FrictionDetailRole: return card.frictionDetail;
     case EventsRole: return card.events;
     default: return {};
     }
@@ -63,9 +96,10 @@ QHash<int, QByteArray> PullRequestModel::roleNames() const {
     return {{IdRole, "pullRequestId"}, {RepositoryRole, "repository"}, {NumberRole, "number"},
             {TitleRole, "title"}, {UrlRole, "url"}, {ActionLabelRole, "actionLabel"},
             {AttentionRequiredRole, "attentionRequired"}, {FingerprintRole, "currentFingerprint"},
-            {ExplanationHeadingRole, "explanationHeading"}, {ReasonRole, "reason"},
+             {ExplanationHeadingRole, "explanationHeading"}, {ReasonsRole, "reasons"}, {HealthRole, "health"},
             {NextActionLabelRole, "nextActionLabel"}, {NextActionUrlRole, "nextActionUrl"},
-            {FrictionStatusRole, "frictionStatus"}, {FrictionLevelRole, "frictionLevel"},
+             {FrictionStatusRole, "frictionStatus"}, {FrictionLevelRole, "frictionLevel"},
+             {FrictionDetailRole, "frictionDetail"},
             {EventsRole, "events"}};
 }
 
@@ -82,11 +116,12 @@ void PullRequestModel::replace(const QJsonArray &cards) {
         cards_.append({object.value("id").toString(), object.value("repository").toString(),
                        object.value("title").toString(), object.value("url").toString(),
                        object.value("actionLabel").toString(), object.value("currentFingerprint").toString(),
-                       explanation.value("heading").toString(), reason.value("summary").toString(),
-                       nextAction.value("label").toString(), nextAction.value("url").toString(),
-                       friction.value("status").toString(), friction.value("level").toString(),
-                       object.value("number").toInt(), object.value("attentionRequired").toBool(),
-                       eventList(object.value("events").toArray())});
+                        explanation.value("heading").toString(), healthSummary(explanation.value("health").toObject()),
+                         nextAction.value("label").toString(), nextAction.value("url").toString(),
+                         friction.value("status").toString(), friction.value("level").toString(),
+                         frictionSummary(friction), object.value("number").toInt(),
+                         object.value("attentionRequired").toBool(), reasonList(reasons),
+                         eventList(object.value("events").toArray())});
     }
     endResetModel();
 }
