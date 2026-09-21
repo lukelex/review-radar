@@ -73,14 +73,21 @@ jobs:
         run: >-
           sudo apt-get update && sudo apt-get install -y --no-install-recommends
           cmake g++ make qt6-base-dev qt6-declarative-dev qt6-qpa-plugins libqt6svg6
-          qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts
+          qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls qml6-module-qtquick-layouts
           qml6-module-qtquick-templates qml6-module-qtqml-workerscript
 
       - name: Build desktop client
         run: cmake -S apps/linux-qt -B build/linux-qt -DCMAKE_BUILD_TYPE=Release && cmake --build build/linux-qt --parallel
 
       - name: Lint QML
-        run: /usr/lib/qt6/bin/qmllint apps/linux-qt/qml/*.qml
+        run: |
+          set +e
+          /usr/lib/qt6/bin/qmllint apps/linux-qt/qml/*.qml >qmllint.log 2>&1
+          set -e
+          cat qmllint.log
+          if grep -qE '(^|: )Error:' qmllint.log; then
+            exit 1
+          fi
 
       - name: Run desktop tests
         run: ctest --test-dir build/linux-qt --output-on-failure
