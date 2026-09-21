@@ -45,6 +45,10 @@ for a notification.
 - Contracts for opening URLs, copying links, and delivering notifications.
 - No platform implementation or UI toolkit dependency.
 
+`PlatformCommand` carries these effects as plain data. Platform notifications
+receive only transitions already deduplicated by `crates/state`; a native client
+implements `PlatformEffects` for its own toolkit and operating system.
+
 ## Client boundaries
 
 Clients receive an already-ranked snapshot plus explicit commands. `Acknowledge`

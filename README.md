@@ -51,7 +51,8 @@ tests/fixtures/   GitHub snapshot fixtures shared by all clients
 
 ## Status
 
-GitHub data spike implemented; the Rust core and native clients are not implemented yet.
+The GitHub collector, ranked domain projection, local acknowledgement/snooze
+state, and platform-effect contracts are implemented. Native clients are pending.
 
 ## GitHub data spike
 

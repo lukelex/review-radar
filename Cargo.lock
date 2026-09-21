@@ -768,6 +768,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "review-radar-platform"
+version = "0.1.0"
+
+[[package]]
 name = "review-radar-state"
 version = "0.1.0"
 dependencies = [
