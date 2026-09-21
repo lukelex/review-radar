@@ -1,6 +1,9 @@
 services:
   collector:
-    build: .
+    image: review-radar-core:local
+    build:
+      context: .
+      dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
     environment:
       GH_TOKEN: ${GH_TOKEN:-}
@@ -8,7 +11,10 @@ services:
       - ./data:/data
 
   seed-export:
-    build: .
+    image: review-radar-core:local
+    build:
+      context: .
+      dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
     entrypoint: ["review-radar-seed-export"]
     volumes:
@@ -17,23 +23,27 @@ services:
       - ./tests/fixtures/github:/fixtures
 
   queue:
-    build: .
+    image: review-radar-core:local
+    build:
+      context: .
+      dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
     entrypoint: ["review-radar-queue"]
     volumes:
       - ./data:/data
 
   state:
-    build: .
+    image: review-radar-core:local
+    build:
+      context: .
+      dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
     entrypoint: ["review-radar-state"]
     volumes:
       - ./data:/data
 
   desktop:
-    build:
-      context: .
-      target: linux-desktop
+    image: review-radar-desktop:local
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     environment:
       GH_TOKEN: ${GH_TOKEN:-}
