@@ -18,6 +18,7 @@
 - Ranking policies live in `crates/domain/src/ranking.rs`. They order projected cards only; classification and workspace-view membership stay in the domain projection. Add a `RankingStrategy` and select it by its stable ID rather than adding sort logic to a client or SQL query.
 - `crates/state` uses a separate SQLite store for local-only acknowledgement, snooze, and attention observations. Acknowledge/snooze always needs the current newest meaningful-event fingerprint; a changed fingerprint must reactivate the PR. The first attention observation establishes a no-notification baseline.
 - Native clients consume already-ranked snapshots and explicit commands. GitHub queries, ranking, event classification, and persistence belong in the shared Rust core.
+- Keep the same projected dataset and command surface available to a CLI client; when building shared features, also account for a future TUI client rather than coupling behavior or data exclusively to a native GUI.
 - Linux uses Qt 6/QML as a standalone application. Quickshell is an integration adapter, not the primary runtime. The planned macOS and Windows shells use SwiftUI and WinUI 3 respectively.
 
 ## Product invariants
