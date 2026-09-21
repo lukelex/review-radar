@@ -4,17 +4,20 @@ RUN rustup component add clippy rustfmt
 COPY Cargo.toml Cargo.lock ./
 COPY crates/domain/Cargo.toml crates/domain/Cargo.toml
 COPY crates/github/Cargo.toml crates/github/Cargo.toml
-RUN mkdir -p crates/domain/src crates/github/src/bin \
+COPY crates/state/Cargo.toml crates/state/Cargo.toml
+RUN mkdir -p crates/domain/src crates/github/src/bin crates/state/src \
     && echo '' > crates/domain/src/lib.rs \
+    && echo '' > crates/state/src/lib.rs \
     && echo 'fn main() {}' > crates/github/src/main.rs \
     && echo 'fn main() {}' > crates/github/src/bin/seed_export.rs \
     && echo 'fn main() {}' > crates/github/src/bin/queue.rs \
     && cargo build --release --locked -p review-radar-github
 COPY crates/github/src crates/github/src
 COPY crates/domain/src crates/domain/src
+COPY crates/state/src crates/state/src
 COPY crates/github/tests crates/github/tests
 COPY tests/fixtures tests/fixtures
-RUN touch crates/domain/src/lib.rs crates/github/src/main.rs crates/github/src/bin/seed_export.rs crates/github/src/bin/queue.rs \
+RUN touch crates/domain/src/lib.rs crates/github/src/main.rs crates/github/src/bin/seed_export.rs crates/github/src/bin/queue.rs crates/state/src/lib.rs \
     && cargo build --release --locked -p review-radar-github
 
 FROM debian:bookworm-slim

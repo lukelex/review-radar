@@ -767,6 +767,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "review-radar-state"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "rusqlite",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"

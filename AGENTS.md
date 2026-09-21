@@ -15,6 +15,7 @@
 
 - Keep GitHub queries and normalization in `crates/github`; classification, ranking, event fingerprints, and reactivation in `crates/domain`; per-device persistence and notification deduplication in `crates/state`.
 - `crates/platform` defines URL-opening, clipboard, and notification contracts only; it must not contain platform implementations or UI toolkit dependencies.
+- `crates/state` uses a separate SQLite store for local-only acknowledgement, snooze, and attention observations. Acknowledge/snooze always needs the current newest meaningful-event fingerprint; a changed fingerprint must reactivate the PR. The first attention observation establishes a no-notification baseline.
 - Native clients consume already-ranked snapshots and explicit commands. GitHub queries, ranking, event classification, and persistence belong in the shared Rust core.
 - Linux uses Qt 6/QML as a standalone application. Quickshell is an integration adapter, not the primary runtime. The planned macOS and Windows shells use SwiftUI and WinUI 3 respectively.
 

@@ -34,6 +34,12 @@ environment while remaining suitable for a standalone desktop application.
 - Last-emitted attention transition for notification deduplication.
 - Schema migration.
 
+The current SQLite store keys acknowledgement and snooze to the newest meaningful
+event fingerprint. If that fingerprint changes, the item reactivates immediately;
+otherwise a snooze stays effective until expiry. First attention observation is a
+baseline, and only a later transition from non-attention to attention is eligible
+for a notification.
+
 ### `crates/platform`
 
 - Contracts for opening URLs, copying links, and delivering notifications.
