@@ -19,8 +19,9 @@ GitHub refresh.
 On a Linux session that implements `org.freedesktop.Notifications`, the client
 sends an alert only for IDs in the queue response's `notificationEligibleIds`.
 Those IDs originate from persisted attention transitions, so polling does not
-repeat alerts. The notification's **Open pull request** action opens the PR URL
-in the default browser.
+repeat alerts. Browser actions, including **Start review**, open URLs through
+the host's desktop OpenURI portal when running in Docker, with a native desktop
+fallback when no portal is available.
 
 ```sh
 cmake -S apps/linux-qt -B build/linux-qt
@@ -35,6 +36,18 @@ executables it launches, use the repository script:
 ./scripts/build-native
 GH_TOKEN="$(gh auth token)" ./build/native/bin/review-radar
 ```
+
+To create the same relocatable archive used by the GitHub alpha release:
+
+```sh
+./scripts/package-release 0.1.0-alpha.1
+sha256sum --check build/review-radar-linux-x86_64-0.1.0-alpha.1.tar.gz.sha256
+```
+
+The archive is Linux x86_64-specific and contains the Qt runtime, plugins, QML
+modules, Rust helpers, launcher, checksum companion, and a bundled README. A
+tag such as `v0.1.0-alpha.1`, or the **Release Linux alpha** workflow, publishes
+the archive as a GitHub prerelease.
 
 The script builds the existing root `Dockerfile`'s `linux-desktop` stage and
 extracts the resulting application and Rust helpers under `build/native/bin/`.

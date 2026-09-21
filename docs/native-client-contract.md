@@ -110,16 +110,25 @@ bounded captured activity, and browser/read/snooze/copy actions. Expanding a car
 must not change its classification or ranking. A client may defer rendering
 activity details, but must not fabricate a partial explanation.
 
+Browser actions must open the user's host browser, including when the client is
+running in a container. On Linux Docker sessions, the reference client uses the
+host session's `org.freedesktop.portal.OpenURI` portal and falls back to the
+native desktop URL launcher when no portal is available. Other clients should
+use their platform's equivalent host/default-browser mechanism.
+
 Selection is identified by PR ID across refreshes. If the PR remains in the
 rendered dataset, its selection is retained and its content is updated; if it
 leaves the dataset, selection is cleared.
 
 Desktop clients provide basic Vim-style keyboard navigation when a search field
 is not being edited: `j` moves to the next matching PR, `k` moves to the previous
-matching PR, `l` opens details for the highlighted PR, and `h` closes details.
-While details are open, `j` and `k` move between PRs without leaving the detail
-context. The highlighted item must remain visible and the shortcuts must not
-intercept text input.
+matching PR, `l` opens details for the highlighted PR, `o` opens the selected PR's
+canonical URL in the host browser, `a` asks for confirmation before acknowledging
+the selected PR, `s` opens snooze choices, `y` copies its canonical URL, `/` focuses
+search, and `?` shows shortcut help. `h` closes details. While details are open,
+`j` and `k` move between PRs without leaving the detail context. `Ctrl+N` cycles
+to the next workspace, wrapping at the end. The highlighted item must remain
+visible and the shortcuts must not intercept text input.
 
 ## Decisions and tradeoffs
 

@@ -3,6 +3,7 @@
 #include <QClipboard>
 #include <QDBusConnection>
 #include <QDBusInterface>
+#include <QDBusMessage>
 #include <QDBusReply>
 #include <QDesktopServices>
 #include <QDir>
@@ -278,7 +279,19 @@ void QueueController::loadProjection(bool collectAfter) {
     queueProcess_.start();
 }
 
-void QueueController::openUrl(const QString &url) { QDesktopServices::openUrl(QUrl(url)); }
+void QueueController::openUrl(const QString &url) {
+    const auto bus = QDBusConnection::sessionBus();
+    if (bus.isConnected()) {
+        QDBusMessage request = QDBusMessage::createMethodCall(
+            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.OpenURI", "OpenURI");
+        request << QString() << url << QVariant::fromValue(QVariantMap{});
+        const auto reply = bus.call(request, QDBus::AutoDetect, 3000);
+        if (reply.type() == QDBusMessage::ReplyMessage) return;
+    }
+    // Native sessions without an available portal retain the desktop fallback.
+    QDesktopServices::openUrl(QUrl(url));
+}
 void QueueController::copyText(const QString &text) { QGuiApplication::clipboard()->setText(text); }
 void QueueController::acknowledge(const QString &id, const QString &fingerprint) {
     runStateCommand({"acknowledge", "--pull-request-id", id, "--fingerprint", fingerprint});

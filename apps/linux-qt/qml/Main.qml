@@ -18,6 +18,7 @@ ApplicationWindow {
     property string search: searchField.text.trim().toLowerCase()
     property var selected: null
     property int revision: 0
+    property int navigationIndex: -1
     property int matchingCount: { revision; return queue.pullRequests.matchingCount(search) }
     property var views: [
         { key: "tailored", label: "Tailored to you", icon: "◎", subtitle: "Your next move, in focus." },
@@ -30,9 +31,89 @@ ApplicationWindow {
     property bool narrow: width < 1250
     property bool showSkeleton: queue.pullRequests.matchingCount("") === 0 && !root.search && (queue.loading || queue.refreshing)
 
+    function matches(index) {
+        const entry = queue.pullRequests.get(index)
+        return !root.search || entry.title.toLowerCase().includes(root.search)
+            || entry.repository.toLowerCase().includes(root.search)
+            || String(entry.number).includes(root.search)
+    }
+
+    function moveNavigation(direction) {
+        const count = queue.pullRequests.matchingCount("")
+        if (count === 0) return
+        let index = root.navigationIndex
+        if (index < 0) index = direction > 0 ? -1 : count
+        if (index >= count) index = count
+        for (let step = 0; step < count; step++) {
+            index += direction
+            if (index < 0) index = count - 1
+            if (index >= count) index = 0
+            if (root.matches(index)) {
+                root.navigationIndex = index
+                cards.positionViewAtIndex(index, ListView.Contain)
+                if (root.selected) root.selected = queue.pullRequests.get(index)
+                return
+            }
+        }
+    }
+
+    function openNavigationDetails() {
+        if (root.navigationIndex >= 0 && root.matches(root.navigationIndex))
+            root.selected = queue.pullRequests.get(root.navigationIndex)
+    }
+
+    function selectedEntry() { return root.selected || ({}) }
+    function nextWorkspace() {
+        const index = root.views.findIndex(view => view.key === queue.view)
+        queue.view = root.views[(index + 1) % root.views.length].key
+    }
+
     Shortcut { sequence: "Ctrl+K"; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
     Shortcut { sequence: "Ctrl+R"; onActivated: queue.refresh() }
+    Shortcut { sequence: "Ctrl+N"; onActivated: root.nextWorkspace() }
     Shortcut { sequence: "Escape"; onActivated: { if (root.selected) root.selected = null; else searchField.clear() } }
+    Shortcut { sequence: "/"; enabled: !searchField.activeFocus; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
+    Shortcut { sequence: "j"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(1) }
+    Shortcut { sequence: "k"; enabled: !searchField.activeFocus; onActivated: root.moveNavigation(-1) }
+    Shortcut { sequence: "l"; enabled: !searchField.activeFocus; onActivated: root.openNavigationDetails() }
+    Shortcut { sequence: "h"; enabled: !searchField.activeFocus && !!root.selected; onActivated: root.selected = null }
+    Shortcut { sequence: "o"; enabled: !searchField.activeFocus && !!root.selected; onActivated: queue.openUrl(root.selected.url) }
+    Shortcut { sequence: "a"; enabled: !searchField.activeFocus && !!root.selected; onActivated: acknowledgeDialog.open() }
+    Shortcut { sequence: "s"; enabled: !searchField.activeFocus && !!root.selected; onActivated: detailLoader.item.openSnoozeMenu() }
+    Shortcut { sequence: "y"; enabled: !searchField.activeFocus && !!root.selected; onActivated: queue.copyText(root.selected.url) }
+    Shortcut { sequence: "?"; enabled: !searchField.activeFocus; onActivated: shortcutsDialog.open() }
+
+    Dialog {
+        id: acknowledgeDialog
+        title: "Mark pull request as read?"
+        modal: true
+        standardButtons: Dialog.Cancel | Dialog.Ok
+        Label {
+            text: "This PR will stay quiet until a meaningful event changes."
+            color: Style.secondary
+            wrapMode: Text.Wrap
+        }
+        onAccepted: queue.acknowledge(root.selected.pullRequestId, root.selected.currentFingerprint)
+    }
+
+    Dialog {
+        id: shortcutsDialog
+        title: "Keyboard shortcuts"
+        modal: true
+        standardButtons: Dialog.Ok
+        Column {
+            spacing: 8
+            Label { text: "j / k   Move between pull requests" }
+            Label { text: "l       Open details" }
+            Label { text: "o       Open PR in browser" }
+            Label { text: "a       Mark as read" }
+            Label { text: "s       Snooze" }
+            Label { text: "y       Copy PR link" }
+            Label { text: "/       Focus search" }
+            Label { text: "Ctrl+N  Next workspace" }
+            Label { text: "Esc     Close details or clear search" }
+        }
+    }
     Connections {
         target: queue.pullRequests
         function onModelReset() {
@@ -184,8 +265,9 @@ ApplicationWindow {
                                     width: parent.width
                                      entry: row.entry
                                      updating: queue.refreshing && queue.stale
-                                    selected: !!root.selected && root.selected.pullRequestId === entry.pullRequestId
-                                    onSelectedRequested: root.selected = entry
+                                     selected: !!root.selected && root.selected.pullRequestId === entry.pullRequestId
+                                     keyboardActive: root.navigationIndex === row.index
+                                     onSelectedRequested: { root.navigationIndex = row.index; root.selected = entry }
                                     onOpenRequested: url => queue.openUrl(url)
                                 }
                             }
@@ -205,8 +287,9 @@ ApplicationWindow {
                             RadarButton { Layout.alignment: Qt.AlignHCenter; visible: root.search.length > 0; text: "Clear search"; onClicked: searchField.clear() }
                         }
                     }
-                    Loader {
-                        Layout.fillHeight: true
+                        Loader {
+                            id: detailLoader
+                            Layout.fillHeight: true
                         Layout.fillWidth: root.narrow
                         Layout.preferredWidth: root.narrow ? -1 : Math.min(520, root.width * 0.39)
                         active: !!root.selected; visible: active

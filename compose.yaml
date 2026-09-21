@@ -56,6 +56,10 @@ services:
       context: .
       dockerfile: Dockerfile.desktop
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    # Bound the shell and the helper processes it launches as one workload.
+    cpus: "${REVIEW_RADAR_DESKTOP_CPUS:-2.0}"
+    mem_limit: "${REVIEW_RADAR_DESKTOP_MEMORY:-1g}"
+    pids_limit: "${REVIEW_RADAR_DESKTOP_PIDS:-256}"
     environment:
       GH_TOKEN: ${GH_TOKEN:-}
       REVIEW_RADAR_CAPTURE_DATABASE: /data/review-radar.sqlite3

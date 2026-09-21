@@ -9,6 +9,7 @@ Rectangle {
     required property var controller
     signal closeRequested()
     property bool activityReady: false
+    function openSnoozeMenu() { snooze.open() }
     color: "white"; radius: 12; border.color: Style.line
     Timer { interval: 120; running: true; onTriggered: panel.activityReady = true }
     ColumnLayout {

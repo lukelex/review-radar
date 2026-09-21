@@ -6,14 +6,15 @@ Rectangle {
     id: card
     required property var entry
     property bool selected: false
+    property bool keyboardActive: false
     property bool updating: false
     signal selectedRequested()
     signal openRequested(string url)
     implicitHeight: content.implicitHeight + 38
     color: "white"
     radius: 12
-    border.color: selected || hit.activeFocus ? Style.accent : hit.hovered ? "#c3bedf" : Style.line
-    border.width: selected || hit.activeFocus ? 2 : 1
+    border.color: selected || keyboardActive || hit.activeFocus ? Style.accent : hit.hovered ? "#c3bedf" : Style.line
+    border.width: selected || keyboardActive || hit.activeFocus ? 2 : 1
 
     Button {
         id: hit
