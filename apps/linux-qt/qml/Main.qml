@@ -28,6 +28,7 @@ ApplicationWindow {
     ]
     property var activeView: views.filter(v => v.key === queue.view)[0] || views[0]
     property bool narrow: width < 1250
+    property bool showSkeleton: queue.pullRequests.matchingCount("") === 0 && !root.search && (queue.loading || queue.refreshing)
 
     Shortcut { sequence: "Ctrl+K"; onActivated: { searchField.forceActiveFocus(); searchField.selectAll() } }
     Shortcut { sequence: "Ctrl+R"; onActivated: queue.refresh() }
@@ -118,8 +119,8 @@ ApplicationWindow {
                     Item { Layout.fillWidth: true }
                     Label {
                         visible: root.width >= 1100
-                        text: queue.stale ? "●  Cached data" : queue.refreshing ? "●  Syncing" : queue.loading ? "●  Loading" : "●  Local workspace"
-                        color: queue.stale ? "#a35b2a" : queue.refreshing ? Style.accent : Style.secondary
+                         text: queue.refreshing && queue.stale ? "●  Cached data · syncing" : queue.stale ? "●  Cached data" : queue.loading ? "●  Loading" : "●  Local workspace"
+                         color: queue.stale ? "#a35b2a" : queue.refreshing ? Style.accent : Style.secondary
                         font.pixelSize: 12
                     }
                     RadarButton { text: queue.refreshing ? "Syncing…" : "↻  Refresh"; enabled: !queue.refreshing && !queue.loading; onClicked: queue.refresh(); ToolTip.visible: hovered; ToolTip.text: "Refresh from GitHub · Ctrl+R" }
@@ -181,16 +182,23 @@ ApplicationWindow {
                                     id: pr
                                     objectName: "card-" + row.index
                                     width: parent.width
-                                    entry: row.entry
+                                     entry: row.entry
+                                     updating: queue.refreshing && queue.stale
                                     selected: !!root.selected && root.selected.pullRequestId === entry.pullRequestId
                                     onSelectedRequested: root.selected = entry
                                     onOpenRequested: url => queue.openUrl(url)
                                 }
                             }
-                        }
-                        ColumnLayout {
+                         }
+                         Column {
+                             anchors { left: parent.left; right: parent.right; top: parent.top }
+                             spacing: 16
+                             visible: root.showSkeleton
+                             Repeater { model: 4; SkeletonCard { width: parent.width } }
+                         }
+                         ColumnLayout {
                             anchors.centerIn: parent; width: Math.min(parent.width - 40, 360); spacing: 14
-                            visible: root.matchingCount === 0
+                             visible: root.matchingCount === 0 && !root.showSkeleton
                             Label { Layout.alignment: Qt.AlignHCenter; text: queue.loading || queue.refreshing ? "◎" : root.search ? "⌕" : "✓"; font.pixelSize: 42; color: Style.accent }
                             Label { Layout.fillWidth: true; text: root.search ? "No matching pull requests" : queue.loading || queue.refreshing ? "Preparing your workspace" : "Nothing here right now"; font.pixelSize: 19; font.weight: Font.DemiBold; color: Style.ink; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap }
                             Label { Layout.fillWidth: true; text: root.search ? "Try a different title, repository, or PR number." : queue.loading || queue.refreshing ? "Your pull requests will appear as soon as the data is ready." : "Refresh to check GitHub, or explore another workspace."; color: Style.muted; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap; font.pixelSize: 12 }

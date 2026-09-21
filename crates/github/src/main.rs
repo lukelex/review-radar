@@ -7,7 +7,8 @@ use rusqlite::{params, Connection};
 use serde_json::{json, Value};
 
 const API_URL: &str = "https://api.github.com/graphql";
-const QUERY: &str = include_str!("query.graphql");
+const SEARCH_QUERY: &str = include_str!("search.graphql");
+const HYDRATE_QUERY: &str = include_str!("hydrate.graphql");
 const SCHEMA: &str = include_str!("schema.sql");
 
 #[derive(Debug, Clone)]
@@ -118,7 +119,8 @@ impl GitHub {
 fn main() -> Result<()> {
     let config = parse_config(env::args().skip(1))?;
     let token = env::var("GH_TOKEN").context("GH_TOKEN is required")?;
-    let capture = collect(GitHub::new(token)?, &config)?;
+    let cache = load_cache(&config.database)?;
+    let capture = collect(GitHub::new(token)?, &config, &cache)?;
     let capture_id = persist(&config, &capture)?;
     println!(
         "Saved capture {capture_id} with {} distinct PRs to {}",
@@ -176,7 +178,11 @@ fn bounded(value: &str, min: u64, max: u64, name: &str) -> Result<u64> {
     Ok(value)
 }
 
-fn collect(mut github: GitHub, config: &Config) -> Result<Capture> {
+fn collect(
+    mut github: GitHub,
+    config: &Config,
+    cache: &BTreeMap<String, Value>,
+) -> Result<Capture> {
     let captured_at = Utc::now();
     let identity = github.query(
         "query { viewer { login } rateLimit { cost remaining resetAt } }",
@@ -219,7 +225,7 @@ fn collect(mut github: GitHub, config: &Config) -> Result<Capture> {
         let mut has_next_page = false;
         for _ in 0..config.max_pages {
             let data = github.query(
-                QUERY,
+                SEARCH_QUERY,
                 json!({
                     "search": query,
                     "pageSize": config.page_size,
@@ -237,7 +243,9 @@ fn collect(mut github: GitHub, config: &Config) -> Result<Capture> {
                 if !ids.contains(&id) {
                     ids.push(id.clone());
                 }
-                pull_requests.insert(id, node.clone());
+                // Search responses are deliberately lightweight. Details are
+                // hydrated once below, after all memberships have been merged.
+                pull_requests.entry(id).or_insert_with(|| node.clone());
             }
             pages_fetched += 1;
             let page_info = required(search, "pageInfo")?;
@@ -261,6 +269,40 @@ fn collect(mut github: GitHub, config: &Config) -> Result<Capture> {
             ids,
         });
     }
+
+    let ids_to_hydrate: Vec<String> = pull_requests
+        .iter()
+        .filter_map(|(id, summary)| {
+            let cached = cache.get(id)?;
+            (required_str(summary, "updatedAt").ok()? != required_str(cached, "updatedAt").ok()?)
+                .then_some(id.clone())
+        })
+        .chain(pull_requests.iter().filter_map(|(id, summary)| {
+            (!cache.contains_key(id) && summary.get("updatedAt").is_some()).then_some(id.clone())
+        }))
+        .collect();
+
+    let mut hydrated = BTreeMap::new();
+    for ids in ids_to_hydrate.chunks(10) {
+        let data = github.query(
+            HYDRATE_QUERY,
+            json!({"ids": ids, "eventLimit": config.event_limit}),
+        )?;
+        for node in required_array(&data, "nodes")? {
+            if !node.is_null() {
+                hydrated.insert(required_str(node, "id")?.to_owned(), node.clone());
+            }
+        }
+    }
+    for (id, summary) in &mut pull_requests {
+        if let Some(node) = hydrated.remove(id) {
+            *summary = node;
+        } else if let Some(cached) = cache.get(id) {
+            *summary = cached.clone();
+        } else {
+            bail!("GitHub did not return pull request {id} during hydration");
+        }
+    }
     Ok(Capture {
         captured_at: captured_at.to_rfc3339_opts(SecondsFormat::Millis, true),
         viewer,
@@ -271,6 +313,28 @@ fn collect(mut github: GitHub, config: &Config) -> Result<Capture> {
         remaining: github.remaining,
         reset_at: github.reset_at,
     })
+}
+
+fn load_cache(database: &PathBuf) -> Result<BTreeMap<String, Value>> {
+    if !database.exists() {
+        return Ok(BTreeMap::new());
+    }
+    let connection = Connection::open(database)?;
+    connection.execute_batch(SCHEMA)?;
+    let mut statement = connection.prepare(
+        "SELECT node_id, payload FROM pull_requests WHERE capture_id = (SELECT max(id) FROM captures)",
+    )?;
+    let rows = statement.query_map([], |row| {
+        let id: String = row.get(0)?;
+        let payload: String = row.get(1)?;
+        Ok((id, payload))
+    })?;
+    let mut cache = BTreeMap::new();
+    for row in rows {
+        let (id, payload) = row?;
+        cache.insert(id, serde_json::from_str(&payload)?);
+    }
+    Ok(cache)
 }
 
 fn persist(config: &Config, capture: &Capture) -> Result<i64> {

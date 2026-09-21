@@ -6,6 +6,7 @@ Rectangle {
     id: card
     required property var entry
     property bool selected: false
+    property bool updating: false
     signal selectedRequested()
     signal openRequested(string url)
     implicitHeight: content.implicitHeight + 38
@@ -36,6 +37,7 @@ Rectangle {
                 color: Style.muted; font.pixelSize: 12; elide: Text.ElideMiddle
             }
             Label { text: Style.age(card.entry.updatedAt); color: Style.muted; font.pixelSize: 11 }
+            Label { visible: card.updating; text: "Updating…"; color: Style.accent; font.pixelSize: 11 }
         }
         Label {
             Layout.fillWidth: true

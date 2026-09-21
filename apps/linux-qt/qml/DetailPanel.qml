@@ -8,7 +8,9 @@ Rectangle {
     required property var entry
     required property var controller
     signal closeRequested()
+    property bool activityReady: false
     color: "white"; radius: 12; border.color: Style.line
+    Timer { interval: 120; running: true; onTriggered: panel.activityReady = true }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 20; spacing: 16
         RowLayout {
@@ -76,22 +78,15 @@ Rectangle {
                 Badge { text: Style.humanize(panel.entry.frictionLevel || panel.entry.frictionStatus || "not assessed"); color: Style.secondary; tint: Style.sidebar }
                 Label { Layout.fillWidth: true; text: panel.entry.frictionDetail || "No additional review history available."; textFormat: Text.PlainText; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Style.line }
-                Label { text: "RECENT ACTIVITY"; color: Style.muted; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1 }
-                Label { Layout.fillWidth: true; text: "Events from the latest captured history."; color: Style.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
-                Repeater {
-                    model: panel.entry.events || []
-                    RowLayout {
-                        required property var modelData
-                        Layout.fillWidth: true; spacing: 14
-                        Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 5; implicitWidth: 7; implicitHeight: 7; radius: 4; color: Style.accent }
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 5
-                            Label { Layout.fillWidth: true; text: Style.humanize(modelData.kind) + (modelData.state ? " · " + Style.humanize(modelData.state) : ""); textFormat: Text.PlainText; color: Style.ink; font.pixelSize: 12; font.weight: Font.DemiBold; wrapMode: Text.Wrap }
-                            Label { Layout.fillWidth: true; text: (modelData.actor || "GitHub") + " · " + Qt.formatDateTime(new Date(modelData.occurredAt), "MMM d, yyyy · HH:mm"); textFormat: Text.PlainText; color: Style.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
-                        }
-                    }
-                }
-                Label { visible: !(panel.entry.events || []).length; text: "No captured activity yet."; color: Style.muted; font.pixelSize: 12 }
+                 Rectangle {
+                     Layout.fillWidth: true; visible: !panel.activityReady; implicitHeight: 76
+                     color: Style.canvas; radius: 8
+                     Label { anchors.centerIn: parent; text: "Loading activity…"; color: Style.muted; font.pixelSize: 11 }
+                 }
+                 Loader {
+                     Layout.fillWidth: true; active: panel.activityReady
+                     sourceComponent: ActivityTimeline { entry: panel.entry }
+                 }
                 RadarButton { text: "Open full conversation on GitHub  ↗"; quiet: true; onClicked: panel.controller.openUrl(panel.entry.url) }
                 Item { implicitHeight: 8 }
             }

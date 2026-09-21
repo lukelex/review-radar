@@ -71,6 +71,17 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 
 ## Next work
 
+## Sync performance
+
+- [ ] **Parallelize independent searches:** reduce wall-clock refresh time while
+  respecting GitHub GraphQL rate limits and query complexity.
+- [ ] **Reduce nested payloads:** fetch detailed event data only when required by
+  the selected view, or tune the bounded event window based on measurements.
+- [ ] **Add sync progress reporting:** expose search/page progress instead of
+  showing only an undifferentiated syncing state.
+- [ ] **Instrument collector requests:** record per-request duration, response
+  size, GraphQL cost, and cache hit rate before further tuning.
+
 Native Linux notifications are complete: the Qt shell sends only the
 state-deduplicated attention transitions, includes an activation action, and
 opens the associated pull request in the browser. The remaining roadmap is:

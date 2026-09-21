@@ -1,0 +1,10 @@
+query SearchSnapshot($search: String!, $pageSize: Int!, $cursor: String) {
+  search(query: $search, type: ISSUE, first: $pageSize, after: $cursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest { id updatedAt }
+    }
+  }
+  rateLimit { cost remaining resetAt }
+}
