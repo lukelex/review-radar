@@ -1,16 +1,22 @@
-name: CI
+name: Core CI
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**/*.md'
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**
+      - tests/**
+      - Dockerfile
+      - compose.yaml
+      - .github/workflows/core.yml
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: core-ci-${{ github.ref }}
   cancel-in-progress: false
 
 env:
