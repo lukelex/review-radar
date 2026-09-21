@@ -68,3 +68,22 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
   only when the client or its build dependencies change.
   `.github/workflows/linux-qt.yml` is path-filtered and runs build, QML lint,
   and the offscreen startup test.
+
+## Next work
+
+Native Linux notifications are complete: the Qt shell sends only the
+state-deduplicated attention transitions, includes an activation action, and
+opens the associated pull request in the browser. The remaining roadmap is:
+
+- [ ] **Hardening:** add explicit rate-limit handling and retry guidance.
+- [ ] **Hardening:** expose offline and stale-capture state without hiding the
+  last usable projection.
+- [ ] **Hardening:** add local-state schema migrations and recovery tests.
+- [ ] **Hardening:** audit keyboard navigation, screen-reader labels, and color
+  contrast in the Qt/QML shell.
+- [ ] **Hardening:** add fixture-driven end-to-end projection and notification
+  deduplication tests.
+- [ ] **Quickshell integration:** provide a bar/status adapter without moving
+  collection, ranking, or notification state into QML.
+- [ ] **macOS client:** implement the SwiftUI shell against the shared core.
+- [ ] **Windows client:** implement the WinUI 3 shell against the shared core.
