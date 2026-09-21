@@ -12,6 +12,8 @@ pub struct StateProjection {
     pub notification_eligible_ids: Vec<String>,
 }
 
+/// Apply per-device acknowledgement, snooze, and notification state without
+/// changing the shared domain projection.
 pub fn apply_local_state(
     cards: Vec<PullRequestCard>,
     state: &StateStore,
