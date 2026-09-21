@@ -8,7 +8,7 @@ the change can be reviewed and reverted independently.
 
 - [ ] **Typed domain identifiers and enums** — reduce stringly typed PR IDs,
   fingerprints, lifecycle, and state values at core boundaries.
-- [ ] **Typed crate errors** — introduce crate-owned `thiserror` errors and keep
+- [x] **Typed crate errors** — introduce crate-owned `thiserror` errors and keep
   `anyhow` at binary/application boundaries.
 - [ ] **Deterministic time** — inject a clock or explicit `now` value into
   time-sensitive domain and state operations.

@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 pub mod attention;
 pub mod friction;
@@ -10,6 +10,12 @@ pub mod ranking;
 pub use ranking::{
     HighestFrictionRanking, NewestActivityRanking, RankingStrategy, TailoredRanking,
 };
+
+#[derive(Debug, Error)]
+pub enum DomainError {
+    #[error("invalid GitHub snapshot: {0}")]
+    InvalidSnapshot(#[from] serde_json::Error),
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,8 +33,8 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
-    pub fn from_json(json: &str) -> Result<Self> {
-        serde_json::from_str(json).context("invalid GitHub snapshot")
+    pub fn from_json(json: &str) -> std::result::Result<Self, DomainError> {
+        serde_json::from_str(json).map_err(DomainError::InvalidSnapshot)
     }
 
     pub fn tailored_queue(&self) -> Vec<PullRequestCard> {
