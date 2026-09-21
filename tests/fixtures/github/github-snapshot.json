@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-21T16:33:41.888Z",
+  "capturedAt": "2026-09-21T19:21:20.137Z",
   "limits": {
     "checkContexts": 100,
     "eventLimit": 20,
@@ -34485,7 +34485,7 @@
         "node-3046"
       ],
       "pagesFetched": 3,
-      "query": "is:pr is:closed involves:user-001 closed:>=2026-09-07T16:33:41Z sort:updated-desc",
+      "query": "is:pr is:closed involves:user-001 closed:>=2026-09-07T19:21:20Z sort:updated-desc",
       "reportedCount": 64,
       "truncated": false
     },
@@ -34541,7 +34541,7 @@
         "node-2993"
       ],
       "pagesFetched": 2,
-      "query": "is:pr is:closed review-involves:user-001 closed:>=2026-09-07T16:33:41Z sort:updated-desc",
+      "query": "is:pr is:closed review-involves:user-001 closed:>=2026-09-07T19:21:20Z sort:updated-desc",
       "reportedCount": 46,
       "truncated": false
     },
