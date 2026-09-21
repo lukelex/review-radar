@@ -116,6 +116,13 @@ void WorkspaceTest::workspace() {
         QTest::keyClick(window, Qt::Key_U, Qt::ControlModifier);
         QTRY_VERIFY(list->property("contentY").toReal() < pagedContentY);
 
+        search->setProperty("text", "WEB");
+        QMetaObject::invokeMethod(search, "forceActiveFocus");
+        QVERIFY(search->property("activeFocus").toBool());
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_COMPARE(search->property("text").toString(), QString());
+        QVERIFY(!search->property("activeFocus").toBool());
+
         // Basic Vim navigation follows the filtered list without stealing
         // keystrokes from the search field.
         QCOMPARE(window->property("navigationIndex").toInt(), -1);
@@ -159,6 +166,7 @@ void WorkspaceTest::workspace() {
         QTRY_VERIFY(window->findChild<QObject *>("detail-panel"));
         auto *open = window->findChild<QQuickItem *>("detail-open");
         QVERIFY(open);
+        QTest::qWait(50); // Allow the new detail layout to settle before hit testing.
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
                           open->mapToScene(QPointF(open->width() / 2, open->height() / 2)).toPoint());
         QCOMPARE(queue.opened, QString("https://github.com/example/api/pull/142/files"));
@@ -174,6 +182,22 @@ void WorkspaceTest::workspace() {
         window->resize(860, 640);
         QTRY_VERIFY(window->property("narrow").toBool());
         screenshot("narrow-detail");
+        auto *shortcuts = window->findChild<QObject *>("shortcuts-dialog");
+        QVERIFY(shortcuts);
+        QVERIFY(QMetaObject::invokeMethod(shortcuts, "open"));
+        QTRY_VERIFY(shortcuts->property("visible").toBool());
+        QTest::qWait(50);
+        QVERIFY(shortcuts->property("height").toReal() <= window->height() - 40);
+        screenshot("shortcuts-modal");
+        QVERIFY(QMetaObject::invokeMethod(shortcuts, "close"));
+        auto *confirmation = window->findChild<QObject *>("acknowledge-dialog");
+        QVERIFY(confirmation);
+        QVERIFY(QMetaObject::invokeMethod(confirmation, "open"));
+        QTRY_VERIFY(confirmation->property("visible").toBool());
+        screenshot("confirmation-modal");
+        const auto previousAcknowledgement = queue.acknowledged;
+        QVERIFY(QMetaObject::invokeMethod(confirmation, "reject"));
+        QCOMPARE(queue.acknowledged, previousAcknowledgement);
         // A cache update retains selection by identity and refreshes its data.
         auto replacement = fixture.array();
         auto first = replacement.first().toObject();

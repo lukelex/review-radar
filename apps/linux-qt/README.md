@@ -37,7 +37,7 @@ executables it launches, use the repository script:
 GH_TOKEN="$(gh auth token)" ./build/native/bin/review-radar
 ```
 
-To create the same relocatable archive used by the GitHub alpha release:
+To create the same relocatable archive used by the GitHub release:
 
 ```sh
 ./scripts/package-release 0.1.0-alpha.1
@@ -46,8 +46,10 @@ sha256sum --check build/review-radar-linux-x86_64-0.1.0-alpha.1.tar.gz.sha256
 
 The archive is Linux x86_64-specific and contains the Qt runtime, plugins, QML
 modules, Rust helpers, launcher, checksum companion, and a bundled README. A
-tag such as `v0.1.0-alpha.1`, or the **Release Linux alpha** workflow, publishes
-the archive as a GitHub prerelease.
+Use the **Release Linux** workflow, enter a tag such as `v0.1.0`, and it will
+run CI, create the tag, build the archive, and publish the GitHub release.
+Versions containing `-alpha`, `-beta`, `-rc`, `-dev`, or `-preview` are
+published as GitHub prereleases.
 
 The script builds the existing root `Dockerfile`'s `linux-desktop` stage and
 extracts the resulting application and Rust helpers under `build/native/bin/`.

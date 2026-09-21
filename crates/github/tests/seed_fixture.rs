@@ -57,11 +57,13 @@ fn every_identity_field_is_generalized() {
 
 #[test]
 fn fixture_projects_each_supported_workspace_view() {
-    let snapshot = Snapshot::from_json(&fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/github/github-snapshot.json"),
+    let snapshot = Snapshot::from_json(
+        &fs::read_to_string(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/fixtures/github/github-snapshot.json"),
+        )
+        .unwrap(),
     )
-    .unwrap())
     .unwrap();
     let ranking = by_id("tailored").unwrap();
 

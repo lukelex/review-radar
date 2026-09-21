@@ -155,14 +155,26 @@ and a denser authored-PR table are future refinements. They must preserve the
 shared core's ordering and meaning, including when the user chooses Highest
 friction sorting.
 
-### Shortcut guide
+### Modals and shortcut guide
 
 The shortcut guide is an in-app surface, not a default toolkit dialog. Use the
 same white surface, quiet border, 12–14px corners, 20–24px spacing, muted section
-captions, and indigo-tinted branded header as the workspace. Render keys as
+captions, and clear title hierarchy as the workspace. Render keys as
 compact bordered keycaps with readable labels, group actions by user intent, and
 include a clear close action. Keep the guide quiet and scannable; it should teach
 the existing interaction model without introducing new shortcuts.
+
+`RadarModal.qml` supplies the shared centered surface, 24px body padding,
+22px title, subdued overlay, scrollable body, and persistent action footer.
+Shortcuts use grouped keycaps and Done; confirmations use Cancel and a specific
+action label, initially focusing Cancel. Escape dismisses without applying an
+action. Future preferences should reuse this shell with grouped settings and
+explicit Save/Cancel semantics when editing a draft; preferences are not yet
+implemented. Keep the header and footer visible when the body needs scrolling.
+
+Rendered references (illustrative data, 860 × 640):
+[shortcuts](mockups/high/shortcuts-modal.png) and
+[confirmation](mockups/high/confirmation-modal.png).
 
 ## Interaction and data states
 

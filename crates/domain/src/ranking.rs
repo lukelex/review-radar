@@ -112,8 +112,8 @@ mod tests {
         friction::{AssessmentStatus, Level},
         Snapshot, WorkspaceView,
     };
-    use std::collections::BTreeSet;
     use proptest::prelude::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn friction_order_crosses_bands_and_handles_unknowns_and_stable_ties() {

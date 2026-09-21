@@ -10,16 +10,24 @@ macro_rules! stable_string_id {
         pub struct $name(String);
 
         impl $name {
-            pub fn as_str(&self) -> &str { &self.0 }
-            pub fn is_empty(&self) -> bool { self.0.is_empty() }
+            pub fn as_str(&self) -> &str {
+                &self.0
+            }
+            pub fn is_empty(&self) -> bool {
+                self.0.is_empty()
+            }
         }
 
         impl From<String> for $name {
-            fn from(value: String) -> Self { Self(value) }
+            fn from(value: String) -> Self {
+                Self(value)
+            }
         }
 
         impl From<&str> for $name {
-            fn from(value: &str) -> Self { Self(value.to_owned()) }
+            fn from(value: &str) -> Self {
+                Self(value.to_owned())
+            }
         }
 
         impl std::fmt::Display for $name {
@@ -106,58 +114,60 @@ impl Snapshot {
                     .map(|captured_at| self.new_feedback_since(previous, captured_at))
             })
             .unwrap_or_default();
-        let mut cards = self
-            .pull_requests
-            .iter()
-            .map(|pr| {
-                let mut feedback = detected_feedback.get(pr.id.as_str()).cloned().unwrap_or_default();
-                let retained = retained_feedback
-                    .get(pr.id.as_str())
-                    .into_iter()
-                    .flat_map(|fingerprints| {
-                        events(pr)
-                            .into_iter()
-                            .filter(|event| fingerprints.contains(&event.fingerprint))
-                            .collect::<Vec<_>>()
-                    });
-                for event in retained {
-                    if !feedback
-                        .iter()
-                        .any(|existing| existing.fingerprint == event.fingerprint)
-                    {
-                        feedback.push(event);
+        let mut cards =
+            self.pull_requests
+                .iter()
+                .map(|pr| {
+                    let mut feedback = detected_feedback
+                        .get(pr.id.as_str())
+                        .cloned()
+                        .unwrap_or_default();
+                    let retained = retained_feedback.get(pr.id.as_str()).into_iter().flat_map(
+                        |fingerprints| {
+                            events(pr)
+                                .into_iter()
+                                .filter(|event| fingerprints.contains(&event.fingerprint))
+                                .collect::<Vec<_>>()
+                        },
+                    );
+                    for event in retained {
+                        if !feedback
+                            .iter()
+                            .any(|existing| existing.fingerprint == event.fingerprint)
+                        {
+                            feedback.push(event);
+                        }
                     }
-                }
-                // Preserve the reason even when a bounded current event window
-                // no longer contains the event. Its fingerprint remains the
-                // local evidence and the current PR timestamp is conservative.
-                for fingerprint in retained_feedback
-                    .get(pr.id.as_str())
-                    .into_iter()
-                    .flat_map(|set| set.iter())
-                {
-                    if !feedback
-                        .iter()
-                        .any(|event| &event.fingerprint == fingerprint)
+                    // Preserve the reason even when a bounded current event window
+                    // no longer contains the event. Its fingerprint remains the
+                    // local evidence and the current PR timestamp is conservative.
+                    for fingerprint in retained_feedback
+                        .get(pr.id.as_str())
+                        .into_iter()
+                        .flat_map(|set| set.iter())
                     {
-                        feedback.push(Event {
-                            fingerprint: fingerprint.clone(),
-                            kind: EventKind::Comment,
-                            actor: None,
-                            state: None,
-                            occurred_at: pr.updated_at.clone(),
-                            is_bot: false,
-                        });
+                        if !feedback
+                            .iter()
+                            .any(|event| &event.fingerprint == fingerprint)
+                        {
+                            feedback.push(Event {
+                                fingerprint: fingerprint.clone(),
+                                kind: EventKind::Comment,
+                                actor: None,
+                                state: None,
+                                occurred_at: pr.updated_at.clone(),
+                                is_bot: false,
+                            });
+                        }
                     }
-                }
-                project(
-                    pr,
-                    memberships.get(pr.id.as_str()),
-                    self.review_histories.get(pr.id.as_str()),
-                    &feedback,
-                )
-            })
-            .collect::<Vec<_>>();
+                    project(
+                        pr,
+                        memberships.get(pr.id.as_str()),
+                        self.review_histories.get(pr.id.as_str()),
+                        &feedback,
+                    )
+                })
+                .collect::<Vec<_>>();
         ranking.rank(&mut cards);
         cards
     }
@@ -889,7 +899,10 @@ mod tests {
             card.explanation.reasons[0].evidence,
             ["search:authored", "capture-delta"]
         );
-        assert!(card.current_fingerprint.as_str().contains("comment:comment-1"));
+        assert!(card
+            .current_fingerprint
+            .as_str()
+            .contains("comment:comment-1"));
 
         // The same bounded event tail is a baseline when there is no prior
         // capture, and is not repeatedly classified after it was observed.
@@ -928,7 +941,10 @@ mod tests {
             .unwrap();
         assert_eq!(card.action, Action::NewFeedback);
         assert_eq!(card.feedback_fingerprints.len(), 1);
-        assert!(card.current_fingerprint.as_str().contains("comment:comment-1"));
+        assert!(card
+            .current_fingerprint
+            .as_str()
+            .contains("comment:comment-1"));
     }
 
     #[test]

@@ -23,6 +23,12 @@ that visual source of truth.
 
 ## Collection and projection performance
 
+The queue executable writes exactly one JSON response to stdout. All tracing
+and diagnostic output goes to stderr, including when `RUST_LOG` is enabled.
+Native clients parse the complete stdout stream as JSON; mixing logs into that
+stream causes a queue-response parse failure. This boundary is covered by the
+`queue_output` executable integration test.
+
 The collector must preserve one coherent successful capture. A client may show
 the previous successful capture while a new capture runs, but must not combine
 partially classified cards into a new ranked workspace.
@@ -48,6 +54,13 @@ Current behavior:
 The collector reports cache hits, hydration count, request duration, slowest
 request, response bytes, and GraphQL cost. These measurements are diagnostic;
 they must not change ranking or attention semantics.
+
+Hydration batches start conservatively and adapt within one capture from the
+observed request cost, latency, and remaining rate-limit budget. The adaptation
+is bounded by a minimum and maximum batch size and reduces the next batch after
+slow, expensive, or rate-limit-constrained requests. A failed or timed-out
+request retains the existing stale-fallback behavior; adaptive sizing must not
+create a partial projection.
 
 During refresh it also emits progress for each search/page and hydration batch.
 Native clients should surface that as concise progress copy (for example,
@@ -125,12 +138,39 @@ is not being edited: `j` moves to the next matching PR, `k` moves to the previou
 matching PR, `l` opens details for the highlighted PR, `o` opens the selected PR's
 canonical URL in the host browser, `a` asks for confirmation before acknowledging
 the selected PR, `s` opens snooze choices, `y` copies its canonical URL, `/` focuses
-search, and `?` shows shortcut help. `h` closes details. While details are open,
+search, and `?` shows shortcut help. `h` closes details. `Esc` closes details if
+open, clears the search field, and returns focus to the workspace. While details are open,
 `j` and `k` move between PRs without leaving the detail context. `Ctrl+N` cycles
 to the next workspace, wrapping at the end. The highlighted item must remain
 visible and the shortcuts must not intercept text input.
 
+The five primary workspaces are directly addressable with `Ctrl+1` through
+`Ctrl+5`, in the documented order: Tailored, Action, My PRs, Following, and
+Recent. `Ctrl+D` pages the PR list down by most of a viewport and `Ctrl+U` pages
+it up by the same amount. These paging shortcuts must preserve the current
+selection and must not intercept search-field editing.
+
+While the Control modifier is held, desktop clients reveal subtle numeric hints
+beside the five workspace navigation items. The hints are discoverability aids,
+not a replacement for accessible names or the shortcut guide, and disappear on
+modifier release or window deactivation. Modifier state must be observed at the
+native-shell level so the hints remain reliable while focus is in search or
+another child control.
+
 ## Decisions and tradeoffs
+
+### Shared modal presentation
+
+Shortcuts and confirmations share a centered, viewport-bounded modal with a
+readable title, scrolling body, and persistent footer. This keeps longer help
+content usable on smaller windows. Escape dismisses; confirmations initially
+focus Cancel and capture their target when opened so refresh cannot redirect
+the action to a different PR. Shortcuts use grouped keycaps and Done.
+Future preferences reuse the same hierarchy with grouped settings and explicit
+Save/Cancel for draft edits; no preferences screen is implemented yet.
+Acceptance: header and actions stay reachable at the minimum window size,
+confirmation cancellation causes no state mutation, and all variants use shared
+design tokens. Linux reference: `apps/linux-qt/qml/RadarModal.qml`.
 
 ### Stable Linux application-data directory
 
@@ -175,9 +215,9 @@ navigation, and loading treatments. They must not move GitHub queries,
 classification, ranking, notification deduplication, or local persistence into
 the UI layer.
 
-### Relocatable Linux alpha bundles
+### Relocatable Linux release bundles
 
-The Linux alpha release is published as a relocatable x86_64 archive containing
+The Linux release is published as a relocatable x86_64 archive containing
 the native shell, Rust helper executables, the matching Qt runtime/plugins/QML
 modules, and a launcher that resolves its bundle root at runtime. The archive
 must not embed credentials or depend on the build machine's absolute path. It
@@ -189,11 +229,12 @@ Acceptance criteria:
   or editing the launcher.
 - The launcher uses the bundled Qt ABI rather than an arbitrary host Qt minor
   version, while leaving host system ABI and graphics libraries host-provided.
-- Every published archive has a SHA-256 companion and alpha/prerelease status.
+- Every published archive has a SHA-256 companion and stable/prerelease status
+  matching its version.
 - The release documents Linux x86_64 and graphical-session requirements.
 
 Implementation reference: `scripts/package-release` and
-`.github/workflows/release-alpha.yml`.
+`.github/workflows/release.yml`.
 
 ## References
 
