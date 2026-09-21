@@ -1,5 +1,6 @@
 services:
   collector:
+    container_name: collector
     image: review-radar-core:local
     build:
       context: .
@@ -11,38 +12,45 @@ services:
       - ./data:/data
 
   seed-export:
+    container_name: seed-export
     image: review-radar-core:local
     build:
       context: .
       dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
-    entrypoint: ["review-radar-seed-export"]
+    entrypoint:
+      - "review-radar-seed-export"
     volumes:
       # SQLite WAL readers may need to create shared-memory sidecar files.
       - ./data:/data
       - ./tests/fixtures/github:/fixtures
 
   queue:
+    container_name: queue
     image: review-radar-core:local
     build:
       context: .
       dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
-    entrypoint: ["review-radar-queue"]
+    entrypoint:
+      - "review-radar-queue"
     volumes:
       - ./data:/data
 
   state:
+    container_name: state
     image: review-radar-core:local
     build:
       context: .
       dockerfile: Dockerfile.core
     user: "${UID:-1000}:${GID:-1000}"
-    entrypoint: ["review-radar-state"]
+    entrypoint:
+      - "review-radar-state"
     volumes:
       - ./data:/data
 
   desktop:
+    container_name: desktop
     image: review-radar-desktop:local
     build:
       context: .
@@ -57,6 +65,8 @@ services:
       DISPLAY: ${DISPLAY:-}
       XAUTHORITY: /host-xauthority
       QT_X11_NO_MITSHM: "1"
+      QT_QPA_PLATFORM: ${QT_QPA_PLATFORM:-}
+      QT_QUICK_BACKEND: ${QT_QUICK_BACKEND:-software}
     volumes:
       - ./data:/data
       - ${XDG_RUNTIME_DIR:-/tmp}:/host-runtime
