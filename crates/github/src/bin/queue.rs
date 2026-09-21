@@ -1,7 +1,9 @@
 use std::{env, path::PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
-use review_radar_domain::{Snapshot, WorkspaceView};
+use review_radar_domain::{
+    NewestActivityRanking, RankingStrategy, Snapshot, TailoredRanking, WorkspaceView,
+};
 use rusqlite::{params, Connection, OpenFlags};
 use serde_json::{json, Value};
 
@@ -10,10 +12,12 @@ struct Config {
     database: PathBuf,
     capture_id: Option<i64>,
     view: WorkspaceView,
+    ranking: String,
 }
 
 fn main() -> Result<()> {
     let config = parse_config(env::args().skip(1))?;
+    let ranking = ranking(&config.ranking)?;
     let connection = Connection::open_with_flags(
         &config.database,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
@@ -21,7 +25,7 @@ fn main() -> Result<()> {
     .with_context(|| format!("cannot open {}", config.database.display()))?;
     let capture_id = config.capture_id.unwrap_or(latest_capture_id(&connection)?);
     let (captured_at, snapshot) = load_snapshot(&connection, capture_id)?;
-    let cards = snapshot.view(config.view);
+    let cards = snapshot.view_with_ranking(config.view, ranking.as_ref());
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -29,6 +33,7 @@ fn main() -> Result<()> {
             "captureId": capture_id,
             "capturedAt": captured_at,
             "view": config.view.as_str(),
+            "ranking": ranking.id(),
             "count": cards.len(),
             "pullRequests": cards,
         }))?
@@ -41,6 +46,7 @@ fn parse_config(args: impl Iterator<Item = String>) -> Result<Config> {
         database: "/data/review-radar.sqlite3".into(),
         capture_id: None,
         view: WorkspaceView::Tailored,
+        ranking: "tailored".into(),
     };
     let mut args = args.peekable();
     while let Some(flag) = args.next() {
@@ -59,10 +65,19 @@ fn parse_config(args: impl Iterator<Item = String>) -> Result<Config> {
                     )
                 })?
             }
+            "--ranking" => config.ranking = value,
             _ => bail!("unknown argument: {flag}"),
         }
     }
     Ok(config)
+}
+
+fn ranking(id: &str) -> Result<Box<dyn RankingStrategy>> {
+    match id {
+        "tailored" => Ok(Box::new(TailoredRanking)),
+        "newest-activity" => Ok(Box::new(NewestActivityRanking)),
+        _ => bail!("invalid ranking {id:?}; use tailored or newest-activity"),
+    }
 }
 
 fn latest_capture_id(connection: &Connection) -> Result<i64> {
@@ -137,12 +152,16 @@ mod tests {
                 "action".into(),
                 "--capture-id".into(),
                 "4".into(),
+                "--ranking".into(),
+                "newest-activity".into(),
             ]
             .into_iter(),
         )
         .unwrap();
         assert_eq!(config.view, WorkspaceView::Action);
         assert_eq!(config.capture_id, Some(4));
+        assert_eq!(config.ranking, "newest-activity");
         assert!(parse_config(["--view".into(), "other".into()].into_iter()).is_err());
+        assert!(ranking("other").is_err());
     }
 }

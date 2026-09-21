@@ -96,6 +96,7 @@ then delegates filtering and ranking to `crates/domain`.
 docker compose run --rm queue
 docker compose run --rm queue --view action
 docker compose run --rm queue --view my-prs --capture-id 1
+docker compose run --rm queue --view action --ranking newest-activity
 ```
 
 It prints a stable JSON view model with the selected capture, ranked cards, top
@@ -103,6 +104,12 @@ action, relationship memberships, and ordered review/comment events. The support
 views are `tailored`, `action`, `my-prs`, `following`, and `recent`. The latest
 capture is the default; `--capture-id` makes historical inspection reproducible.
 This command is read-only and reports an error when there is no successful capture.
+
+`tailored` is the default ranking policy: priority bands, then newest activity.
+`newest-activity` is a deliberately separate chronological policy that demonstrates
+the plug-in boundary; it preserves a view's membership while changing only its
+order. Ranking implementations live in `crates/domain/src/ranking.rs` and clients
+should persist the policy identifier, not recreate a comparator.
 
 ## Queries and bounds
 

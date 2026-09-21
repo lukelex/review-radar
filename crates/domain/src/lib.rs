@@ -3,6 +3,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+pub mod ranking;
+
+pub use ranking::{NewestActivityRanking, RankingStrategy, TailoredRanking};
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
@@ -17,23 +21,30 @@ impl Snapshot {
     }
 
     pub fn tailored_queue(&self) -> Vec<PullRequestCard> {
+        self.ranked(&TailoredRanking)
+    }
+
+    pub fn ranked(&self, ranking: &dyn RankingStrategy) -> Vec<PullRequestCard> {
         let memberships = self.memberships();
         let mut cards = self
             .pull_requests
             .iter()
             .map(|pr| project(pr, memberships.get(&pr.id)))
             .collect::<Vec<_>>();
-        cards.sort_by(|left, right| {
-            left.priority
-                .cmp(&right.priority)
-                .then_with(|| right.updated_at.cmp(&left.updated_at))
-                .then_with(|| left.id.cmp(&right.id))
-        });
+        ranking.rank(&mut cards);
         cards
     }
 
     pub fn view(&self, view: WorkspaceView) -> Vec<PullRequestCard> {
-        self.tailored_queue()
+        self.view_with_ranking(view, &TailoredRanking)
+    }
+
+    pub fn view_with_ranking(
+        &self,
+        view: WorkspaceView,
+        ranking: &dyn RankingStrategy,
+    ) -> Vec<PullRequestCard> {
+        self.ranked(ranking)
             .into_iter()
             .filter(|card| match view {
                 WorkspaceView::Tailored => true,
@@ -552,5 +563,29 @@ mod tests {
         assert!(events
             .iter()
             .all(|event| event.fingerprint.split(':').count() >= 3));
+    }
+
+    #[test]
+    fn ranking_strategies_can_be_swapped_without_changing_view_membership() {
+        let snapshot = Snapshot::from_json(SEED).unwrap();
+        let tailored = snapshot.view_with_ranking(WorkspaceView::Action, &TailoredRanking);
+        let chronological =
+            snapshot.view_with_ranking(WorkspaceView::Action, &NewestActivityRanking);
+
+        assert_eq!(TailoredRanking.id(), "tailored");
+        assert_eq!(NewestActivityRanking.id(), "newest-activity");
+        assert_eq!(
+            tailored
+                .iter()
+                .map(|card| &card.id)
+                .collect::<BTreeSet<_>>(),
+            chronological
+                .iter()
+                .map(|card| &card.id)
+                .collect::<BTreeSet<_>>()
+        );
+        assert!(chronological
+            .windows(2)
+            .all(|pair| pair[0].updated_at >= pair[1].updated_at));
     }
 }
