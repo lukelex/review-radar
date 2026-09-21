@@ -2,6 +2,8 @@ use std::{collections::BTreeMap, env, path::PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::{DateTime, Utc};
+#[cfg(test)]
+use review_radar_domain::PullRequestCard;
 use review_radar_domain::{
     friction::{Coverage, HistoryEvent, HistoryEventKind, ReviewHistory},
     RankingStrategy, Snapshot, WorkspaceView,
@@ -10,6 +12,8 @@ use review_radar_github::projection::apply_local_state;
 use review_radar_state::StateStore;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde_json::{json, Value};
+use tracing::{info, info_span};
+use tracing_subscriber::EnvFilter;
 
 #[derive(Debug)]
 struct Config {
@@ -22,6 +26,14 @@ struct Config {
 }
 
 fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("review_radar_queue=info")),
+        )
+        .with_target(false)
+        .init();
+    let _span = info_span!("queue.projection").entered();
     let config = parse_config(env::args().skip(1))?;
     let ranking = ranking(&config.ranking)?;
     let connection = Connection::open_with_flags(
@@ -43,10 +55,25 @@ fn main() -> Result<()> {
     );
     for card in &cards {
         if !card.feedback_fingerprints.is_empty() {
-            state.record_feedback(card.id.as_str(), &card.feedback_fingerprints.iter().map(|value| value.as_str().to_owned()).collect::<Vec<_>>(), Utc::now())?;
+            state.record_feedback(
+                card.id.as_str(),
+                &card
+                    .feedback_fingerprints
+                    .iter()
+                    .map(|value| value.as_str().to_owned())
+                    .collect::<Vec<_>>(),
+                Utc::now(),
+            )?;
         }
     }
     let projection = apply_local_state(cards, &state, config.record_attention, Utc::now())?;
+    info!(
+        capture_id,
+        source_count = projection.source_count,
+        visible_count = projection.cards.len(),
+        suppressed_count = projection.suppressed_count,
+        "projection completed"
+    );
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -462,8 +489,8 @@ mod tests {
         let state = StateStore::in_memory().unwrap();
         let now = Utc::now();
 
-        let first = apply_local_state(vec![card("pr-1", true, "event-1")], &state, true, now)
-            .unwrap();
+        let first =
+            apply_local_state(vec![card("pr-1", true, "event-1")], &state, true, now).unwrap();
         assert!(first.notification_eligible_ids.is_empty());
 
         let unchanged =

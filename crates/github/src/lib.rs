@@ -3,6 +3,7 @@ use std::{
     env, fs,
     io::{self, Write},
     path::PathBuf,
+    thread,
     time::{Duration, Instant},
 };
 
@@ -10,15 +11,23 @@ use anyhow::{anyhow, bail, Context, Result};
 use chrono::{Duration as ChronoDuration, SecondsFormat, Utc};
 use reqwest::blocking::Client;
 use rusqlite::{params, Connection};
+use serde::Deserialize;
 use serde_json::{json, Value};
+use tracing::{debug, info, info_span, warn};
+use tracing_subscriber::EnvFilter;
 
 pub mod projection;
-use serde::Deserialize;
 
 const API_URL: &str = "https://api.github.com/graphql";
 const SEARCH_QUERY: &str = include_str!("search.graphql");
 const HYDRATE_QUERY: &str = include_str!("hydrate.graphql");
 const SCHEMA: &str = include_str!("schema.sql");
+const INITIAL_HYDRATION_BATCH: usize = 6;
+const MIN_HYDRATION_BATCH: usize = 2;
+// Ten is the existing verified upper bound for nested hydration responses.
+const MAX_HYDRATION_BATCH: usize = 10;
+const MAX_REQUEST_ATTEMPTS: usize = 3;
+const REQUEST_BACKOFF: Duration = Duration::from_millis(250);
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -105,6 +114,7 @@ struct GitHub {
 impl GitHub {
     fn new(token: String) -> Result<Self> {
         let client = Client::builder()
+            .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(120))
             .user_agent("review-radar-data-spike")
             .build()?;
@@ -122,6 +132,8 @@ impl GitHub {
     }
 
     fn query(&mut self, query: &str, variables: Value) -> Result<Value> {
+        let query_kind = query_kind(query);
+        let _span = info_span!("github.request", query = query_kind).entered();
         if self.requests > 0 && self.remaining == 0 {
             bail!(
                 "GitHub rate limit exhausted; retry after {}",
@@ -132,17 +144,55 @@ impl GitHub {
                 }
             );
         }
-        let started = Instant::now();
-        let response = self
-            .client
-            .post(API_URL)
-            .bearer_auth(&self.token)
-            .json(&json!({ "query": query, "variables": variables }))
-            .send()
-            .context("GitHub request failed")?;
-        let elapsed = started.elapsed();
-        self.request_time += elapsed;
-        self.slowest_request = self.slowest_request.max(elapsed);
+        let mut attempt = 0;
+        let response = loop {
+            attempt += 1;
+            let started = Instant::now();
+            let response = self
+                .client
+                .post(API_URL)
+                .bearer_auth(&self.token)
+                .json(&json!({ "query": query, "variables": &variables }))
+                .send();
+            let elapsed = started.elapsed();
+            self.request_time += elapsed;
+            self.slowest_request = self.slowest_request.max(elapsed);
+            match response {
+                Ok(response)
+                    if retryable_status(response.status().as_u16())
+                        && attempt < MAX_REQUEST_ATTEMPTS =>
+                {
+                    warn!(
+                        status = response.status().as_u16(),
+                        attempt,
+                        elapsed_ms = elapsed.as_millis() as u64,
+                        "retrying GitHub request"
+                    );
+                    thread::sleep(REQUEST_BACKOFF * attempt as u32);
+                }
+                Ok(response) => break response,
+                Err(error) if error.is_timeout() && attempt < MAX_REQUEST_ATTEMPTS => {
+                    warn!(
+                        attempt,
+                        elapsed_ms = elapsed.as_millis() as u64,
+                        "GitHub request timed out; retrying"
+                    );
+                    thread::sleep(REQUEST_BACKOFF * attempt as u32);
+                }
+                Err(error) => {
+                    let category = if error.is_timeout() {
+                        "timeout"
+                    } else {
+                        "transport"
+                    };
+                    return Err(anyhow!("GitHub request {category} failed: {error}"));
+                }
+            }
+        };
+        debug!(
+            status = response.status().as_u16(),
+            attempt, "GitHub request completed"
+        );
         if matches!(response.status().as_u16(), 403 | 429) {
             bail!(
                 "GitHub rate limit request rejected (HTTP {}); retry after {}",
@@ -180,7 +230,28 @@ impl GitHub {
     }
 }
 
+fn query_kind(query: &str) -> &'static str {
+    if query == HYDRATE_QUERY {
+        "hydrate"
+    } else if query == SEARCH_QUERY {
+        "search"
+    } else {
+        "metadata"
+    }
+}
+
+fn retryable_status(status: u16) -> bool {
+    status == 408 || status == 429 || (500..=599).contains(&status)
+}
+
 pub fn run() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("review_radar_github=info")),
+        )
+        .with_target(false)
+        .init();
     let config = parse_config(env::args().skip(1))?;
     let token = env::var("GH_TOKEN").context("GH_TOKEN is required")?;
     let cache = load_cache(&config.database)?;
@@ -259,6 +330,34 @@ fn bounded(value: &str, min: u64, max: u64, name: &str) -> Result<u64> {
         bail!("{name} must be between {min} and {max}");
     }
     Ok(value)
+}
+
+fn hydration_batch_size(remaining: u64) -> usize {
+    if remaining < 250 {
+        MIN_HYDRATION_BATCH
+    } else if remaining < 500 {
+        4
+    } else {
+        INITIAL_HYDRATION_BATCH
+    }
+}
+
+fn next_hydration_batch_size(
+    current: usize,
+    elapsed: Duration,
+    cost: u64,
+    remaining: u64,
+) -> usize {
+    // Leave room for the next request and avoid increasing batches near the
+    // rate-limit floor. The latency and cost limits are deliberately
+    // conservative because hydration includes nested review history.
+    if remaining < 250 || elapsed > Duration::from_secs(30) || cost > 500 {
+        return (current / 2).max(MIN_HYDRATION_BATCH);
+    }
+    if elapsed <= Duration::from_secs(10) && cost <= 300 && remaining >= 500 {
+        return (current + 2).min(MAX_HYDRATION_BATCH);
+    }
+    current.clamp(MIN_HYDRATION_BATCH, MAX_HYDRATION_BATCH)
 }
 
 fn collect(
@@ -407,16 +506,23 @@ fn collect(
 
     let cache_hits = pull_requests.len() as u64 - ids_to_hydrate.len() as u64;
     let cache_misses = ids_to_hydrate.len() as u64;
+    info!(cache_hits, cache_misses, "prepared pull-request hydration");
     let mut hydrated = BTreeMap::new();
     let mut hydration_error = None;
-    let hydration_batches = ids_to_hydrate.chunks(10).len();
-    for (batch_index, ids) in ids_to_hydrate.chunks(10).enumerate() {
+    let mut batch_size = hydration_batch_size(github.remaining);
+    let mut offset = 0;
+    let mut batch_index = 0;
+    while offset < ids_to_hydrate.len() {
+        let end = (offset + batch_size).min(ids_to_hydrate.len());
+        let ids = &ids_to_hydrate[offset..end];
         report_progress(format!(
-            "hydrating batch {}/{} ({} PRs)",
+            "hydrating batch {} ({} PRs; batch size {})",
             batch_index + 1,
-            hydration_batches,
-            ids.len()
+            ids.len(),
+            batch_size
         ));
+        let request_cost = github.cost;
+        let request_time = github.request_time;
         let data = match github.query(
             HYDRATE_QUERY,
             json!({"ids": ids, "eventLimit": config.event_limit}),
@@ -427,11 +533,19 @@ fn collect(
                 break;
             }
         };
+        batch_size = next_hydration_batch_size(
+            batch_size,
+            github.request_time.saturating_sub(request_time),
+            github.cost.saturating_sub(request_cost),
+            github.remaining,
+        );
         for node in required_array(&data, "nodes")? {
             if !node.is_null() {
                 hydrated.insert(required_str(node, "id")?.to_owned(), node.clone());
             }
         }
+        offset = end;
+        batch_index += 1;
     }
     let mut stale_ids = Vec::new();
     for (id, summary) in &mut pull_requests {
@@ -466,6 +580,10 @@ fn collect(
 }
 
 /// Collect a complete GitHub snapshot using the supplied cache.
+///
+/// This is the reusable collector boundary for native clients. It owns the
+/// authenticated HTTP client and returns only a complete capture or an error;
+/// callers never observe a partially hydrated projection.
 pub fn collect_with_token(
     token: impl Into<String>,
     config: &Config,
@@ -656,6 +774,34 @@ mod tests {
         assert!(parse_config(["--max-pages".into(), "0".into()].into_iter()).is_err());
         let config = parse_config(["--event-limit".into(), "5".into()].into_iter()).unwrap();
         assert_eq!(config.event_limit, 5);
+    }
+
+    #[test]
+    fn hydration_batches_adapt_with_rate_limit_and_request_pressure() {
+        assert_eq!(hydration_batch_size(1_000), INITIAL_HYDRATION_BATCH);
+        assert_eq!(hydration_batch_size(400), 4);
+        assert_eq!(hydration_batch_size(100), MIN_HYDRATION_BATCH);
+
+        assert_eq!(
+            next_hydration_batch_size(6, Duration::from_secs(5), 200, 1_000),
+            8
+        );
+        assert_eq!(
+            next_hydration_batch_size(10, Duration::from_secs(31), 200, 1_000),
+            5
+        );
+        assert_eq!(
+            next_hydration_batch_size(3, Duration::from_secs(31), 200, 1_000),
+            MIN_HYDRATION_BATCH
+        );
+        assert_eq!(
+            next_hydration_batch_size(10, Duration::from_secs(5), 200, 200),
+            5
+        );
+        assert_eq!(
+            next_hydration_batch_size(20, Duration::from_secs(5), 200, 1_000),
+            MAX_HYDRATION_BATCH
+        );
     }
 
     #[test]
