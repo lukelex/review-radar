@@ -1,8 +1,8 @@
 # Split Docker images
 
-The existing `Dockerfile` and `compose.yaml` remain the supported setup. The
-parallel files here provide an additive core/desktop split for development and
-future packaging:
+The existing service names and runtime contract in `compose.yaml` remain
+supported. Compose now consumes the parallel core/desktop images; the original
+`Dockerfile` remains available as a fallback. Build the split images with:
 
 ```sh
 ./scripts/build-split-images
@@ -18,6 +18,7 @@ This produces:
 The desktop build consumes the tagged core image through `CORE_IMAGE`; build
 the core image first. The existing Compose services, `/data` paths, binary
 names, environment variables, and entrypoints are intentionally unchanged.
+`scripts/desktop` performs this build automatically before launching Compose.
 
 Smoke-test the split images without changing the current runtime:
 
