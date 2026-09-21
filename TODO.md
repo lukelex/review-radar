@@ -1,0 +1,21 @@
+# Attention and review friction TODO
+
+Work through these in order, with a separate commit for each completed task.
+Design: [attention and review friction](docs/attention-and-review-friction.md).
+
+- [ ] **1. Attention explanations:** project evidence-backed personal reasons,
+  concurrent health signals, and explicit next actions in the Rust domain;
+  verify actionable, waiting, following, and completed cases.
+- [ ] **2. History/data spike:** inventory collector and fixture coverage for
+  review cycles, churn, and ready/draft intervals; document measurement policy,
+  missing-history behavior, and collection requirements.
+- [ ] **3. Friction assessments and ranking:** implement a versioned, explainable
+  assessment contract with representative history fixtures, conservative missing
+  data handling, and the `highest-friction` strategy selectable by stable ID.
+
+## Follow-through
+
+- [ ] Collect the historical evidence identified by the spike and connect it to
+  live assessments; do not present unavailable metrics as measured values.
+- [ ] Connect the projected reasons, friction breakdown, and ranking selection to
+  the Qt/QML native client when its shell is implemented.
