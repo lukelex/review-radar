@@ -122,6 +122,24 @@ the plug-in boundary; it preserves a view's membership while changing only its
 order. Ranking implementations live in `crates/domain/src/ranking.rs` and clients
 should persist the policy identifier, not recreate a comparator.
 
+## Local state commands
+
+The local-state command uses no GitHub token and persists only the user's device
+state. Pass the `currentFingerprint` returned with the projected card, rather than
+deriving a fingerprint in a client:
+
+```sh
+docker compose run --rm state acknowledge \
+  --pull-request-id PR_NODE_ID --fingerprint CURRENT_FINGERPRINT
+docker compose run --rm state snooze \
+  --pull-request-id PR_NODE_ID --fingerprint CURRENT_FINGERPRINT \
+  --until 2026-09-22T09:00:00Z
+docker compose run --rm state clear-snooze --pull-request-id PR_NODE_ID
+```
+
+`acknowledge` and `snooze` require a fingerprint. If the next capture projects a
+different fingerprint, the card is automatically visible again.
+
 ## Queries and bounds
 
 The field selection is in `crates/github/src/query.graphql`. Every search sorts by

@@ -5,7 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "review-radar-state"
+path = "src/bin/state.rs"
+
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true
 rusqlite.workspace = true
+serde_json.workspace = true

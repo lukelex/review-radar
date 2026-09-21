@@ -37,6 +37,27 @@ pub struct AttentionObservation {
     pub baselined: bool,
 }
 
+/// A local-only user action issued by a client for the currently projected PR.
+///
+/// Acknowledgement and snoozing deliberately include the current signal
+/// fingerprint supplied with the card. State is never attached merely to a PR ID:
+/// a changed signal makes the prior action inapplicable and reactivates the card.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum LocalStateCommand {
+    Acknowledge {
+        pull_request_id: String,
+        current_fingerprint: String,
+    },
+    SnoozeUntil {
+        pull_request_id: String,
+        current_fingerprint: String,
+        until: DateTime<Utc>,
+    },
+    ClearSnooze {
+        pull_request_id: String,
+    },
+}
+
 impl StateStore {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let connection = Connection::open(path)?;
@@ -50,6 +71,24 @@ impl StateStore {
     fn from_connection(connection: Connection) -> Result<Self> {
         connection.execute_batch(SCHEMA)?;
         Ok(Self { connection })
+    }
+
+    /// Apply a command from a client without requiring GitHub access.
+    pub fn apply(&self, command: LocalStateCommand, now: DateTime<Utc>) -> Result<()> {
+        match command {
+            LocalStateCommand::Acknowledge {
+                pull_request_id,
+                current_fingerprint,
+            } => self.acknowledge(&pull_request_id, &current_fingerprint, now),
+            LocalStateCommand::SnoozeUntil {
+                pull_request_id,
+                current_fingerprint,
+                until,
+            } => self.snooze_until(&pull_request_id, &current_fingerprint, until),
+            LocalStateCommand::ClearSnooze { pull_request_id } => {
+                self.clear_snooze(&pull_request_id)
+            }
+        }
     }
 
     pub fn acknowledge(
@@ -261,6 +300,22 @@ mod tests {
             .unwrap();
         store.clear_snooze("pr-1").unwrap();
         assert!(!store.is_suppressed("pr-1", "event-1", now()).unwrap());
+    }
+
+    #[test]
+    fn commands_require_the_projected_fingerprint_to_suppress_a_card() {
+        let store = StateStore::in_memory().unwrap();
+        store
+            .apply(
+                LocalStateCommand::Acknowledge {
+                    pull_request_id: "pr-1".into(),
+                    current_fingerprint: "event-1".into(),
+                },
+                now(),
+            )
+            .unwrap();
+        assert!(store.is_suppressed("pr-1", "event-1", now()).unwrap());
+        assert!(!store.is_suppressed("pr-1", "event-2", now()).unwrap());
     }
 
     #[test]

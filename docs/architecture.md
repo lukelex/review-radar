@@ -47,8 +47,10 @@ for a notification.
 
 ## Client boundaries
 
-Clients receive an already-ranked snapshot plus explicit commands. They should not
-reimplement GitHub queries, ranking, event classification, or persistence.
+Clients receive an already-ranked snapshot plus explicit commands. `Acknowledge`
+and `SnoozeUntil` carry the card's current fingerprint, so persistence stays local
+while a changed card signal reactivates it. Clients should not reimplement GitHub
+queries, ranking, event classification, or persistence.
 
 ```text
 GitHub API -> github -> domain + state -> client view model -> native UI

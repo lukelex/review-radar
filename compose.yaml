@@ -22,3 +22,10 @@ services:
     entrypoint: ["review-radar-queue"]
     volumes:
       - ./data:/data
+
+  state:
+    build: .
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["review-radar-state"]
+    volumes:
+      - ./data:/data
