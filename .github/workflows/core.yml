@@ -97,6 +97,27 @@ jobs:
       - name: Run tests
         run: docker run --rm "$BUILDER_IMAGE" cargo test --workspace --locked
 
+  runtime-smoke:
+    name: Smoke-test runtime image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build runtime image
+        run: docker build --target runtime --tag review-radar-runtime:ci .
+
+      - name: Verify runtime binaries and startup
+        run: >-
+          docker run --rm --entrypoint sh review-radar-runtime:ci -ceu
+          'test -x /usr/local/bin/review-radar-github &&
+          test -x /usr/local/bin/review-radar-seed-export &&
+          test -x /usr/local/bin/review-radar-queue &&
+          test -x /usr/local/bin/review-radar-state &&
+          review-radar-state --database /tmp/review-radar-state.sqlite3
+          acknowledge --pull-request-id pr-smoke --fingerprint smoke'
+
   cleanup:
     name: Clean up CI image
     if: ${{ always() }}
