@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+pub mod attention;
 pub mod ranking;
 
 pub use ranking::{NewestActivityRanking, RankingStrategy, TailoredRanking};
@@ -290,6 +291,7 @@ pub struct PullRequestCard {
     pub action: Action,
     pub action_label: &'static str,
     pub attention_required: bool,
+    pub explanation: attention::Explanation,
     /// Stable for unchanged captured signals; changes when the current action,
     /// review, check, merge, or latest-activity signal changes.
     pub current_fingerprint: String,
@@ -408,6 +410,7 @@ fn project(pr: &PullRequest, membership: Option<&BTreeSet<String>>) -> PullReque
         action,
         action_label: action.label(),
         attention_required,
+        explanation: attention::explain(pr, action, authored, attention_required, checks),
         current_fingerprint,
         events,
     }

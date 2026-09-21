@@ -5,6 +5,14 @@ Status: accepted design direction for future implementation. The static
 review-round counts, durations, and churn labels are invented examples, not output
 from the current collector or domain model.
 
+Implementation progress: current snapshot-based attention explanations are now
+projected in `crates/domain/src/attention.rs` and included in queue JSON as
+`explanation` (heading, ordered reasons with evidence fields and next actions,
+and concurrent health). Reasons use factual snapshot conditions without claiming
+unavailable event newness or requester identity. The primary reason matches the
+existing classification; additional authored blockers remain visible. See
+[TODO](../TODO.md) for the remaining work.
+
 ## Two questions on every PR
 
 1. **Why does this need my attention?** Explain the user's relationship, the

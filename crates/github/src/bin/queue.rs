@@ -263,6 +263,17 @@ mod tests {
             action: review_radar_domain::Action::ChangesRequested,
             action_label: "Changes requested",
             attention_required,
+            explanation: review_radar_domain::attention::Explanation {
+                heading: "Why this needs your attention",
+                reasons: Vec::new(),
+                health: review_radar_domain::attention::Health {
+                    review_decision: None,
+                    checks: None,
+                    mergeable: "UNKNOWN".into(),
+                    merge_state_status: "UNKNOWN".into(),
+                    is_draft: false,
+                },
+            },
             current_fingerprint: current_fingerprint.into(),
             events: Vec::new(),
         }

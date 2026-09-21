@@ -3,9 +3,12 @@
 Work through these in order, with a separate commit for each completed task.
 Design: [attention and review friction](docs/attention-and-review-friction.md).
 
-- [ ] **1. Attention explanations:** project evidence-backed personal reasons,
+- [x] **1. Attention explanations:** project evidence-backed personal reasons,
   concurrent health signals, and explicit next actions in the Rust domain;
   verify actionable, waiting, following, and completed cases.
+  Implemented in `crates/domain/src/attention.rs`; queue JSON includes explanations
+  and all health signals. New-comment obligations still require historical event
+  comparison; a bounded snapshot does not establish newness.
 - [ ] **2. History/data spike:** inventory collector and fixture coverage for
   review cycles, churn, and ready/draft intervals; document measurement policy,
   missing-history behavior, and collection requirements.
