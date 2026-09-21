@@ -4,3 +4,4 @@ RadarButton 1.0 RadarButton.qml
 Badge 1.0 Badge.qml
 PrCard 1.0 PrCard.qml
 DetailPanel 1.0 DetailPanel.qml
+ShortcutRow 1.0 ShortcutRow.qml

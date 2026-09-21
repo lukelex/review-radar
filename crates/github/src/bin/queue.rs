@@ -4,8 +4,9 @@ use anyhow::{anyhow, bail, Context, Result};
 use chrono::{DateTime, Utc};
 use review_radar_domain::{
     friction::{Coverage, HistoryEvent, HistoryEventKind, ReviewHistory},
-    PullRequestCard, RankingStrategy, Snapshot, WorkspaceView,
+    RankingStrategy, Snapshot, WorkspaceView,
 };
+use review_radar_github::projection::apply_local_state;
 use review_radar_state::StateStore;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde_json::{json, Value};
@@ -103,48 +104,6 @@ fn parse_config(args: impl Iterator<Item = String>) -> Result<Config> {
         }
     }
     Ok(config)
-}
-
-struct StateProjection {
-    cards: Vec<PullRequestCard>,
-    source_count: usize,
-    suppressed_count: usize,
-    notification_eligible_ids: Vec<String>,
-}
-
-fn apply_local_state(
-    cards: Vec<PullRequestCard>,
-    state: &StateStore,
-    record_attention: bool,
-    now: chrono::DateTime<Utc>,
-) -> Result<StateProjection> {
-    let source_count = cards.len();
-    let mut visible = Vec::new();
-    let mut notification_eligible_ids = Vec::new();
-    for card in cards {
-        if record_attention
-            && state
-                .observe_attention(
-                    card.id.as_str(),
-                    card.attention_required,
-                    card.current_fingerprint.as_str(),
-                    now,
-                )?
-                .notification_due
-        {
-            notification_eligible_ids.push(card.id.to_string());
-        }
-        if !state.is_suppressed(card.id.as_str(), card.current_fingerprint.as_str(), now)? {
-            visible.push(card);
-        }
-    }
-    let suppressed_count = source_count - visible.len();
-    Ok(StateProjection {
-        cards: visible,
-        source_count,
-        suppressed_count,
-        notification_eligible_ids,
-    })
 }
 
 fn ranking(id: &str) -> Result<Box<dyn RankingStrategy>> {

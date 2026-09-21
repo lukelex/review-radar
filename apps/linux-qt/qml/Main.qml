@@ -134,67 +134,36 @@ ApplicationWindow {
         workspaceFocus.forceActiveFocus()
     }
 
-    Dialog {
+    RadarModal {
         id: acknowledgeDialog
+        objectName: "acknowledge-dialog"
         title: "Mark pull request as read?"
-        modal: true
-        standardButtons: Dialog.Cancel | Dialog.Ok
+        confirmation: true
+        actionText: "Mark read"
+        preferredWidth: 460
+        property var target: null
+        onAboutToShow: target = root.selected
         Label {
+            Layout.fillWidth: true
             text: "This PR will stay quiet until a meaningful event changes."
             color: Style.secondary
             wrapMode: Text.Wrap
         }
-        onAccepted: queue.acknowledge(root.selected.pullRequestId, root.selected.currentFingerprint)
+        onAccepted: if (target) queue.acknowledge(target.pullRequestId, target.currentFingerprint)
     }
 
-    Dialog {
+    RadarModal {
         id: shortcutsDialog
-        modal: true
-        width: Math.min(parent.width - 40, 540)
-        padding: 0
-        topPadding: 0
-        bottomPadding: 0
-        leftPadding: 0
-        rightPadding: 0
-        contentItem: ColumnLayout {
+        objectName: "shortcuts-dialog"
+        title: "Keyboard shortcuts"
+        subtitle: "Navigate your workspace. Single-key shortcuts work outside search."
+        ColumnLayout {
+            Layout.fillWidth: true
             spacing: 0
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 96
-                color: Style.tint
-                topLeftRadius: 14
-                topRightRadius: 14
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 24
-                    anchors.rightMargin: 24
-                    spacing: 14
-                    Rectangle {
-                        implicitWidth: 38
-                        implicitHeight: 38
-                        radius: 10
-                        color: "white"
-                        Image {
-                            anchors.centerIn: parent
-                            width: 30; height: 30
-                            source: "qrc:/assets/logo.svg"
-                            sourceSize: Qt.size(60, 60)
-                            fillMode: Image.PreserveAspectFit
-                            Accessible.ignored: true
-                        }
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
-                        Label { text: "Keyboard shortcuts"; color: Style.ink; font.pixelSize: 18; font.weight: Font.Bold }
-                        Label { text: "Move through your workspace without leaving the queue."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
-                    }
-                }
-            }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 18
-                Layout.margins: 24
+                Layout.margins: 0
                 Repeater {
                     model: root.shortcutGroups
                     delegate: ColumnLayout {
@@ -214,16 +183,7 @@ ApplicationWindow {
                     }
                 }
             }
-            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Style.line }
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.margins: 18
-                spacing: 10
-                Label { Layout.fillWidth: true; text: "Press ? anytime to open this guide"; color: Style.muted; font.pixelSize: 11 }
-                RadarButton { text: "Done"; primary: true; onClicked: shortcutsDialog.close() }
-            }
         }
-        background: Rectangle { color: "white"; radius: 14; border.color: Style.line; border.width: 1 }
     }
     Connections {
         target: queue.pullRequests
@@ -269,22 +229,23 @@ ApplicationWindow {
                         required property var modelData
                         Layout.fillWidth: true; implicitHeight: 43
                         hoverEnabled: true
-                        property bool current: queue.view === modelData.key
-                        Accessible.name: modelData.label
-                        Accessible.role: Accessible.PageTab
-                        onClicked: queue.view = modelData.key
-                        background: Rectangle { radius: 8; color: nav.current ? "#e5e3fa" : nav.hovered ? "#e9ecf3" : "transparent"; border.color: nav.activeFocus ? Style.accent : "transparent" }
+                         property bool current: queue.view === modelData.key
+                         Accessible.name: modelData.label
+                         Accessible.role: Accessible.PageTab
+                         onClicked: queue.view = modelData.key
+                         background: Rectangle { radius: 8; color: nav.current ? "#e5e3fa" : nav.hovered ? "#e9ecf3" : "transparent"; border.color: nav.activeFocus ? Style.accent : "transparent" }
+                         Label {
+                             anchors.right: parent.left
+                             anchors.rightMargin: 8
+                             anchors.verticalCenter: parent.verticalCenter
+                             text: nav.modelData.shortcut
+                             color: nav.current ? Style.accent : Style.muted
+                             font.pixelSize: 11
+                             font.weight: Font.DemiBold
+                             visible: root.ctrlHeld
+                         }
                          contentItem: RowLayout {
                              spacing: 12
-                             Label {
-                                 Layout.preferredWidth: 18
-                                 text: nav.modelData.shortcut
-                                 color: nav.current ? Style.accent : Style.muted
-                                 font.pixelSize: 11
-                                 font.weight: Font.DemiBold
-                                 horizontalAlignment: Text.AlignHCenter
-                                 opacity: root.ctrlHeld ? 0.9 : 0
-                             }
                              Label { text: nav.modelData.icon; color: nav.current ? Style.accent : Style.muted; font.pixelSize: 18; Layout.leftMargin: 8 }
                             Label { Layout.fillWidth: true; text: nav.modelData.label; color: nav.current ? Style.accent : Style.secondary; font.pixelSize: 12; font.weight: nav.current ? Font.DemiBold : Font.Normal }
                         }
