@@ -118,6 +118,19 @@ jobs:
           review-radar-state --database /tmp/review-radar-state.sqlite3
           acknowledge --pull-request-id pr-smoke --fingerprint smoke'
 
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Audit Rust dependencies
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   cleanup:
     name: Clean up CI image
     if: ${{ always() }}
