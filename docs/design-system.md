@@ -155,6 +155,15 @@ and a denser authored-PR table are future refinements. They must preserve the
 shared core's ordering and meaning, including when the user chooses Highest
 friction sorting.
 
+### Shortcut guide
+
+The shortcut guide is an in-app surface, not a default toolkit dialog. Use the
+same white surface, quiet border, 12–14px corners, 20–24px spacing, muted section
+captions, and indigo-tinted branded header as the workspace. Render keys as
+compact bordered keycaps with readable labels, group actions by user intent, and
+include a clear close action. Keep the guide quiet and scannable; it should teach
+the existing interaction model without introducing new shortcuts.
+
 ## Interaction and data states
 
 - Search is local and filters title, repository, or PR number. Distinguish an
@@ -210,6 +219,8 @@ useful next step without making the interface noisy.
   visible focus indicator and an accessible name, including icon-only controls.
 - Preserve **Ctrl+K** for search, **Ctrl+R** for refresh, and **Escape** to close
   details, then clear search. Adapt modifiers to platform conventions elsewhere.
+- Holding **Ctrl** reveals subtle `1`–`5` workspace hints at the left edge of
+  navigation items; `Ctrl+1` through `Ctrl+5` select the corresponding workspace.
 - Do not rely on color, hover, or a tooltip alone for essential meaning.
 - Support long titles, long repository names, larger text, display scaling, and
   scrolling without overlapping actions or losing the primary explanation.

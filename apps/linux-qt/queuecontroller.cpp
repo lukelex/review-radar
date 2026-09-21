@@ -153,6 +153,14 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
     refreshTimer_.setInterval(5 * 60 * 1000);
     connect(&refreshTimer_, &QTimer::timeout, this, &QueueController::refresh);
     refreshTimer_.start();
+    modifierTimer_.setInterval(50);
+    connect(&modifierTimer_, &QTimer::timeout, this, [this]() {
+        const bool held = QGuiApplication::queryKeyboardModifiers().testFlag(Qt::ControlModifier);
+        if (controlHeld_ == held) return;
+        controlHeld_ = held;
+        emit controlHeldChanged();
+    });
+    modifierTimer_.start();
     QDBusConnection::sessionBus().connect(
         "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
         "org.freedesktop.Notifications", "ActionInvoked", this,
@@ -235,6 +243,7 @@ QString QueueController::status() const { return status_; }
 bool QueueController::loading() const { return loading_; }
 bool QueueController::refreshing() const { return refreshing_; }
 bool QueueController::stale() const { return stale_; }
+bool QueueController::controlHeld() const { return controlHeld_; }
 int QueueController::sourceCount() const { return sourceCount_; }
 int QueueController::suppressedCount() const { return suppressedCount_; }
 
