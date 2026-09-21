@@ -18,7 +18,8 @@ This produces:
 The desktop build consumes the tagged core image through `CORE_IMAGE`; build
 the core image first. The existing Compose services, `/data` paths, binary
 names, environment variables, and entrypoints are intentionally unchanged.
-`scripts/desktop` performs this build automatically before launching Compose.
+Run `./scripts/build-split-images` before `./scripts/desktop` when the images
+are not already available locally.
 
 Smoke-test the split images without changing the current runtime:
 

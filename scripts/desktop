@@ -9,8 +9,6 @@ export GH_TOKEN
 export USER_ID="$(id -u)"
 export GROUP_ID="$(id -g)"
 
-./scripts/build-split-images
-
 host_xauthority=${XAUTHORITY:-"${HOME:-/tmp}/.Xauthority"}
 temporary_xauthority=
 if [ -r "$host_xauthority" ]; then
