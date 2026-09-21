@@ -1,0 +1,81 @@
+[
+  {
+    "name": "Large initial diff and productive discussion are not pain",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 86400, "initiallyDraft": false, "initialReviewDiffLines": 50000,
+      "events": [{"id":"r1","at":10,"kind":"review"},{"id":"r2","at":20,"kind":"review"},{"id":"r3","at":30,"kind":"review"}] },
+    "status": "assessed", "level": "low", "rounds": 1, "seconds": 86400
+  },
+  {
+    "name": "Repeated revisions count even when final net diff could be small",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 86400, "initiallyDraft": false, "initialReviewDiffLines": 100,
+      "events": [{"id":"r1","at":10,"kind":"review"},{"id":"v1","at":20,"kind":"revision","changedLines":150},{"id":"r2","at":30,"kind":"review"},{"id":"v2","at":40,"kind":"revision","changedLines":150},{"id":"r3","at":50,"kind":"review"}] },
+    "status": "assessed", "level": "high", "rounds": 3, "seconds": 86400
+  },
+  {
+    "name": "A prolonged wait is high friction with no reviews or churn",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 1209600, "initiallyDraft": false, "initialReviewDiffLines": 100, "events": [] },
+    "status": "assessed", "level": "high", "rounds": 0, "seconds": 1209600
+  },
+  {
+    "name": "Draft intervals pause elapsed review time",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 100, "initiallyDraft": true, "initialReviewDiffLines": 100,
+      "events": [{"id":"ready1","at":10,"kind":"ready"},{"id":"draft1","at":20,"kind":"draft"},{"id":"ready2","at":80,"kind":"ready"}] },
+    "status": "assessed", "level": "low", "rounds": 0, "seconds": 30
+  },
+  {
+    "name": "Never-ready draft is not assessed only with complete history",
+    "lifecycle": "OPEN", "isDraft": true,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 100, "initiallyDraft": true, "initialReviewDiffLines": null, "events": [] },
+    "status": "not-assessed", "level": null, "rounds": 0, "seconds": 0
+  },
+  {
+    "name": "Current draft without history is not proof review never started",
+    "lifecycle": "OPEN", "isDraft": true, "history": null,
+    "status": "limited-history", "level": null, "rounds": null, "seconds": null
+  },
+  {
+    "name": "Returned-to-draft retains prior friction",
+    "lifecycle": "OPEN", "isDraft": true,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 2000000, "initiallyDraft": false, "initialReviewDiffLines": 100,
+      "events": [{"id":"draft1","at":1209600,"kind":"draft"}] },
+    "status": "assessed", "level": "high", "rounds": 0, "seconds": 1209600
+  },
+  {
+    "name": "Completion freezes accumulated time",
+    "lifecycle": "MERGED", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 2000000, "initiallyDraft": false, "initialReviewDiffLines": 100,
+      "events": [{"id":"closed1","at":432000,"kind":"closed"}] },
+    "status": "assessed", "level": "moderate", "rounds": 0, "seconds": 432000
+  },
+  {
+    "name": "Partial evidence does not receive a measured level",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "partial", "startedAt": 0, "observedUntil": 2000000, "initiallyDraft": false, "initialReviewDiffLines": 100, "events": [] },
+    "status": "limited-history", "level": null, "rounds": null, "seconds": null
+  },
+  {
+    "name": "Unknown revision churn cannot become zero",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 100, "initiallyDraft": false, "initialReviewDiffLines": 100,
+      "events": [{"id":"r1","at":10,"kind":"review"},{"id":"v1","at":20,"kind":"revision"}] },
+    "status": "limited-history", "level": null, "rounds": 1, "seconds": 100
+  },
+  {
+    "name": "Reopened histories need a future episode policy",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 100, "initiallyDraft": false, "initialReviewDiffLines": 100,
+      "events": [{"id":"closed1","at":10,"kind":"closed"},{"id":"reopened1","at":20,"kind":"reopened"}] },
+    "status": "limited-history", "level": null, "rounds": null, "seconds": null
+  },
+  {
+    "name": "Two moderate contributors combine to high",
+    "lifecycle": "OPEN", "isDraft": false,
+    "history": { "coverage": "complete", "startedAt": 0, "observedUntil": 432000, "initiallyDraft": false, "initialReviewDiffLines": 100,
+      "events": [{"id":"r1","at":10,"kind":"review"},{"id":"v1","at":20,"kind":"revision","changedLines":10},{"id":"r2","at":30,"kind":"review"}] },
+    "status": "assessed", "level": "high", "rounds": 2, "seconds": 432000
+  }
+]

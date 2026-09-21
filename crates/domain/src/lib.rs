@@ -4,9 +4,12 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 pub mod attention;
+pub mod friction;
 pub mod ranking;
 
-pub use ranking::{NewestActivityRanking, RankingStrategy, TailoredRanking};
+pub use ranking::{
+    HighestFrictionRanking, NewestActivityRanking, RankingStrategy, TailoredRanking,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,6 +17,9 @@ pub struct Snapshot {
     pub viewer: Actor,
     pub searches: Vec<Search>,
     pub pull_requests: Vec<PullRequest>,
+    /// Optional normalized history; raw bounded GitHub snapshots omit it.
+    #[serde(default)]
+    pub review_histories: BTreeMap<String, friction::ReviewHistory>,
 }
 
 impl Snapshot {
@@ -30,7 +36,13 @@ impl Snapshot {
         let mut cards = self
             .pull_requests
             .iter()
-            .map(|pr| project(pr, memberships.get(&pr.id)))
+            .map(|pr| {
+                project(
+                    pr,
+                    memberships.get(&pr.id),
+                    self.review_histories.get(&pr.id),
+                )
+            })
             .collect::<Vec<_>>();
         ranking.rank(&mut cards);
         cards
@@ -292,6 +304,7 @@ pub struct PullRequestCard {
     pub action_label: &'static str,
     pub attention_required: bool,
     pub explanation: attention::Explanation,
+    pub review_friction: friction::Assessment,
     /// Stable for unchanged captured signals; changes when the current action,
     /// review, check, merge, or latest-activity signal changes.
     pub current_fingerprint: String,
@@ -316,7 +329,11 @@ pub struct Event {
     pub occurred_at: String,
 }
 
-fn project(pr: &PullRequest, membership: Option<&BTreeSet<String>>) -> PullRequestCard {
+fn project(
+    pr: &PullRequest,
+    membership: Option<&BTreeSet<String>>,
+    history: Option<&friction::ReviewHistory>,
+) -> PullRequestCard {
     let membership = membership.cloned().unwrap_or_default();
     let authored = membership.contains("authored");
     let review_requested = membership.contains("review_requested");
@@ -411,6 +428,7 @@ fn project(pr: &PullRequest, membership: Option<&BTreeSet<String>>) -> PullReque
         action_label: action.label(),
         attention_required,
         explanation: attention::explain(pr, action, authored, attention_required, checks),
+        review_friction: friction::assess(history, lifecycle(&pr.state), pr.is_draft),
         current_fingerprint,
         events,
     }

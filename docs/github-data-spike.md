@@ -97,6 +97,7 @@ docker compose run --rm queue
 docker compose run --rm queue --view action
 docker compose run --rm queue --view my-prs --capture-id 1
 docker compose run --rm queue --view action --ranking newest-activity
+docker compose run --rm queue --view my-prs --ranking highest-friction
 docker compose run --rm queue --record-attention true
 ```
 
@@ -121,6 +122,18 @@ non-attention → attention transitions.
 the plug-in boundary; it preserves a view's membership while changing only its
 order. Ranking implementations live in `crates/domain/src/ranking.rs` and clients
 should persist the policy identifier, not recreate a comparator.
+
+`highest-friction` orders measured High/Moderate/Low assessments first (longest
+review duration breaks level ties), followed by Limited history and Not assessed.
+It crosses priority bands within the selected view without changing membership.
+Current captures lack complete revision and ready/draft history, so they report
+Limited history rather than fabricated levels. See the
+[history spike](review-friction-data-spike.md) for measurements and collection gaps.
+
+Cards also include `explanation`: personally relevant reasons, source-field
+evidence, next-action destinations, and concurrent health. `reviewFriction`
+contains the versioned assessment and its evidence/limitations. These fields do
+not alter attention-state fingerprints or notification eligibility.
 
 ## Local state commands
 

@@ -15,12 +15,18 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
   Findings and the experimental v1 policy are in
   `docs/review-friction-data-spike.md`. Current captures cannot support measured
   friction levels; history collection is a separate follow-through task.
-- [ ] **3. Friction assessments and ranking:** implement a versioned, explainable
+- [x] **3. Friction assessments and ranking:** implement a versioned, explainable
   assessment contract with representative history fixtures, conservative missing
   data handling, and the `highest-friction` strategy selectable by stable ID.
+  Implemented in `crates/domain/src/friction.rs` and `ranking.rs`, with synthetic
+  history fixtures covering cycles, rework, waiting, draft pauses, completion,
+  missing data, and reopening. The queue accepts `--ranking highest-friction`.
+  Existing captures report Limited history; thresholds remain experimental.
 
 ## Follow-through
 
+- [ ] Compare meaningful reviewer events across captures to classify new feedback
+  without treating all captured comments as new obligations.
 - [ ] Collect the historical evidence identified by the spike and connect it to
   live assessments; do not present unavailable metrics as measured values.
 - [ ] Connect the projected reasons, friction breakdown, and ranking selection to

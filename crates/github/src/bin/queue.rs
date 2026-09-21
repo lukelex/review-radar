@@ -2,10 +2,7 @@ use std::{env, path::PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::Utc;
-use review_radar_domain::{
-    NewestActivityRanking, PullRequestCard, RankingStrategy, Snapshot, TailoredRanking,
-    WorkspaceView,
-};
+use review_radar_domain::{PullRequestCard, RankingStrategy, Snapshot, WorkspaceView};
 use review_radar_state::StateStore;
 use rusqlite::{params, Connection, OpenFlags};
 use serde_json::{json, Value};
@@ -136,11 +133,9 @@ fn apply_local_state(
 }
 
 fn ranking(id: &str) -> Result<Box<dyn RankingStrategy>> {
-    match id {
-        "tailored" => Ok(Box::new(TailoredRanking)),
-        "newest-activity" => Ok(Box::new(NewestActivityRanking)),
-        _ => bail!("invalid ranking {id:?}; use tailored or newest-activity"),
-    }
+    review_radar_domain::ranking::by_id(id).ok_or_else(|| {
+        anyhow!("invalid ranking {id:?}; use tailored, newest-activity, or highest-friction")
+    })
 }
 
 fn latest_capture_id(connection: &Connection) -> Result<i64> {
@@ -229,6 +224,10 @@ mod tests {
         assert!(config.record_attention);
         assert!(parse_config(["--view".into(), "other".into()].into_iter()).is_err());
         assert!(ranking("other").is_err());
+        assert_eq!(
+            ranking("highest-friction").unwrap().id(),
+            "highest-friction"
+        );
     }
 
     #[test]
@@ -263,6 +262,9 @@ mod tests {
             action: review_radar_domain::Action::ChangesRequested,
             action_label: "Changes requested",
             attention_required,
+            review_friction: review_radar_domain::friction::Assessment::unavailable(
+                review_radar_domain::Lifecycle::Open,
+            ),
             explanation: review_radar_domain::attention::Explanation {
                 heading: "Why this needs your attention",
                 reasons: Vec::new(),

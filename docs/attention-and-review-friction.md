@@ -1,9 +1,11 @@
 # Attention explanations and review friction
 
-Status: accepted design direction for future implementation. The static
+Status: domain explanations, experimental history-based friction, and alternate
+ranking are implemented; historical collection and native presentation remain
+future work. The static
 [mockups](mockups/README.md) illustrate the experience; their friction assessments,
 review-round counts, durations, and churn labels are invented examples, not output
-from the current collector or domain model.
+from the current collector. Mockup metrics are not computed by the domain model.
 
 Implementation progress: current snapshot-based attention explanations are now
 projected in `crates/domain/src/attention.rs` and included in queue JSON as
@@ -12,6 +14,14 @@ and concurrent health). Reasons use factual snapshot conditions without claiming
 unavailable event newness or requester identity. The primary reason matches the
 existing classification; additional authored blockers remain visible. See
 [TODO](../TODO.md) for the remaining work.
+
+`crates/domain/src/friction.rs` now implements the experimental
+`review-friction-v1` policy from the [history spike](review-friction-data-spike.md).
+Optional normalized `reviewHistories` in a domain snapshot supply its evidence;
+existing captured snapshots omit them and produce Limited history. Queue cards
+include `reviewFriction` with status, optional level, coverage, measurements,
+contributors/evidence IDs, limitations, and policy version. The domain resolves
+the `highest-friction` ranking ID; the queue CLI exposes it directly.
 
 ## Two questions on every PR
 
@@ -75,9 +85,10 @@ Examples in the mockups include:
 - High while waiting: 3 rounds, 16 days in review, awaiting another review for 6 days.
 - Low: first review round, 1 day in review, little rework.
 
-These are illustrative assessments, not thresholds. Before implementation, choose
-and version the cycle definition, churn units/normalization, duration rules,
-combination policy, and level thresholds using representative histories. A
+These are illustrative assessments, not thresholds. The history spike defines
+versioned experimental cycle, churn, duration, combination, and level rules,
+tested with synthetic histories. Production calibration against representative
+real histories remains necessary. A
 combination should allow prolonged waiting to matter even with little churn, and
 should avoid equating large PRs with difficult reviews automatically.
 
