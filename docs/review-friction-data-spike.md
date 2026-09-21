@@ -130,6 +130,15 @@ first-parent deltas per commit. It therefore cannot calibrate rework ratios or
 promote the experimental Low/Moderate/High thresholds. The fixture deliberately
 omits raw repository, PR, actor, commit, author, URL, and message identities.
 
+The parent-diff traversal supersedes that aggregate-only result: 98 journeys have
+a complete initial-review baseline and post-review rework. Its observed percentiles
+support the experimental `review-friction-v1` thresholds below: review rounds use
+2/4 (75th percentile / maximum tail), review duration uses 3/7 days (roughly 75th
+/95th percentile), and rework uses 100%/500% of initial-review change volume
+(roughly 75th/90th percentile). The observed rework median is 0%; its 90th and
+95th percentiles are about 413% and 1,055%. These thresholds identify outliers
+without labelling the ordinary one-round, short-lived merged PR as difficult.
+
 ## Implemented bounded collection
 
 The collector now preserves the latest bounded ready-for-review, draft, close, and

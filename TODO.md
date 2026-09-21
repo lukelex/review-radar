@@ -39,12 +39,13 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
   collector now requests each bounded commit's first-parent additions/deletions;
   the normalizer establishes an initial-review change-volume baseline only when
   complete parent-diff evidence is available; calibration remains separate.
-- [ ] **Friction calibration:** regenerate generalized representative histories and
+- [x] **Friction calibration:** regenerate generalized representative histories and
   validate the experimental Low/Moderate/High thresholds before calling levels
   measured production output.
-  First traversal fixture: 100 generalized merged PRs from the requested repository.
-  It lacks per-commit parent diffs, so rework-ratio calibration remains blocked until
-  the collector traversal supplies those fields.
+  Parent-diff traversal fixture: 100 generalized merged PRs from the requested
+  repository, with review commit links and first-parent changed-line evidence.
+  Calibrated v1 from 98 complete parent-diff journeys; thresholds and percentile
+  rationale are recorded in `docs/review-friction-data-spike.md`.
 - [x] Connect the projected reasons, concurrent health, friction breakdown, and
   ranking selection to the Qt/QML native client. Its model renders domain output
   only; Qt does not recalculate classification, friction, or sorting.

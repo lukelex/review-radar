@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::Lifecycle;
 
 pub const POLICY_VERSION: &str = "review-friction-v1";
+const MODERATE_REVIEW_SECONDS: u64 = 3 * 86_400;
+const HIGH_REVIEW_SECONDS: u64 = 7 * 86_400;
+const MODERATE_REWORK_BASIS_POINTS: u64 = 10_000;
+const HIGH_REWORK_BASIS_POINTS: u64 = 50_000;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -240,14 +244,18 @@ pub fn assess(history: Option<&ReviewHistory>, lifecycle: Lifecycle, is_draft: b
             signal: "time-in-review",
             value: seconds,
             unit: "seconds",
-            level: band(seconds, 5 * 86400, 14 * 86400),
+            level: band(seconds, MODERATE_REVIEW_SECONDS, HIGH_REVIEW_SECONDS),
             evidence_ids: duration_ids,
         },
         Contributor {
             signal: "code-rework",
             value: ratio,
             unit: "basis-points-of-initial-diff",
-            level: band(ratio, 10_000, 30_000),
+            level: band(
+                ratio,
+                MODERATE_REWORK_BASIS_POINTS,
+                HIGH_REWORK_BASIS_POINTS,
+            ),
             evidence_ids: rework_ids,
         },
     ];
