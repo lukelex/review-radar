@@ -49,18 +49,22 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [x] Connect the projected reasons, concurrent health, friction breakdown, and
   ranking selection to the Qt/QML native client. Its model renders domain output
   only; Qt does not recalculate classification, friction, or sorting.
-- [ ] **Persistent new-feedback visibility:** retain a detected feedback event as
+- [x] **Persistent new-feedback visibility:** retain a detected feedback event as
   an outstanding local reason until acknowledged or superseded, without changing
   first-observation notification baselines.
+  Implemented in the domain projection and separate state-store table; bounded
+  event windows no longer make an unacknowledged feedback reason disappear.
 
 ## CI
 
-- [ ] Build and smoke-test the final runtime Docker image in CI, including its
+- [x] Build and smoke-test the final runtime Docker image in CI, including its
   expected binaries and startup behavior.
-- [ ] Add lightweight dependency and security checks such as `cargo audit` or
+- [x] Add lightweight dependency and security checks such as `cargo audit` or
   `cargo deny`, without introducing paid services.
-- [ ] Add optional coverage generation and retain reports as GitHub artifacts
+- [x] Add optional coverage generation and retain reports as GitHub artifacts
   rather than depending on an external coverage service.
-- [ ] Run fixture projection checks for the supported queue views in CI.
-- [ ] Compile the Linux Qt client when `apps/linux-qt` becomes active, ideally
+- [x] Run fixture projection checks for the supported queue views in CI.
+- [x] Compile the Linux Qt client when `apps/linux-qt` becomes active, ideally
   only when the client or its build dependencies change.
+  `.github/workflows/linux-qt.yml` is path-filtered and runs build, QML lint,
+  and the offscreen startup test.
