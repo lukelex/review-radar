@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     if (QCoreApplication::arguments().contains(QStringLiteral("--smoke-test"))) {
         QTimer::singleShot(0, &app, [&app] { app.quit(); });
     } else {
-        queue.refresh();
+        queue.start();
     }
     return app.exec();
 }

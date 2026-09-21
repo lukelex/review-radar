@@ -38,8 +38,8 @@ ApplicationWindow {
                 onActivated: queue.ranking = currentText
             }
             Button {
-                text: queue.loading ? "Refreshing…" : "Refresh"
-                enabled: !queue.loading
+                text: queue.refreshing ? "Refreshing…" : "Refresh"
+                enabled: !queue.loading && !queue.refreshing
                 onClicked: queue.refresh()
             }
         }

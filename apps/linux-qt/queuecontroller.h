@@ -43,6 +43,7 @@ class QueueController final : public QObject {
     Q_PROPERTY(QString ranking READ ranking WRITE setRanking NOTIFY rankingChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
+    Q_PROPERTY(bool refreshing READ refreshing NOTIFY refreshingChanged)
     Q_PROPERTY(int sourceCount READ sourceCount NOTIFY countsChanged)
     Q_PROPERTY(int suppressedCount READ suppressedCount NOTIFY countsChanged)
 
@@ -55,10 +56,12 @@ public:
     void setRanking(const QString &ranking);
     QString status() const;
     bool loading() const;
+    bool refreshing() const;
     int sourceCount() const;
     int suppressedCount() const;
 
     Q_INVOKABLE void refresh();
+    Q_INVOKABLE void start();
     Q_INVOKABLE void openUrl(const QString &url);
     Q_INVOKABLE void copyText(const QString &text);
     Q_INVOKABLE void acknowledge(const QString &pullRequestId, const QString &fingerprint);
@@ -70,6 +73,7 @@ signals:
     void rankingChanged();
     void statusChanged();
     void loadingChanged();
+    void refreshingChanged();
     void countsChanged();
 
 private:
@@ -77,7 +81,8 @@ private:
     QString captureDatabase() const;
     QString stateDatabase() const;
     QString commandFromEnvironment(const char *name, const QString &fallback) const;
-    void loadProjection();
+    void loadProjection(bool collectAfter = false);
+    void startCollection();
     void runStateCommand(const QStringList &arguments);
     void sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds);
     void setStatus(const QString &status);
@@ -91,6 +96,8 @@ private:
     QString ranking_ = QStringLiteral("tailored");
     QString status_ = QStringLiteral("Loading workspace…");
     bool loading_ = false;
+    bool refreshing_ = false;
+    bool collectAfterProjection_ = false;
     int sourceCount_ = 0;
     int suppressedCount_ = 0;
     QProcess queueProcess_;

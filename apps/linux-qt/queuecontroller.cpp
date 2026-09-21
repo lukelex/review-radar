@@ -135,27 +135,31 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
         "org.freedesktop.Notifications", "ActionInvoked", this,
         SLOT(notificationActionInvoked(uint,QString)));
     connect(&collectorProcess_, &QProcess::finished, this,
-            [this](int exitCode, QProcess::ExitStatus exitStatus) {
-        if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-            loading_ = false;
-            emit loadingChanged();
-            setStatus("Could not refresh GitHub: " + QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed());
-            return;
-        }
+             [this](int exitCode, QProcess::ExitStatus exitStatus) {
+         refreshing_ = false;
+         emit refreshingChanged();
+         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+             setStatus("Could not refresh GitHub: " + QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed());
+             return;
+         }
         loadProjection();
-    });
-    connect(&queueProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
-        loading_ = false;
-        emit loadingChanged();
-        if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-            setStatus("Could not load workspace: " + QString::fromUtf8(queueProcess_.readAllStandardError()).trimmed());
-            return;
+     });
+     connect(&queueProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
+         loading_ = false;
+         emit loadingChanged();
+         const bool shouldCollect = collectAfterProjection_;
+         collectAfterProjection_ = false;
+         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+             setStatus("Could not load workspace: " + QString::fromUtf8(queueProcess_.readAllStandardError()).trimmed());
+             if (shouldCollect) startCollection();
+             return;
         }
         QJsonParseError error;
         const auto response = QJsonDocument::fromJson(queueProcess_.readAllStandardOutput(), &error);
-        if (error.error != QJsonParseError::NoError || !response.isObject()) {
-            setStatus("Could not read queue response: " + error.errorString());
-            return;
+         if (error.error != QJsonParseError::NoError || !response.isObject()) {
+             setStatus("Could not read queue response: " + error.errorString());
+             if (shouldCollect) startCollection();
+             return;
         }
         const auto result = response.object();
         const auto cards = result.value("pullRequests").toArray();
@@ -163,43 +167,70 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
         sourceCount_ = result.value("sourceCount").toInt();
         suppressedCount_ = result.value("suppressedCount").toInt();
         emit countsChanged();
-        sendNotifications(cards, result.value("notificationEligibleIds").toArray());
-        setStatus("Updated " + result.value("capturedAt").toString());
+         sendNotifications(cards, result.value("notificationEligibleIds").toArray());
+         setStatus("Updated " + result.value("capturedAt").toString());
+         if (shouldCollect) startCollection();
     });
     connect(&stateProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
-        if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
             setStatus("Could not update local state: " + QString::fromUtf8(stateProcess_.readAllStandardError()).trimmed());
             return;
         }
-        refresh();
+         loadProjection();
     });
 }
 
 PullRequestModel *QueueController::pullRequests() { return &model_; }
 QString QueueController::view() const { return view_; }
-void QueueController::setView(const QString &view) { if (view_ != view) { view_ = view; emit viewChanged(); refresh(); } }
+void QueueController::setView(const QString &view) {
+    if (view_ != view) {
+        view_ = view;
+        emit viewChanged();
+        loadProjection();
+    }
+}
 QString QueueController::ranking() const { return ranking_; }
-void QueueController::setRanking(const QString &ranking) { if (ranking_ != ranking) { ranking_ = ranking; emit rankingChanged(); refresh(); } }
+void QueueController::setRanking(const QString &ranking) {
+    if (ranking_ != ranking) {
+        ranking_ = ranking;
+        emit rankingChanged();
+        loadProjection();
+    }
+}
 QString QueueController::status() const { return status_; }
 bool QueueController::loading() const { return loading_; }
+bool QueueController::refreshing() const { return refreshing_; }
 int QueueController::sourceCount() const { return sourceCount_; }
 int QueueController::suppressedCount() const { return suppressedCount_; }
 
 void QueueController::refresh() {
-    if (loading_ || queueProcess_.state() != QProcess::NotRunning || collectorProcess_.state() != QProcess::NotRunning) return;
-    loading_ = true;
-    emit loadingChanged();
-    if (qEnvironmentVariableIsSet("REVIEW_RADAR_SKIP_COLLECTION")) {
-        loadProjection();
+    if (refreshing_) {
+        setStatus("Refresh already in progress…");
         return;
     }
-    setStatus("Refreshing GitHub…");
+    loadProjection(true);
+}
+
+void QueueController::start() { loadProjection(true); }
+
+void QueueController::startCollection() {
+    if (refreshing_ || qEnvironmentVariableIsSet("REVIEW_RADAR_SKIP_COLLECTION")) return;
+    refreshing_ = true;
+    emit refreshingChanged();
+    setStatus("Refreshing GitHub in the background…");
     collectorProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_COLLECTOR_COMMAND", "review-radar-github"));
     collectorProcess_.setArguments({"--database", captureDatabase()});
     collectorProcess_.start();
 }
 
-void QueueController::loadProjection() {
+void QueueController::loadProjection(bool collectAfter) {
+    if (queueProcess_.state() != QProcess::NotRunning) {
+        collectAfterProjection_ = collectAfterProjection_ || collectAfter;
+        return;
+    }
+    collectAfterProjection_ = collectAfterProjection_ || collectAfter;
+    loading_ = true;
+    emit loadingChanged();
     setStatus("Loading workspace…");
     queueProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_QUEUE_COMMAND", "review-radar-queue"));
     queueProcess_.setArguments({"--database", captureDatabase(),

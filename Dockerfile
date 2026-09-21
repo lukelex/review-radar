@@ -37,6 +37,7 @@ RUN apt-get update \
         qt6-base-dev \
         qt6-declarative-dev \
         qt6-qpa-plugins \
+        qt6-wayland \
         qml6-module-qtquick \
         qml6-module-qtquick-controls \
         qml6-module-qtquick-layouts \
@@ -45,6 +46,7 @@ RUN apt-get update \
         xdg-utils \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 review-radar
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 COPY --from=builder /app/target/release/review-radar-github /usr/local/bin/review-radar-github
 COPY --from=builder /app/target/release/review-radar-seed-export /usr/local/bin/review-radar-seed-export
 COPY --from=builder /app/target/release/review-radar-queue /usr/local/bin/review-radar-queue
