@@ -122,7 +122,9 @@ fn main() -> Result<()> {
 fn parse_config(args: impl Iterator<Item = String>) -> Result<Config> {
     let mut config = Config {
         database: "data/review-radar.sqlite3".into(),
-        page_size: 25,
+            // Rich nested connections make larger pages time out at GitHub's
+            // GraphQL edge. Keep every response below the verified threshold.
+            page_size: 10,
         max_pages: 4,
         event_limit: 20,
     };
@@ -323,6 +325,7 @@ mod tests {
 
     #[test]
     fn arguments_are_bounded() {
+        assert_eq!(parse_config(std::iter::empty()).unwrap().page_size, 10);
         assert!(parse_config(["--page-size".into(), "101".into()].into_iter()).is_err());
         assert!(parse_config(["--max-pages".into(), "0".into()].into_iter()).is_err());
         let config = parse_config(["--event-limit".into(), "5".into()].into_iter()).unwrap();

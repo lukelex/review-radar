@@ -180,7 +180,7 @@ The field selection is in `crates/github/src/query.graphql`. Every search sorts 
 Combine both participation searches for following candidates and both recent
 searches for recent completions.
 
-- Defaults are 25 PRs/page, at most 4 pages/search (100 results/search), and the
+- Defaults are 10 PRs/page, at most 4 pages/search (40 results/search), and the
   latest 20 reviews, issue comments, review threads, comments per thread, timeline
   lifecycle items, and commits per PR. Each bounded event/history connection
   preserves its page flag in the payload.
