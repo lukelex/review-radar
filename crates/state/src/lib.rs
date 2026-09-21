@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS outstanding_feedback (
   PRIMARY KEY (pull_request_id, feedback_fingerprint)
 );
 "#;
+const SCHEMA_VERSION: i64 = 1;
 
 #[derive(Debug)]
 pub struct StateStore {
@@ -99,7 +100,16 @@ impl StateStore {
     }
 
     fn from_connection(connection: Connection) -> Result<Self> {
+        let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+        if version > SCHEMA_VERSION {
+            return Err(anyhow!(
+                "state database schema version {version} is newer than supported version {SCHEMA_VERSION}"
+            ));
+        }
         connection.execute_batch(SCHEMA)?;
+        if version < SCHEMA_VERSION {
+            connection.execute_batch(&format!("PRAGMA user_version = {SCHEMA_VERSION};"))?;
+        }
         Ok(Self { connection })
     }
 
@@ -469,6 +479,38 @@ mod tests {
         let reopened = StateStore::open(&path).unwrap();
         assert!(reopened.is_suppressed("pr-1", "event-1", now()).unwrap());
         fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn initializes_and_migrates_the_versioned_schema() {
+        let connection = Connection::open_in_memory().unwrap();
+        let store = StateStore::from_connection(connection).unwrap();
+        let version: i64 = store
+            .connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, SCHEMA_VERSION);
+        let table: String = store
+            .connection
+            .query_row(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'outstanding_feedback'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(table, "outstanding_feedback");
+    }
+
+    #[test]
+    fn rejects_a_state_database_from_a_newer_release() {
+        let connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch("PRAGMA user_version = 99;")
+            .unwrap();
+        let error = StateStore::from_connection(connection)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("newer than supported"));
     }
 
     #[cfg(target_os = "linux")]

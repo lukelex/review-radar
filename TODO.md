@@ -75,10 +75,14 @@ Native Linux notifications are complete: the Qt shell sends only the
 state-deduplicated attention transitions, includes an activation action, and
 opens the associated pull request in the browser. The remaining roadmap is:
 
-- [ ] **Hardening:** add explicit rate-limit handling and retry guidance.
-- [ ] **Hardening:** expose offline and stale-capture state without hiding the
+- [x] **Hardening:** add explicit rate-limit handling and retry guidance.
+  The collector stops follow-up requests after exhaustion and reports reset
+  guidance for HTTP 403/429 responses.
+- [x] **Hardening:** expose offline and stale-capture state without hiding the
   last usable projection.
-- [ ] **Hardening:** add local-state schema migrations and recovery tests.
+- [x] **Hardening:** add local-state schema migrations and recovery tests.
+  State databases now use a version marker, migrate older unversioned stores,
+  and reject databases created by a newer release.
 - [ ] **Hardening:** audit keyboard navigation, screen-reader labels, and color
   contrast in the Qt/QML shell.
 - [ ] **Hardening:** add fixture-driven end-to-end projection and notification
