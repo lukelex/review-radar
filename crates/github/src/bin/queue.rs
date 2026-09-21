@@ -1,8 +1,11 @@
-use std::{env, path::PathBuf};
+use std::{collections::BTreeMap, env, path::PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
-use chrono::Utc;
-use review_radar_domain::{PullRequestCard, RankingStrategy, Snapshot, WorkspaceView};
+use chrono::{DateTime, Utc};
+use review_radar_domain::{
+    friction::{Coverage, HistoryEvent, HistoryEventKind, ReviewHistory},
+    PullRequestCard, RankingStrategy, Snapshot, WorkspaceView,
+};
 use review_radar_state::StateStore;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde_json::{json, Value};
@@ -160,11 +163,13 @@ fn load_snapshot(connection: &Connection, capture_id: i64) -> Result<(String, Sn
         .with_context(|| format!("capture {capture_id} does not exist"))?;
     let searches = load_searches(connection, capture_id)?;
     let pull_requests = load_pull_requests(connection, capture_id)?;
+    let review_histories = normalize_review_histories(&pull_requests, &viewer_login, &captured_at)?;
     let snapshot = Snapshot::from_json(&serde_json::to_string(&json!({
         "capturedAt": captured_at.clone(),
         "viewer": { "login": viewer_login },
         "searches": searches,
         "pullRequests": pull_requests,
+        "reviewHistories": review_histories,
     }))?)?;
     Ok((captured_at, snapshot))
 }
@@ -180,6 +185,184 @@ fn load_predecessor_snapshot(connection: &Connection, capture_id: i64) -> Result
     predecessor_id
         .map(|id| load_snapshot(connection, id).map(|(_, snapshot)| snapshot))
         .transpose()
+}
+
+/// Convert bounded collector evidence into the domain history contract. Missing
+/// fields and pagination become partial coverage; commit totals are never used as
+/// revision churn, so the resulting assessment remains Limited history for now.
+fn normalize_review_histories(
+    pull_requests: &[Value],
+    viewer_login: &str,
+    captured_at: &str,
+) -> Result<BTreeMap<String, ReviewHistory>> {
+    let observed_until = unix_seconds(captured_at)?;
+    let mut histories = BTreeMap::new();
+    for pull_request in pull_requests {
+        let Some((id, history)) =
+            normalize_review_history(pull_request, viewer_login, observed_until)
+        else {
+            continue;
+        };
+        histories.insert(id, history);
+    }
+    Ok(histories)
+}
+
+fn normalize_review_history(
+    pull_request: &Value,
+    viewer_login: &str,
+    observed_until: u64,
+) -> Option<(String, ReviewHistory)> {
+    let id = pull_request.get("id")?.as_str()?.to_owned();
+    let started_at = unix_seconds(pull_request.get("createdAt")?.as_str()?).ok()?;
+    let current_draft = pull_request.get("isDraft")?.as_bool()?;
+    let timeline = pull_request.get("timelineItems")?;
+    let reviews = pull_request.get("reviews")?;
+    let commits = pull_request.get("commits")?;
+    let mut complete = connection_complete(timeline)?
+        && connection_complete(reviews)?
+        && connection_complete(commits)?;
+    let mut events = Vec::new();
+    let mut valid = started_at <= observed_until;
+
+    for node in connection_nodes(timeline)? {
+        let (kind, timestamp) = match node.get("__typename").and_then(Value::as_str)? {
+            "ReadyForReviewEvent" => (HistoryEventKind::Ready, node.get("createdAt")),
+            "ConvertToDraftEvent" => (HistoryEventKind::Draft, node.get("createdAt")),
+            "ClosedEvent" => (HistoryEventKind::Closed, node.get("createdAt")),
+            "ReopenedEvent" => (HistoryEventKind::Reopened, node.get("createdAt")),
+            _ => {
+                valid = false;
+                continue;
+            }
+        };
+        let Some(event) = source_event(
+            format!(
+                "timeline:{}",
+                node.get("id").and_then(Value::as_str).unwrap_or_default()
+            ),
+            timestamp.and_then(Value::as_str),
+            kind,
+        ) else {
+            valid = false;
+            continue;
+        };
+        events.push(event);
+    }
+    for node in connection_nodes(reviews)? {
+        let author = node
+            .get("author")
+            .and_then(Value::as_object)
+            .and_then(|author| {
+                author
+                    .get("login")
+                    .and_then(Value::as_str)
+                    .zip(author.get("__typename").and_then(Value::as_str))
+            });
+        let substantive = node.get("state").and_then(Value::as_str) != Some("PENDING");
+        let Some((login, typename)) = author else {
+            continue;
+        };
+        if !substantive || login == viewer_login || typename == "Bot" {
+            continue;
+        }
+        let Some(event) = source_event(
+            format!(
+                "review:{}",
+                node.get("id").and_then(Value::as_str).unwrap_or_default()
+            ),
+            node.get("submittedAt")
+                .or_else(|| node.get("updatedAt"))
+                .and_then(Value::as_str),
+            HistoryEventKind::Review,
+        ) else {
+            valid = false;
+            continue;
+        };
+        events.push(event);
+    }
+    for node in connection_nodes(commits)? {
+        let commit = node.get("commit")?;
+        let Some(event) = source_event(
+            format!(
+                "commit:{}",
+                commit
+                    .get("oid")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+            ),
+            commit.get("committedDate").and_then(Value::as_str),
+            HistoryEventKind::Revision {
+                changed_lines: None,
+            },
+        ) else {
+            valid = false;
+            continue;
+        };
+        events.push(event);
+    }
+    events.sort_by(|left, right| left.at.cmp(&right.at).then_with(|| left.id.cmp(&right.id)));
+    let initially_draft = events
+        .iter()
+        .find_map(|event| match event.kind {
+            HistoryEventKind::Ready => Some(true),
+            HistoryEventKind::Draft => Some(false),
+            _ => None,
+        })
+        .unwrap_or(current_draft);
+    if events.iter().any(|event| event.id.ends_with(':')) {
+        valid = false;
+    }
+    if !valid {
+        complete = false;
+    }
+    Some((
+        id,
+        ReviewHistory {
+            coverage: if complete {
+                Coverage::Complete
+            } else {
+                Coverage::Partial
+            },
+            started_at,
+            observed_until,
+            initially_draft,
+            // Cumulative commit totals are not revision diffs. Leave churn
+            // unknown until targeted parent comparisons can establish it.
+            initial_review_diff_lines: None,
+            events,
+        },
+    ))
+}
+
+fn connection_nodes(connection: &Value) -> Option<&Vec<Value>> {
+    connection.get("nodes")?.as_array()
+}
+
+fn connection_complete(connection: &Value) -> Option<bool> {
+    Some(
+        !connection
+            .get("pageInfo")?
+            .get("hasPreviousPage")?
+            .as_bool()?,
+    )
+}
+
+fn source_event(
+    id: String,
+    timestamp: Option<&str>,
+    kind: HistoryEventKind,
+) -> Option<HistoryEvent> {
+    (!id.ends_with(':')).then_some(HistoryEvent {
+        id,
+        at: unix_seconds(timestamp?).ok()?,
+        kind,
+    })
+}
+
+fn unix_seconds(value: &str) -> Result<u64> {
+    let seconds = DateTime::parse_from_rfc3339(value)?.timestamp();
+    u64::try_from(seconds).context("timestamp before Unix epoch")
 }
 
 fn load_searches(connection: &Connection, capture_id: i64) -> Result<Vec<Value>> {
@@ -261,6 +444,76 @@ mod tests {
         assert_eq!(projection.suppressed_count, 1);
         assert_eq!(projection.cards.len(), 1);
         assert!(projection.notification_eligible_ids.is_empty());
+    }
+
+    #[test]
+    fn normalizes_complete_collector_history_without_claiming_churn() {
+        let payload = json!({
+            "id": "pr-001", "createdAt": "2026-09-01T00:00:00Z", "isDraft": false,
+            "timelineItems": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
+                { "__typename": "ReadyForReviewEvent", "id": "ready-1", "createdAt": "2026-09-03T00:00:00Z" },
+                { "__typename": "ConvertToDraftEvent", "id": "draft-1", "createdAt": "2026-09-04T00:00:00Z" },
+                { "__typename": "ReadyForReviewEvent", "id": "ready-2", "createdAt": "2026-09-05T00:00:00Z" }
+            ] },
+            "reviews": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
+                { "id": "review-1", "author": { "login": "reviewer-001", "__typename": "User" }, "state": "COMMENTED", "submittedAt": "2026-09-06T00:00:00Z", "updatedAt": "2026-09-06T00:00:00Z" }
+            ] },
+            "commits": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
+                { "commit": { "oid": "commit-1", "committedDate": "2026-09-07T00:00:00Z" } }
+            ] }
+        });
+        let (_, history) = normalize_review_history(
+            &payload,
+            "viewer-001",
+            unix_seconds("2026-09-08T00:00:00Z").unwrap(),
+        )
+        .unwrap();
+        assert_eq!(history.coverage, Coverage::Complete);
+        assert!(history.initially_draft);
+        assert_eq!(history.initial_review_diff_lines, None);
+        assert!(history
+            .events
+            .iter()
+            .any(|event| matches!(event.kind, HistoryEventKind::Review)));
+        assert!(history.events.iter().any(|event| matches!(
+            event.kind,
+            HistoryEventKind::Revision {
+                changed_lines: None
+            }
+        )));
+        let assessment = review_radar_domain::friction::assess(
+            Some(&history),
+            review_radar_domain::Lifecycle::Open,
+            false,
+        );
+        assert_eq!(
+            assessment.status,
+            review_radar_domain::friction::AssessmentStatus::LimitedHistory
+        );
+        assert!(assessment.limitations.contains(&"unknown-code-churn"));
+    }
+
+    #[test]
+    fn paginated_or_unattributed_evidence_stays_partial_and_does_not_add_review_events() {
+        let payload = json!({
+            "id": "pr-001", "createdAt": "2026-09-01T00:00:00Z", "isDraft": false,
+            "timelineItems": { "pageInfo": { "hasPreviousPage": true }, "nodes": [] },
+            "reviews": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
+                { "id": "self", "author": { "login": "viewer-001", "__typename": "User" }, "state": "COMMENTED", "submittedAt": "2026-09-02T00:00:00Z" },
+                { "id": "bot", "author": { "login": "bot-001", "__typename": "Bot" }, "state": "COMMENTED", "submittedAt": "2026-09-02T00:00:00Z" },
+                { "id": "pending", "author": { "login": "reviewer-001", "__typename": "User" }, "state": "PENDING", "updatedAt": "2026-09-02T00:00:00Z" },
+                { "id": "unknown", "author": null, "state": "COMMENTED", "submittedAt": "2026-09-02T00:00:00Z" }
+            ] },
+            "commits": { "pageInfo": { "hasPreviousPage": false }, "nodes": [] }
+        });
+        let (_, history) = normalize_review_history(
+            &payload,
+            "viewer-001",
+            unix_seconds("2026-09-08T00:00:00Z").unwrap(),
+        )
+        .unwrap();
+        assert_eq!(history.coverage, Coverage::Partial);
+        assert!(history.events.is_empty());
     }
 
     fn card(id: &str, attention_required: bool, current_fingerprint: &str) -> PullRequestCard {

@@ -24,6 +24,20 @@ query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: 
           pageInfo { hasPreviousPage }
           nodes { id author { login __typename } state submittedAt updatedAt }
         }
+        timelineItems(
+          last: $eventLimit
+          itemTypes: [READY_FOR_REVIEW_EVENT, CONVERT_TO_DRAFT_EVENT, CLOSED_EVENT, REOPENED_EVENT]
+        ) {
+          totalCount
+          pageInfo { hasPreviousPage }
+          nodes {
+            __typename
+            ... on ReadyForReviewEvent { id createdAt }
+            ... on ConvertToDraftEvent { id createdAt }
+            ... on ClosedEvent { id createdAt }
+            ... on ReopenedEvent { id createdAt }
+          }
+        }
         comments(last: $eventLimit) {
           totalCount
           pageInfo { hasPreviousPage }
@@ -41,7 +55,9 @@ query Snapshot($search: String!, $pageSize: Int!, $cursor: String, $eventLimit: 
             }
           }
         }
-        commits(last: 1) {
+        commits(last: $eventLimit) {
+          totalCount
+          pageInfo { hasPreviousPage }
           nodes {
             commit {
               oid committedDate

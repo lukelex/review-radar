@@ -9,7 +9,7 @@ use crate::Lifecycle;
 
 pub const POLICY_VERSION: &str = "review-friction-v1";
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewHistory {
     pub coverage: Coverage,
@@ -28,7 +28,7 @@ pub enum Coverage {
     Partial,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct HistoryEvent {
     pub id: String,
     pub at: u64,
@@ -36,7 +36,7 @@ pub struct HistoryEvent {
     pub kind: HistoryEventKind,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum HistoryEventKind {
     Ready,
