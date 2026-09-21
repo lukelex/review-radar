@@ -44,6 +44,9 @@ services:
 
   desktop:
     image: review-radar-desktop:local
+    build:
+      context: .
+      dockerfile: Dockerfile.desktop
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     environment:
       GH_TOKEN: ${GH_TOKEN:-}

@@ -5,7 +5,7 @@ supported. Compose now consumes the parallel core/desktop images; the original
 `Dockerfile` remains available as a fallback. Build the split images with:
 
 ```sh
-./scripts/build-split-images
+docker compose build
 ```
 
 This produces:
@@ -15,11 +15,10 @@ This produces:
 - `review-radar-desktop:local`: the core image plus Qt/QML and the standalone
   Linux desktop application.
 
-The desktop build consumes the tagged core image through `CORE_IMAGE`; build
-the core image first. The existing Compose services, `/data` paths, binary
-names, environment variables, and entrypoints are intentionally unchanged.
-Run `./scripts/build-split-images` before `./scripts/desktop` when the images
-are not already available locally.
+The core and desktop images build independently. The existing Compose services,
+`/data` paths, binary names, environment variables, and entrypoints are
+intentionally unchanged. Run `docker compose build` before `./scripts/desktop`
+when the images are not already available locally.
 
 Smoke-test the split images without changing the current runtime:
 
