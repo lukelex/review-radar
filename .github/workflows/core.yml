@@ -1,4 +1,4 @@
-name: Core CI
+name: Core and Linux Qt CI
 
 on:
   push:
@@ -11,6 +11,19 @@ on:
       - Dockerfile
       - compose.yaml
       - .github/workflows/core.yml
+      - apps/linux-qt/**
+      - docs/assets/logo.svg
+  pull_request:
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**
+      - tests/**
+      - Dockerfile
+      - compose.yaml
+      - .github/workflows/core.yml
+      - apps/linux-qt/**
+      - docs/assets/logo.svg
   workflow_dispatch:
 
 permissions:
@@ -136,6 +149,90 @@ jobs:
         uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  core:
+    name: Core track complete
+    needs: [build, lint, test, runtime-smoke, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Core checks passed
+        run: echo "Core track passed; starting the Linux Qt track."
+
+  qt-build:
+    name: Qt build
+    needs: core
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt build dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          cmake g++ make qt6-base-dev qt6-declarative-dev qt6-qpa-plugins libqt6svg6
+          qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls
+          qml6-module-qtquick-layouts qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+
+      - name: Configure and build
+        run: >-
+          cmake -S apps/linux-qt -B build/linux-qt -DCMAKE_BUILD_TYPE=Release
+          && cmake --build build/linux-qt --parallel
+
+  qt-lint:
+    name: Qt lint
+    needs: qt-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install QML lint dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          qt6-declarative-dev qt6-declarative-dev-tools qml6-module-qtquick
+          qml6-module-qtquick-window qml6-module-qtquick-controls qml6-module-qtquick-layouts
+          qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+
+      - name: Lint QML
+        run: |
+          set +e
+          /usr/lib/qt6/bin/qmllint apps/linux-qt/qml/*.qml >qmllint.log 2>&1
+          status=$?
+          set -e
+          cat qmllint.log
+          if grep -qE '(^|: )Error:' qmllint.log; then
+            exit 1
+          fi
+          # Ubuntu's Qt 6.4 qmllint reports generated-module diagnostics as
+          # warnings; syntax and type errors remain fatal above.
+          exit 0
+
+  qt-test:
+    name: Qt tests
+    needs: qt-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt test dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          cmake g++ make qt6-base-dev qt6-declarative-dev qt6-qpa-plugins libqt6svg6
+          qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls
+          qml6-module-qtquick-layouts qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+
+      - name: Configure and build test executable
+        run: >-
+          cmake -S apps/linux-qt -B build/linux-qt -DCMAKE_BUILD_TYPE=Release
+          && cmake --build build/linux-qt --parallel
+
+      - name: Run Qt tests
+        run: ctest --test-dir build/linux-qt --output-on-failure
 
   coverage:
     name: Coverage (manual)

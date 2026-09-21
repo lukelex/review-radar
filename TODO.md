@@ -66,8 +66,8 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [x] Run fixture projection checks for the supported queue views in CI.
 - [x] Compile the Linux Qt client when `apps/linux-qt` becomes active, ideally
   only when the client or its build dependencies change.
-  `.github/workflows/linux-qt.yml` is path-filtered and runs build, QML lint,
-  and the offscreen startup test.
+  `.github/workflows/core.yml` is path-filtered and runs the core and Linux Qt
+  tracks, including build, QML lint, and the offscreen startup test.
 
 ## Next work
 
