@@ -5,6 +5,12 @@
 - The Cargo workspace contains the GitHub collector in `crates/github` and fixture-driven ranking/event projection in `crates/domain`; native apps and the state/platform crates remain placeholders.
 - Read `docs/architecture.md` for component contracts, `docs/project-plan.md` for product semantics and delivery phases, and `docs/decisions/0001-native-shells.md` for the accepted UI decision. These describe intended behavior, not implemented features.
 - Read [the design system and language](docs/design-system.md) before changing UI, branding, or user-facing copy. Follow its shared tokens, components, terminology, and interaction guidance; update it when those conventions change. Visual references and implementation screenshots live in `docs/mockups/high/`.
+- Read `docs/native-client-contract.md` before changing performance, UX/UI,
+  loading states, client behavior, or architectural decisions. Treat it as a
+  long-lived cross-platform contract: update it in the same change with the
+  rationale, observable behavior, tradeoffs, and platform-neutral acceptance
+  criteria so future macOS, Windows, and TUI clients can re-implement the
+  behavior. Do not document only the Qt implementation or rely on chat history.
 - `docs/prototype-findings.md` is the verified bridge from the existing dotfiles prototype: preserve its interaction model, but do not move its `gh`/`jq` queries, one-minute polling, ranking, or notification state into QML.
 - Docker is the supported toolchain. Run the collector with `GH_TOKEN="$(gh auth token)" docker compose run --rm collector`; it appends private, unsanitized captures to the gitignored `data/review-radar.sqlite3`.
 - Inspect the live domain projection with `docker compose run --rm queue --view tailored` (or `action`, `my-prs`, `following`, `recent`). It reads the latest SQLite capture without calling GitHub and applies the separate local-state database; pass `--capture-id` to inspect a specific capture. Use `--record-attention true` only after a successful capture so first observation baselines instead of generating notifications.

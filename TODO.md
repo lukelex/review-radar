@@ -73,14 +73,20 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 
 ## Sync performance
 
-- [ ] **Parallelize independent searches:** reduce wall-clock refresh time while
-  respecting GitHub GraphQL rate limits and query complexity.
+- [x] **Parallelize independent searches:** search categories now run concurrently
+  with sequential pagination per category; a low remaining rate-limit budget
+  falls back to independent sequential workers.
 - [ ] **Reduce nested payloads:** fetch detailed event data only when required by
   the selected view, or tune the bounded event window based on measurements.
-- [ ] **Add sync progress reporting:** expose search/page progress instead of
-  showing only an undifferentiated syncing state.
-- [ ] **Instrument collector requests:** record per-request duration, response
-  size, GraphQL cost, and cache hit rate before further tuning.
+- [x] **Add sync progress reporting:** the collector reports search/page and
+  hydration-batch progress to native clients.
+- [x] **Instrument collector requests:** the collector reports request duration,
+  slowest request, GraphQL cost, and cache hit rate before further tuning.
+- [x] **View-targeted detail rendering:** retain complete shared snapshots while
+  deferring expensive activity-detail rendering until a PR is opened. See the
+  native-client contract and the Linux detail panel implementation.
+- [ ] **Adaptive hydration batches:** tune batch size from measured GraphQL cost
+  and latency while retaining the verified timeout guardrails.
 
 Native Linux notifications are complete: the Qt shell sends only the
 state-deduplicated attention transitions, includes an activation action, and

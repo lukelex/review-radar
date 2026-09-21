@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     )
     .with_context(|| format!("cannot open {}", config.database.display()))?;
     let capture_id = config.capture_id.unwrap_or(latest_capture_id(&connection)?);
-    let (captured_at, snapshot) = load_snapshot(&connection, capture_id)?;
+    let (captured_at, snapshot) = load_snapshot(&connection, capture_id, true)?;
     let predecessor = load_predecessor_snapshot(&connection, capture_id)?;
     let state = StateStore::open(&config.state_database)
         .with_context(|| format!("cannot open {}", config.state_database.display()))?;
@@ -163,7 +163,11 @@ fn latest_capture_id(connection: &Connection) -> Result<i64> {
         .context("database contains no successful captures")
 }
 
-fn load_snapshot(connection: &Connection, capture_id: i64) -> Result<(String, Snapshot)> {
+fn load_snapshot(
+    connection: &Connection,
+    capture_id: i64,
+    include_review_history: bool,
+) -> Result<(String, Snapshot)> {
     let (captured_at, viewer_login): (String, String) = connection
         .query_row(
             "SELECT captured_at, viewer_login FROM captures WHERE id = ?",
@@ -173,7 +177,11 @@ fn load_snapshot(connection: &Connection, capture_id: i64) -> Result<(String, Sn
         .with_context(|| format!("capture {capture_id} does not exist"))?;
     let searches = load_searches(connection, capture_id)?;
     let pull_requests = load_pull_requests(connection, capture_id)?;
-    let review_histories = normalize_review_histories(&pull_requests, &viewer_login, &captured_at)?;
+    let review_histories = if include_review_history {
+        normalize_review_histories(&pull_requests, &viewer_login, &captured_at)?
+    } else {
+        BTreeMap::new()
+    };
     let snapshot = Snapshot::from_json(&serde_json::to_string(&json!({
         "capturedAt": captured_at.clone(),
         "viewer": { "login": viewer_login },
@@ -193,7 +201,7 @@ fn load_predecessor_snapshot(connection: &Connection, capture_id: i64) -> Result
         )
         .optional()?;
     predecessor_id
-        .map(|id| load_snapshot(connection, id).map(|(_, snapshot)| snapshot))
+        .map(|id| load_snapshot(connection, id, false).map(|(_, snapshot)| snapshot))
         .transpose()
 }
 

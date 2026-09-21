@@ -1,4 +1,10 @@
-use std::{collections::BTreeMap, env, fs, path::PathBuf, time::Duration};
+use std::{
+    collections::{BTreeMap, HashSet},
+    env, fs,
+    io::{self, Write},
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::{Duration as ChronoDuration, SecondsFormat, Utc};
@@ -29,6 +35,12 @@ struct SearchResult {
     ids: Vec<String>,
 }
 
+struct SearchWork {
+    search: SearchResult,
+    pull_requests: BTreeMap<String, Value>,
+    github: GitHub,
+}
+
 #[derive(Debug)]
 struct Capture {
     captured_at: String,
@@ -39,6 +51,12 @@ struct Capture {
     graphql_cost: u64,
     remaining: u64,
     reset_at: String,
+    cache_hits: u64,
+    cache_misses: u64,
+    request_time_ms: u128,
+    slowest_request_ms: u128,
+    response_bytes: u64,
+    stale_ids: Vec<String>,
 }
 
 struct GitHub {
@@ -48,6 +66,9 @@ struct GitHub {
     cost: u64,
     remaining: u64,
     reset_at: String,
+    request_time: Duration,
+    slowest_request: Duration,
+    response_bytes: u64,
 }
 
 impl GitHub {
@@ -63,6 +84,9 @@ impl GitHub {
             cost: 0,
             remaining: 0,
             reset_at: String::new(),
+            request_time: Duration::ZERO,
+            slowest_request: Duration::ZERO,
+            response_bytes: 0,
         })
     }
 
@@ -77,6 +101,7 @@ impl GitHub {
                 }
             );
         }
+        let started = Instant::now();
         let response = self
             .client
             .post(API_URL)
@@ -84,6 +109,9 @@ impl GitHub {
             .json(&json!({ "query": query, "variables": variables }))
             .send()
             .context("GitHub request failed")?;
+        let elapsed = started.elapsed();
+        self.request_time += elapsed;
+        self.slowest_request = self.slowest_request.max(elapsed);
         if matches!(response.status().as_u16(), 403 | 429) {
             bail!(
                 "GitHub rate limit request rejected (HTTP {}); retry after {}",
@@ -99,7 +127,12 @@ impl GitHub {
             .error_for_status()
             .context("GitHub returned an HTTP error")?;
         self.requests += 1;
-        let body: Value = response.json().context("GitHub returned invalid JSON")?;
+        let body_bytes = response
+            .bytes()
+            .context("GitHub response body could not be read")?;
+        self.response_bytes += body_bytes.len() as u64;
+        let body: Value =
+            serde_json::from_slice(&body_bytes).context("GitHub returned invalid JSON")?;
         if body.get("errors").is_some() {
             bail!("GitHub GraphQL returned errors; no capture was saved");
         }
@@ -140,7 +173,26 @@ fn main() -> Result<()> {
         "  {} requests; GraphQL cost {}; {} points remaining (reset {})",
         capture.request_count, capture.graphql_cost, capture.remaining, capture.reset_at
     );
+    println!(
+        "  cache: {} hits, {} hydrations; requests took {} ms total (slowest {} ms)",
+        capture.cache_hits,
+        capture.cache_misses,
+        capture.request_time_ms,
+        capture.slowest_request_ms
+    );
+    println!("  response data: {} bytes", capture.response_bytes);
+    if !capture.stale_ids.is_empty() {
+        println!(
+            "  stale hydration fallback: {} PRs",
+            capture.stale_ids.len()
+        );
+    }
     Ok(())
+}
+
+fn report_progress(message: impl AsRef<str>) {
+    println!("Progress: {}", message.as_ref());
+    let _ = io::stdout().flush();
 }
 
 fn parse_config(args: impl Iterator<Item = String>) -> Result<Config> {
@@ -191,7 +243,7 @@ fn collect(
     let viewer = required_str(required(&identity, "viewer")?, "login")?.to_owned();
     let cutoff =
         (captured_at - ChronoDuration::days(14)).to_rfc3339_opts(SecondsFormat::Secs, true);
-    let definitions = [
+    let definitions = vec![
         (
             "review_requested",
             format!("is:pr is:open review-requested:{viewer}"),
@@ -216,58 +268,98 @@ fn collect(
     ];
     let mut searches = Vec::new();
     let mut pull_requests = BTreeMap::new();
-    for (category, base_query) in definitions {
-        let query = format!("{base_query} sort:updated-desc");
-        let mut cursor = Value::Null;
-        let mut ids = Vec::new();
-        let mut reported_count = 0;
-        let mut pages_fetched = 0;
-        let mut has_next_page = false;
-        for _ in 0..config.max_pages {
-            let data = github.query(
-                SEARCH_QUERY,
-                json!({
-                    "search": query,
-                    "pageSize": config.page_size,
-                    "cursor": cursor,
-                    "eventLimit": config.event_limit,
-                }),
-            )?;
-            let search = required(&data, "search")?;
-            reported_count = required_u64(search, "issueCount")?;
-            for node in required_array(search, "nodes")? {
-                if node.is_null() {
-                    continue;
-                }
-                let id = required_str(node, "id")?.to_owned();
-                if !ids.contains(&id) {
-                    ids.push(id.clone());
-                }
-                // Search responses are deliberately lightweight. Details are
-                // hydrated once below, after all memberships have been merged.
-                pull_requests.entry(id).or_insert_with(|| node.clone());
-            }
-            pages_fetched += 1;
-            let page_info = required(search, "pageInfo")?;
-            has_next_page = required_bool(page_info, "hasNextPage")?;
-            if !has_next_page {
-                break;
-            }
-            cursor = page_info
-                .get("endCursor")
-                .cloned()
-                .filter(|v| !v.is_null())
-                .ok_or_else(|| anyhow!("GitHub reported another page without a cursor"))?;
+    let search_count = definitions.len();
+    let parallel = github.remaining >= search_count as u64;
+    let mut work = if parallel {
+        let token = github.token.clone();
+        let client = github.client.clone();
+        let remaining = github.remaining;
+        let reset_at = github.reset_at.clone();
+        std::thread::scope(|scope| {
+            let handles = definitions.into_iter().enumerate().map(
+                |(search_index, (category, base_query))| {
+                    let token = token.clone();
+                    let client = client.clone();
+                    let reset_at = reset_at.clone();
+                    scope.spawn(move || {
+                        let worker = GitHub {
+                            client,
+                            token,
+                            requests: 0,
+                            cost: 0,
+                            remaining,
+                            reset_at,
+                            request_time: Duration::ZERO,
+                            slowest_request: Duration::ZERO,
+                            response_bytes: 0,
+                        };
+                        collect_search(
+                            worker,
+                            config,
+                            search_index,
+                            search_count,
+                            category,
+                            base_query,
+                        )
+                    })
+                },
+            );
+            handles
+                .map(|handle| {
+                    handle
+                        .join()
+                        .map_err(|_| anyhow!("search worker panicked"))?
+                })
+                .collect::<Result<Vec<_>>>()
+        })?
+    } else {
+        let token = github.token.clone();
+        let client = github.client.clone();
+        let remaining = github.remaining;
+        let reset_at = github.reset_at.clone();
+        definitions
+            .into_iter()
+            .enumerate()
+            .map(|(search_index, (category, base_query))| {
+                collect_search(
+                    GitHub {
+                        client: client.clone(),
+                        token: token.clone(),
+                        requests: 0,
+                        cost: 0,
+                        remaining,
+                        reset_at: reset_at.clone(),
+                        request_time: Duration::ZERO,
+                        slowest_request: Duration::ZERO,
+                        response_bytes: 0,
+                    },
+                    config,
+                    search_index,
+                    search_count,
+                    category,
+                    base_query,
+                )
+            })
+            .collect::<Result<Vec<_>>>()?
+    };
+    work.sort_by_key(|(index, _)| *index);
+    for (_, result) in work {
+        let SearchWork {
+            search,
+            pull_requests: found,
+            github: worker,
+        } = result;
+        searches.push(search);
+        pull_requests.extend(found);
+        github.requests += worker.requests;
+        github.cost += worker.cost;
+        github.remaining = github.remaining.min(worker.remaining);
+        if !worker.reset_at.is_empty() {
+            github.reset_at = worker.reset_at;
         }
-        let truncated = has_next_page || reported_count > ids.len() as u64;
-        searches.push(SearchResult {
-            category: category.into(),
-            query,
-            reported_count,
-            pages_fetched,
-            truncated,
-            ids,
-        });
+        github.request_time += worker.request_time;
+        github.slowest_request = github.slowest_request.max(worker.slowest_request);
+        github.response_bytes += worker.response_bytes;
     }
 
     let ids_to_hydrate: Vec<String> = pull_requests
@@ -282,25 +374,46 @@ fn collect(
         }))
         .collect();
 
+    let cache_hits = pull_requests.len() as u64 - ids_to_hydrate.len() as u64;
+    let cache_misses = ids_to_hydrate.len() as u64;
     let mut hydrated = BTreeMap::new();
-    for ids in ids_to_hydrate.chunks(10) {
-        let data = github.query(
+    let mut hydration_error = None;
+    let hydration_batches = ids_to_hydrate.chunks(10).len();
+    for (batch_index, ids) in ids_to_hydrate.chunks(10).enumerate() {
+        report_progress(format!(
+            "hydrating batch {}/{} ({} PRs)",
+            batch_index + 1,
+            hydration_batches,
+            ids.len()
+        ));
+        let data = match github.query(
             HYDRATE_QUERY,
             json!({"ids": ids, "eventLimit": config.event_limit}),
-        )?;
+        ) {
+            Ok(data) => data,
+            Err(error) => {
+                hydration_error = Some(error);
+                break;
+            }
+        };
         for node in required_array(&data, "nodes")? {
             if !node.is_null() {
                 hydrated.insert(required_str(node, "id")?.to_owned(), node.clone());
             }
         }
     }
+    let mut stale_ids = Vec::new();
     for (id, summary) in &mut pull_requests {
         if let Some(node) = hydrated.remove(id) {
             *summary = node;
         } else if let Some(cached) = cache.get(id) {
             *summary = cached.clone();
+            mark_hydration_stale(summary);
+            stale_ids.push(id.clone());
         } else {
-            bail!("GitHub did not return pull request {id} during hydration");
+            return Err(hydration_error.unwrap_or_else(|| {
+                anyhow!("GitHub did not return pull request {id} during hydration")
+            }));
         }
     }
     Ok(Capture {
@@ -312,7 +425,95 @@ fn collect(
         graphql_cost: github.cost,
         remaining: github.remaining,
         reset_at: github.reset_at,
+        cache_hits,
+        cache_misses,
+        request_time_ms: github.request_time.as_millis(),
+        slowest_request_ms: github.slowest_request.as_millis(),
+        response_bytes: github.response_bytes,
+        stale_ids,
     })
+}
+
+fn collect_search(
+    mut github: GitHub,
+    config: &Config,
+    search_index: usize,
+    search_count: usize,
+    category: &str,
+    base_query: String,
+) -> Result<(usize, SearchWork)> {
+    let query = format!("{base_query} sort:updated-desc");
+    let mut cursor = Value::Null;
+    let mut ids = Vec::new();
+    let mut seen_ids = HashSet::new();
+    let mut pull_requests = BTreeMap::new();
+    let mut reported_count = 0;
+    let mut pages_fetched = 0;
+    let mut has_next_page = false;
+    for _ in 0..config.max_pages {
+        let data = github.query(
+            SEARCH_QUERY,
+            json!({
+                "search": query,
+                "pageSize": config.page_size,
+                "cursor": cursor,
+                "eventLimit": config.event_limit,
+            }),
+        )?;
+        let search = required(&data, "search")?;
+        reported_count = required_u64(search, "issueCount")?;
+        for node in required_array(search, "nodes")? {
+            if node.is_null() {
+                continue;
+            }
+            let id = required_str(node, "id")?.to_owned();
+            if seen_ids.insert(id.clone()) {
+                ids.push(id.clone());
+            }
+            pull_requests.entry(id).or_insert_with(|| node.clone());
+        }
+        pages_fetched += 1;
+        report_progress(format!(
+            "search {}/{} · {} · page {}/{}",
+            search_index + 1,
+            search_count,
+            category,
+            pages_fetched,
+            config.max_pages
+        ));
+        let page_info = required(search, "pageInfo")?;
+        has_next_page = required_bool(page_info, "hasNextPage")?;
+        if !has_next_page {
+            break;
+        }
+        cursor = page_info
+            .get("endCursor")
+            .cloned()
+            .filter(|v| !v.is_null())
+            .ok_or_else(|| anyhow!("GitHub reported another page without a cursor"))?;
+    }
+    let truncated = has_next_page || reported_count > ids.len() as u64;
+    Ok((
+        search_index,
+        SearchWork {
+            search: SearchResult {
+                category: category.into(),
+                query,
+                reported_count,
+                pages_fetched,
+                truncated,
+                ids,
+            },
+            pull_requests,
+            github,
+        },
+    ))
+}
+
+fn mark_hydration_stale(payload: &mut Value) {
+    if let Some(object) = payload.as_object_mut() {
+        object.insert("_reviewRadar".into(), json!({"hydrationStale": true}));
+    }
 }
 
 fn load_cache(database: &PathBuf) -> Result<BTreeMap<String, Value>> {
