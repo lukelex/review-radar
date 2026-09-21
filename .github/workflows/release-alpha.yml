@@ -109,4 +109,4 @@ jobs:
             --title "Review Radar $VERSION" \
             --notes "Linux x86_64 alpha release. See the bundled README for requirements and launch instructions." \
             --prerelease \
-            --verify-tag "$TAG"
+            --target "$GITHUB_SHA"
