@@ -133,6 +133,6 @@ jobs:
           esac
           gh release create "$VERSION" "$archive" "$archive.sha256" \
             --title "Review Radar $VERSION" \
-            --notes "Linux x86_64 native alpha release. See the bundled README for requirements and launch instructions." \
+            --generate-notes \
             "${prerelease[@]}" \
             --verify-tag "$VERSION"
