@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Review Radar</title>
+  <desc id="desc">A mint pull-request branch inside a radar, with an amber signal marking an item needing attention.</desc>
+  <defs>
+    <linearGradient id="background" x1="24" y1="16" x2="232" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#182E40"/>
+      <stop offset="1" stop-color="#0A1422"/>
+    </linearGradient>
+    <linearGradient id="sweep" x1="128" y1="128" x2="187" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EEAD4" stop-opacity="0"/>
+      <stop offset="1" stop-color="#5EEAD4" stop-opacity="0.24"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="56" fill="url(#background)"/>
+  <rect x="4.5" y="4.5" width="247" height="247" rx="55.5" stroke="#B9E6EC" stroke-opacity="0.15"/>
+  <circle cx="128" cy="128" r="88" stroke="#365467" stroke-width="2"/>
+  <circle cx="128" cy="128" r="60" stroke="#365467" stroke-width="2"/>
+  <path d="M128 128V40A88 88 0 0 1 190.23 65.77Z" fill="url(#sweep)"/>
+  <path d="M128 128L190.23 65.77" stroke="#5EEAD4" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+  <path d="M128 34V44M212 128H222M128 212V222M34 128H44" stroke="#6A8797" stroke-width="2" stroke-linecap="round"/>
+  <path d="M96 102V164M160 164V128C160 110 148 96 130 96H124" stroke="#0D1B2A" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M96 102V164M160 164V128C160 110 148 96 130 96H124M136 84L124 96L136 108" stroke="#5EEAD4" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="96" cy="88" r="12" fill="#102231" stroke="#5EEAD4" stroke-width="7"/>
+  <circle cx="96" cy="176" r="12" fill="#102231" stroke="#5EEAD4" stroke-width="7"/>
+  <circle cx="160" cy="176" r="12" fill="#102231" stroke="#5EEAD4" stroke-width="7"/>
+  <circle cx="190" cy="66" r="17" fill="#FBBF24" fill-opacity="0.12"/>
+  <circle cx="190" cy="66" r="8" fill="#FBBF24" stroke="#102231" stroke-width="3"/>
+</svg>

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="Review Radar logo: a pull-request branch on a radar with an amber attention signal" width="160" height="160">
+</p>
+
 # Review Radar
 
 An actionable, cross-platform GitHub pull-request workspace.
