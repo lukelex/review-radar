@@ -23,6 +23,7 @@ Label {
     font.weight: Font.DemiBold
     textFormat: Text.PlainText
     Accessible.name: "Review friction: " + value + ". " + (status || "Not assessed")
+    Accessible.role: Accessible.StaticText
     background: Rectangle {
         radius: 6
         color: badge.normalizedLevel === "low" ? Style.frictionLowTint

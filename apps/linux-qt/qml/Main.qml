@@ -233,7 +233,12 @@ ApplicationWindow {
                          Accessible.name: modelData.label
                          Accessible.role: Accessible.PageTab
                          onClicked: queue.view = modelData.key
-                         background: Rectangle { radius: 8; color: nav.current ? "#e5e3fa" : nav.hovered ? "#e9ecf3" : "transparent"; border.color: nav.activeFocus ? Style.accent : "transparent" }
+                          background: Rectangle {
+                              radius: 8
+                              color: nav.current ? "#e5e3fa" : nav.hovered ? "#e9ecf3" : "transparent"
+                              border.color: nav.activeFocus ? Style.accent : "transparent"
+                              border.width: nav.activeFocus ? 2 : 1
+                          }
                          Label {
                              anchors.right: parent.left
                              anchors.rightMargin: 8
@@ -275,8 +280,17 @@ ApplicationWindow {
                         font.pixelSize: 12; color: Style.ink; placeholderTextColor: Style.muted
                         Accessible.name: "Search pull requests"
                         selectByMouse: true
-                        background: Rectangle { color: Style.canvas; radius: 8; border.color: searchField.activeFocus ? Style.accent : Style.line }
-                        Label { anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: "Ctrl K"; color: Style.muted; font.pixelSize: 10 }
+                        background: Rectangle {
+                            color: Style.canvas
+                            radius: 8
+                            border.color: searchField.activeFocus ? Style.accent : Style.line
+                            border.width: searchField.activeFocus ? 2 : 1
+                        }
+                        Label {
+                            anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
+                            text: "Ctrl K"; color: Style.muted; font.pixelSize: 10
+                            Accessible.ignored: true
+                        }
                     }
                     Item { Layout.fillWidth: true }
                     Label {
@@ -315,7 +329,12 @@ ApplicationWindow {
                         onActivated: queue.ranking = currentValue
                         font.pixelSize: 12
                         Accessible.name: "Sort pull requests"
-                        background: Rectangle { color: "white"; radius: 7; border.color: sort.activeFocus ? Style.accent : Style.line }
+                        background: Rectangle {
+                            color: "white"
+                            radius: 7
+                            border.color: sort.activeFocus ? Style.accent : Style.line
+                            border.width: sort.activeFocus ? 2 : 1
+                        }
                     }
                 }
                 RowLayout {
@@ -382,7 +401,14 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true; spacing: 8
                     Rectangle { implicitWidth: 6; implicitHeight: 6; radius: 3; color: queue.stale || queue.status.startsWith("Could not") ? "#a35b2a" : Style.accent }
-                    Label { Layout.fillWidth: true; text: queue.status; textFormat: Text.PlainText; color: queue.stale || queue.status.startsWith("Could not") ? "#a35b2a" : Style.muted; font.pixelSize: 11; elide: Text.ElideRight; ToolTip.visible: statusHover.hovered; ToolTip.text: text; HoverHandler { id: statusHover } }
+                    Label {
+                        Layout.fillWidth: true; text: queue.status; textFormat: Text.PlainText
+                        color: queue.stale || queue.status.startsWith("Could not") ? "#a35b2a" : Style.muted
+                        font.pixelSize: 11; elide: Text.ElideRight
+                        Accessible.name: "Workspace status: " + text
+                        Accessible.role: Accessible.StaticText
+                        ToolTip.visible: statusHover.hovered; ToolTip.text: text; HoverHandler { id: statusHover }
+                    }
                     Label { visible: root.width >= 1100; text: "LOCAL FIRST  ·  SYNC EVERY 5 MIN"; color: Style.muted; font.pixelSize: 9; font.letterSpacing: 0.5 }
                 }
             }

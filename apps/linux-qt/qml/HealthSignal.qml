@@ -13,6 +13,8 @@ Rectangle {
     color: tone === "positive" ? Style.positiveTint
          : tone === "negative" ? Style.negativeTint
          : tone === "caution" ? Style.cautionTint : Style.sidebar
+    Accessible.name: signal.label + ": " + signal.value
+    Accessible.role: Accessible.StaticText
 
     Row {
         id: content

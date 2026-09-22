@@ -107,6 +107,17 @@ and keyboard navigation resolve to the same selected PR when details are open;
 otherwise the keyboard-navigation target alone receives the outline. Toolkit
 button focus and hover styling must not create a second active-outline indication.
 
+### Accessibility acceptance criteria
+
+- Health and friction chips expose their full label and value to assistive
+  technologies; symbols and color are supplemental.
+- Keyboard focus has a visible, non-color-only two-pixel outline on interactive
+  navigation, search, sort, and action controls.
+- Decorative shortcut hints and brand images do not create duplicate spoken
+  announcements.
+- A selected card and a keyboard-navigation target never appear as separate active
+  cards.
+
 Review friction uses a separate semantic low/medium/high/unknown color scale.
 It communicates accumulated review difficulty, not urgency or PR health. Clients
 must retain the explicit friction label, level, and a non-color cue; insufficient

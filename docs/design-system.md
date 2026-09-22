@@ -75,7 +75,7 @@ beside the product name should not create duplicate screen-reader announcements.
 | Amber foreground / background | `#a35b2a` / `#fff0e4` | High-friction and caution treatments |
 | Positive foreground / background | `#287a55` / `#e8f6ee` | Passing, approved, and mergeable values |
 | Caution foreground / background | `#94631b` / `#fff4dc` | Pending or waiting values |
-| Negative foreground / background | `#b33f4a` / `#fdecef` | Failing, conflicting, or requested-change values |
+| Negative foreground / background | `#b33f4a` / `#fdecef` | Failing or errored check values |
 | Friction low foreground / background | `#176b70` / `#e5f4f3` | Low assessed review friction |
 | Friction medium foreground / background | `#855b16` / `#fff3d6` | Medium assessed review friction |
 | Friction high foreground / background | `#a34420` / `#fceadf` | High assessed review friction |
@@ -85,6 +85,11 @@ Pair color with text or another explicit indicator. Indigo can identify an
 interaction or attention summary; it is not evidence of a failing PR. Amber
 friction badges must say what they describe. Merged, closed, and open states
 retain explicit labels.
+
+Essential status text and controls must meet the light-theme contrast baseline.
+Focused controls add a two-pixel indigo outline; do not rely on an outline color
+change alone. Hover may remain quieter, but must not be used as a substitute for
+keyboard focus or selection.
 
 Health values are rendered as separate labeled chips so their meaning is
 scannable without reading a sentence: `Review`, `Checks`, and `Merge` retain
