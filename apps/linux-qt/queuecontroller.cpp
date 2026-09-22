@@ -208,6 +208,10 @@ void QueueController::initialize() {
         closeToTray_ = trayEnabled_ && object.value("closeToTray").toBool(false);
         trayAttentionDot_ = object.value("trayAttentionDot").toBool(true);
         barEnabled_ = object.value("barEnabled").toBool(false);
+        notifyReviewRequests_ = object.value("notifyReviewRequests").toBool(true);
+        notifyFeedback_ = object.value("notifyFeedback").toBool(true);
+        notifyChecks_ = object.value("notifyChecks").toBool(true);
+        notifyConflicts_ = object.value("notifyConflicts").toBool(true);
     }
     osIntegration_->configureBar(barEnabled_);
     connect(this, &QueueController::loadingChanged, this, &QueueController::publishBarSnapshot);
@@ -459,6 +463,16 @@ void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArra
         }
         if (card.isEmpty()) continue;
         const auto reasons = card.value("explanation").toObject().value("reasons").toArray();
+        bool categoryEnabled = false;
+        for (const auto &value : reasons) {
+            const auto code = value.toObject().value("code").toString();
+            categoryEnabled = categoryEnabled
+                || (code == "reviewRequested" && notifyReviewRequests_)
+                || ((code == "changesRequested" || code == "newFeedback") && notifyFeedback_)
+                || (code == "checksFailing" && notifyChecks_)
+                || (code == "mergeConflict" && notifyConflicts_);
+        }
+        if (!categoryEnabled) continue;
         const auto reason = reasons.isEmpty() ? QString{} : reasons.first().toObject().value("summary").toString();
         const auto title = card.value("actionLabel").toString();
         const auto body = QStringLiteral("%1 #%2\n%3")
@@ -503,10 +517,19 @@ bool QueueController::saveDesktopPreferences(bool notificationsEnabled, bool tra
 
 bool QueueController::saveIntegrationPreferences(bool notificationsEnabled, bool trayEnabled,
                                                 bool closeToTray, bool attentionDot, bool barEnabled) {
+    return saveAllPreferences(notificationsEnabled, trayEnabled, closeToTray, attentionDot, barEnabled,
+                              notifyReviewRequests_, notifyFeedback_, notifyChecks_, notifyConflicts_);
+}
+
+bool QueueController::saveAllPreferences(bool notificationsEnabled, bool trayEnabled,
+                                         bool closeToTray, bool attentionDot, bool barEnabled,
+                                         bool reviewRequests, bool feedback, bool checks, bool conflicts) {
     QSaveFile file(applicationDataFile("preferences.json"));
     const auto bytes = QJsonDocument(QJsonObject{{"notificationsEnabled", notificationsEnabled},
         {"trayEnabled", trayEnabled}, {"closeToTray", trayEnabled && closeToTray},
-        {"trayAttentionDot", attentionDot}, {"barEnabled", barEnabled}}).toJson();
+        {"trayAttentionDot", attentionDot}, {"barEnabled", barEnabled},
+        {"notifyReviewRequests", reviewRequests}, {"notifyFeedback", feedback},
+        {"notifyChecks", checks}, {"notifyConflicts", conflicts}}).toJson();
     if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
         return false;
     notificationsEnabled_ = notificationsEnabled;
@@ -514,6 +537,10 @@ bool QueueController::saveIntegrationPreferences(bool notificationsEnabled, bool
     closeToTray_ = trayEnabled && closeToTray;
     trayAttentionDot_ = attentionDot;
     barEnabled_ = barEnabled;
+    notifyReviewRequests_ = reviewRequests;
+    notifyFeedback_ = feedback;
+    notifyChecks_ = checks;
+    notifyConflicts_ = conflicts;
     osIntegration_->configureBar(barEnabled_);
     publishBarSnapshot();
     osIntegration_->configureTray(trayEnabled_, trayAttentionDot_);

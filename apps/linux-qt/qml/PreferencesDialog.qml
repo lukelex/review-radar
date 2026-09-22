@@ -10,6 +10,10 @@ Dialog {
     property bool draftCloseToTray: false
     property bool draftAttentionDot: true
     property bool draftBar: false
+    property bool draftReviewRequests: true
+    property bool draftFeedback: true
+    property bool draftChecks: true
+    property bool draftConflicts: true
     property string errorMessage: ""
     property string testMessage: ""
     property bool testSucceeded: false
@@ -18,6 +22,10 @@ Dialog {
         || draftTray !== controller.trayEnabled || draftCloseToTray !== controller.closeToTray
         || draftAttentionDot !== controller.trayAttentionDot
         || draftBar !== controller.barEnabled
+        || draftReviewRequests !== controller.notifyReviewRequests
+        || draftFeedback !== controller.notifyFeedback
+        || draftChecks !== controller.notifyChecks
+        || draftConflicts !== controller.notifyConflicts
     readonly property bool compact: width < 900
     readonly property var sections: ["General", "Workspace", "Notifications", "Desktop integration", "Appearance", "Keyboard", "Account & sync", "Local data", "Advanced"]
     readonly property var descriptions: ({
@@ -58,6 +66,10 @@ Dialog {
         draftCloseToTray = controller.closeToTray
         draftAttentionDot = controller.trayAttentionDot
         draftBar = controller.barEnabled
+        draftReviewRequests = controller.notifyReviewRequests
+        draftFeedback = controller.notifyFeedback
+        draftChecks = controller.notifyChecks
+        draftConflicts = controller.notifyConflicts
         errorMessage = ""; testMessage = ""; section = "Notifications"
     }
     onOpened: toggle.forceActiveFocus()
@@ -217,6 +229,11 @@ Dialog {
                         text: preferences.testMessage; color: preferences.testSucceeded ? Style.secondary : Style.negative
                         font.pixelSize: 11; wrapMode: Text.Wrap; Accessible.name: text
                     }
+                    Label { Layout.topMargin: 10; text: "WHAT TO NOTIFY ABOUT"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
+                    SettingSwitch { label: "Review requests"; description: "Your review is newly needed."; checked: preferences.draftReviewRequests; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftReviewRequests = value } }
+                    SettingSwitch { label: "Feedback requiring your response"; description: "A reviewer has feedback on your pull request."; checked: preferences.draftFeedback; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftFeedback = value } }
+                    SettingSwitch { label: "Failed checks on your PRs"; description: "Checks require your attention."; checked: preferences.draftChecks; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftChecks = value } }
+                    SettingSwitch { label: "Merge conflicts"; description: "Your pull request needs conflict resolution."; checked: preferences.draftConflicts; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftConflicts = value } }
                     Rectangle {
                         Layout.fillWidth: true; implicitHeight: preview.implicitHeight + 34; color: Style.canvas; radius: 10
                         ColumnLayout {
@@ -240,7 +257,7 @@ Dialog {
                         }
                     }
                     Label { Layout.topMargin: 10; text: "MORE OPTIONS"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
-                    Label { Layout.fillWidth: true; text: "Category filters, sound, preview detail, and quiet hours are planned. The master switch above is available now."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.5 }
+                    Label { Layout.fillWidth: true; text: "Sound, preview detail, and quiet hours are planned. Category filters apply only to delivery; attention tracking and deduplication continue for every eligible update."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.5 }
                 }
                 ColumnLayout {
                     visible: preferences.section === "Desktop integration"
@@ -337,7 +354,7 @@ Dialog {
             RadarButton {
                 objectName: "save-preferences"; text: "Save changes"; primary: true; enabled: preferences.dirty
                 onClicked: {
-                    if (preferences.controller.saveIntegrationPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot, preferences.draftBar)) preferences.close()
+                    if (preferences.controller.saveAllPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot, preferences.draftBar, preferences.draftReviewRequests, preferences.draftFeedback, preferences.draftChecks, preferences.draftConflicts)) preferences.close()
                     else preferences.errorMessage = "Could not save preferences. Your changes have not been applied. Try again."
                 }
             }

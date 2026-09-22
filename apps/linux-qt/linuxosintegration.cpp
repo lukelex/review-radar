@@ -1,9 +1,11 @@
 #include "linuxosintegration.h"
+#include "notificationimage.h"
 
 #include <QClipboard>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusMessage>
+#include <QDBusMetaType>
 #include <QDBusReply>
 #include <QDesktopServices>
 #include <QDir>
@@ -115,6 +117,19 @@ bool LinuxOsIntegration::showNotification(const NotificationRequest &request) {
         }
     }
     QVariantMap hints{{"desktop-entry", "review-radar-linux"}};
+    // The daemon may live outside our filesystem (e.g. on the Docker host).
+    // Send pixels, not a container-local path or just an icon-theme lookup name.
+    const auto image = QIcon(":/assets/logo.svg").pixmap(64, 64).toImage()
+                           .convertToFormat(QImage::Format_RGBA8888);
+    if (!image.isNull()) {
+        qDBusRegisterMetaType<NotificationImage>();
+        NotificationImage data;
+        data.width = image.width();
+        data.height = image.height();
+        data.rowStride = image.bytesPerLine();
+        data.pixels = QByteArray(reinterpret_cast<const char *>(image.constBits()), image.sizeInBytes());
+        hints.insert("image-data", QVariant::fromValue(data));
+    }
     QDBusReply<uint> reply = notifications.call(
         "Notify", "Review Radar", notificationIds_.value(request.id), "review-radar-linux", request.title,
         request.body, actions, hints, -1);

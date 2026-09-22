@@ -62,6 +62,10 @@ class QueueController final : public QObject {
     Q_PROPERTY(bool trayAvailable READ trayAvailable NOTIFY trayAvailabilityChanged)
     Q_PROPERTY(bool barEnabled READ barEnabled NOTIFY preferencesChanged)
     Q_PROPERTY(bool barActive READ barActive NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyReviewRequests READ notifyReviewRequests NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyFeedback READ notifyFeedback NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyChecks READ notifyChecks NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyConflicts READ notifyConflicts NOTIFY preferencesChanged)
 
 public:
     explicit QueueController(QObject *parent = nullptr);
@@ -82,8 +86,15 @@ public:
     Q_INVOKABLE bool savePreferences(bool notificationsEnabled);
     Q_INVOKABLE bool saveDesktopPreferences(bool notificationsEnabled, bool trayEnabled, bool closeToTray, bool attentionDot);
     Q_INVOKABLE bool saveIntegrationPreferences(bool notificationsEnabled, bool trayEnabled, bool closeToTray, bool attentionDot, bool barEnabled);
+    Q_INVOKABLE bool saveAllPreferences(bool notificationsEnabled, bool trayEnabled, bool closeToTray,
+                                        bool attentionDot, bool barEnabled, bool reviewRequests,
+                                        bool feedback, bool checks, bool conflicts);
     bool barEnabled() const { return barEnabled_; }
     bool barActive() const { return osIntegration_->barActive(); }
+    bool notifyReviewRequests() const { return notifyReviewRequests_; }
+    bool notifyFeedback() const { return notifyFeedback_; }
+    bool notifyChecks() const { return notifyChecks_; }
+    bool notifyConflicts() const { return notifyConflicts_; }
     bool trayEnabled() const { return trayEnabled_; }
     bool closeToTray() const { return closeToTray_; }
     bool trayAttentionDot() const { return trayAttentionDot_; }
@@ -135,6 +146,10 @@ private:
     bool closeToTray_ = false;
     bool trayAttentionDot_ = true;
     bool barEnabled_ = false;
+    bool notifyReviewRequests_ = true;
+    bool notifyFeedback_ = true;
+    bool notifyChecks_ = true;
+    bool notifyConflicts_ = true;
     bool barError_ = false;
     ReviewRadar::BarSnapshot barSnapshot_;
     QString requestedView_;

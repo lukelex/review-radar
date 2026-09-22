@@ -99,6 +99,16 @@ On Linux, `LinuxOsIntegration` delivers notifications through
 persisted `notificationEligibleIds`, and its OS adapter opens the relevant PR in
 the browser from the notification action.
 
+The adapter sends embedded logo pixels in the standard DBus `image-data` hint.
+An installed icon name alone is insufficient when the host notification daemon
+cannot see the app's container or bundle filesystem. Pixel encoding stays inside
+the Linux adapter; the shared contracts and controller do not handle DBus images.
+
+The notification master switch and category filters are client-local delivery
+preferences. They run only after the queue projection supplies persisted
+`notificationEligibleIds`; they cannot create, classify, or deduplicate attention
+transitions.
+
 ## Local state
 
 Local state is deliberately independent of GitHub's notification-read state. It

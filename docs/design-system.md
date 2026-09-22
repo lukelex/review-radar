@@ -58,6 +58,10 @@ an explicit explanation. Quickshell has its own opt-in with registration status
 and setup instructions. An attention dot is
 paired with a tooltip count and its current-workspace scope.
 
+Notification settings group a master switch with independent review-request,
+feedback, failed-check, and merge-conflict delivery filters. Filters are explicit
+text settings and never replace the shared attention explanation.
+
 The compact Quickshell entry shows “Radar” and the current workspace's attention
 count, plus non-ready sync state in text. Disconnected is “Radar —”, not zero.
 Its tooltip supplies the workspace name and capture timestamp. It uses the same

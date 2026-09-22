@@ -286,6 +286,14 @@ activation URL or browser action. Report adapter acceptance as sent, not proof o
 on-screen display (desktop quiet modes may suppress it); report delivery failure
 inline. This makes the platform integration independently diagnosable.
 
+Notification delivery preferences also expose four independent categories:
+review requests, feedback requiring a response, failed checks, and merge
+conflicts. A card is delivered when at least one enabled category matches one of
+its projected reason codes. These are delivery filters only: the queue still
+records every attention observation and deduplicates every meaningful fingerprint
+before the client filters delivery. Turning a category back on does not replay
+transitions observed while it was muted.
+
 ### Optional desktop tray
 
 The system-tray icon defaults off. Preferences → Desktop integration saves the
@@ -350,11 +358,19 @@ recover; bar reads leave capture and attention state untouched. Linux reference:
 session bus and, when installed, the real Quickshell runtime. Other platforms can
 implement the same summary/commands using their own IPC.
 
-Linux notifications identify the installed `review-radar-linux` application icon
-and expose explicit actions from the shared projected card: its relevant next
+Linux notifications identify the `review-radar-linux` application and carry the
+embedded canonical logo as freedesktop `image-data` (RGBA pixels with explicit
+stride, dimensions, and alpha). The daemon must not need access to the app's
+filesystem or an installed icon theme entry: it may run outside the container or
+receive notifications from an uninstalled build. The icon name and desktop entry
+remain identity/fallback hints. Acceptance: a separate receiver with no installed
+Review Radar icon receives the same logo pixels through DBus. This is verified by
+the private-bus notification integration test, including signature and pixel hash.
+
+Notifications expose explicit actions from the shared projected card: its relevant next
 action (when it has a URL) and a canonical Open pull request action when distinct.
 The OS adapter maps action IDs back to URLs; the queue supplies no DBus details.
-Tests and notifications have no PR action. Action labels remain text, rather than
+Test notifications have no PR action. Action labels remain text, rather than
 icon-only affordances, and a notification service may choose its own rendering.
 
 The native preferences shell follows the high-fidelity reference: a wide modal

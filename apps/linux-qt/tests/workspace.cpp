@@ -33,6 +33,10 @@ class PreviewQueue final : public QObject {
     Q_PROPERTY(bool trayAvailable MEMBER trayAvailable CONSTANT)
     Q_PROPERTY(bool barEnabled MEMBER barEnabled NOTIFY preferencesChanged)
     Q_PROPERTY(bool barActive MEMBER barEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyReviewRequests MEMBER notifyReviewRequests NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyFeedback MEMBER notifyFeedback NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyChecks MEMBER notifyChecks NOTIFY preferencesChanged)
+    Q_PROPERTY(bool notifyConflicts MEMBER notifyConflicts NOTIFY preferencesChanged)
 public:
     PullRequestModel model;
     QString view = "tailored", ranking = "tailored", status = "Cached on this device · Updated just now";
@@ -42,6 +46,12 @@ public:
     bool notificationsEnabled = true;
     bool trayEnabled = false, closeToTray = false, trayAttentionDot = true, trayAvailable = true;
     bool barEnabled = false;
+    bool notifyReviewRequests = true, notifyFeedback = true, notifyChecks = true, notifyConflicts = true;
+    Q_INVOKABLE bool saveAllPreferences(bool notifications, bool tray, bool background, bool dot, bool bar,
+                                        bool review, bool feedback, bool checks, bool conflicts) {
+        notifyReviewRequests = review; notifyFeedback = feedback; notifyChecks = checks; notifyConflicts = conflicts;
+        return saveIntegrationPreferences(notifications, tray, background, dot, bar);
+    }
     Q_INVOKABLE bool saveIntegrationPreferences(bool notifications, bool tray, bool background, bool dot, bool bar) {
         if (!saveSucceeds) return false;
         barEnabled = bar;
@@ -143,6 +153,12 @@ void WorkspaceTest::osIntegrationBoundary() {
     QVERIFY(trayRestored.trayEnabled());
     QVERIFY(trayRestored.closeToTray());
     QVERIFY(!trayRestored.trayAttentionDot());
+    QVERIFY(trayRestored.saveAllPreferences(false, true, true, false, false, false, true, false, true));
+    QueueController categoryRestored(&osIntegration, nullptr);
+    QVERIFY(!categoryRestored.notifyReviewRequests());
+    QVERIFY(categoryRestored.notifyFeedback());
+    QVERIFY(!categoryRestored.notifyChecks());
+    QVERIFY(categoryRestored.notifyConflicts());
     QSignalSpy restore(&trayRestored, &QueueController::showWorkspaceRequested);
     osIntegration.available = false;
     emit osIntegration.trayAvailabilityChanged();
