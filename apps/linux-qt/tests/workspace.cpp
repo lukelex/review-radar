@@ -61,7 +61,7 @@ void WorkspaceTest::workspace() {
            "actionLabel":"Review requested","currentFingerprint":"event-142",
            "explanation":{"heading":"Your review is outstanding.",
              "reasons":[{"summary":"user-002 requested your review.","nextAction":{"label":"Start review","url":"https://github.com/example/api/pull/142/files"}}],
-             "health":{"reviewDecision":"REVIEW_REQUIRED","checks":"passing"}},
+              "health":{"reviewDecision":"REVIEW_REQUIRED","checks":"passing","mergeable":"MERGEABLE"}},
            "reviewFriction":{"status":"assessed","level":"low","contributors":[{"signal":"review rounds","value":1,"unit":"round"}],"limitations":[]},
            "events":[{"kind":"review-requested","actor":"user-002","occurredAt":"2026-09-21T12:00:00Z"}]},
           {"id":"pr-87","repository":"example/web","number":87,
@@ -81,6 +81,12 @@ void WorkspaceTest::workspace() {
         ])");
         QVERIFY(fixture.isArray());
         queue.model.replace(fixture.array());
+        const auto healthSignals = queue.model.get(0).value("healthSignals").toList();
+        QCOMPARE(healthSignals.size(), 3);
+        QCOMPARE(healthSignals.at(0).toMap().value("label").toString(), QString("Review"));
+        QCOMPARE(healthSignals.at(0).toMap().value("value").toString(), QString("Required"));
+        QCOMPARE(healthSignals.at(0).toMap().value("tone").toString(), QString("caution"));
+        QCOMPARE(healthSignals.at(1).toMap().value("value").toString(), QString("Passing"));
         QQmlApplicationEngine engine;
         QStringList warnings;
         connect(&engine, &QQmlEngine::warnings, this, [&warnings](const QList<QQmlError> &errors) {

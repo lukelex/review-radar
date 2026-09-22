@@ -87,6 +87,15 @@ must not produce a partial projection.
 - A client remains responsive under its configured runtime budget; resource
   exhaustion cannot create an unbounded helper-process or refresh loop.
 
+### Health status presentation
+
+Clients render Review, Checks, and Merge as separate status values rather than
+one undifferentiated health sentence. Labels remain explicit, while the value
+uses a semantic positive, caution, negative, or neutral treatment and a text
+symbol. Color is supplemental and must not be the only indication of meaning.
+The shared projection remains the source of the structured health fields; shells
+may choose platform-native chip or badge layouts.
+
 ## Loading and refresh states
 
 Clients distinguish these states:

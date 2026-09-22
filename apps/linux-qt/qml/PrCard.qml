@@ -67,15 +67,13 @@ Rectangle {
                 }
             }
         }
-        Label {
-            Layout.fillWidth: true
-            text: card.entry.health || ""; textFormat: Text.PlainText
-            visible: text.length > 0
-            color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap
-        }
         Flow {
             Layout.fillWidth: true
             spacing: 8
+            Repeater {
+                model: card.entry.healthSignals || []
+                delegate: HealthSignal { required property var modelData; label: modelData.label; value: modelData.value; tone: modelData.tone; icon: modelData.icon }
+            }
             Badge {
                 text: Style.humanize(card.entry.lifecycle)
                 color: card.entry.lifecycle === "merged" ? Style.accent : Style.secondary

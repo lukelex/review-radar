@@ -70,11 +70,20 @@ not create duplicate screen-reader announcements.
 | `line` | `#e4e7ef` | Quiet borders and separators |
 | Selected navigation | `#e5e3fa` | Active workspace background |
 | Amber foreground / background | `#a35b2a` / `#fff0e4` | High-friction and caution treatments |
+| Positive foreground / background | `#287a55` / `#e8f6ee` | Passing, approved, and mergeable values |
+| Caution foreground / background | `#94631b` / `#fff4dc` | Pending or waiting values |
+| Negative foreground / background | `#b33f4a` / `#fdecef` | Failing, conflicting, or requested-change values |
 
 Pair color with text or another explicit indicator. Indigo can identify an
 interaction or attention summary; it is not evidence of a failing PR. Amber
 friction badges must say what they describe. Merged, closed, and open states
 retain explicit labels.
+
+Health values are rendered as separate labeled chips so their meaning is
+scannable without reading a sentence: `Review`, `Checks`, and `Merge` retain
+neutral labels while the values use positive, caution, negative, or neutral
+foreground/background pairs. Each colored value also carries a text label and
+symbol; color is never the only indicator.
 
 New reusable colors should become semantic tokens in `Style.qml`, rather than
 unrelated per-component hex values. The current palette is a light-theme

@@ -10,6 +10,12 @@ QtObject {
     readonly property color accent: "#635bdf"
     readonly property color tint: "#efedfc"
     readonly property color line: "#e4e7ef"
+    readonly property color positive: "#287a55"
+    readonly property color positiveTint: "#e8f6ee"
+    readonly property color caution: "#94631b"
+    readonly property color cautionTint: "#fff4dc"
+    readonly property color negative: "#b33f4a"
+    readonly property color negativeTint: "#fdecef"
 
     function humanize(value) {
         const text = String(value || "").replace(/[-_]/g, " ");

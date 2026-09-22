@@ -41,6 +41,49 @@ QString healthSummary(const QJsonObject &health) {
     return healthSignals.join(" · ");
 }
 
+QVariantMap healthSignal(const QString &label, const QString &value, const QString &tone,
+                         const QString &icon) {
+    return {{"label", label}, {"value", value}, {"tone", tone}, {"icon", icon}};
+}
+
+QVariantList healthSignals(const QJsonObject &health) {
+    QVariantList result;
+    const auto review = health.value("reviewDecision").toString().toUpper();
+    if (health.value("isDraft").toBool() && review.isEmpty()) {
+        result.append(healthSignal("Review", "Draft", "neutral", "◆"));
+    } else if (review == "APPROVED") {
+        result.append(healthSignal("Review", "Approved", "positive", "✓"));
+    } else if (review == "CHANGES_REQUESTED") {
+        result.append(healthSignal("Review", "Changes requested", "negative", "!"));
+    } else if (review == "REVIEW_REQUIRED") {
+        result.append(healthSignal("Review", "Required", "caution", "◷"));
+    } else if (!review.isEmpty()) {
+        result.append(healthSignal("Review", review.toLower().replace('_', ' '), "neutral", "?"));
+    }
+
+    const auto checks = health.value("checks").toString().toUpper();
+    if (checks == "SUCCESS" || checks == "PASSING") {
+        result.append(healthSignal("Checks", "Passing", "positive", "✓"));
+    } else if (checks == "FAILURE" || checks == "FAILING" || checks == "ERROR") {
+        result.append(healthSignal("Checks", "Failing", "negative", "!"));
+    } else if (checks == "PENDING" || checks == "EXPECTED") {
+        result.append(healthSignal("Checks", "Pending", "caution", "◷"));
+    } else if (!checks.isEmpty()) {
+        result.append(healthSignal("Checks", checks.toLower().replace('_', ' '), "neutral", "?"));
+    }
+
+    const auto mergeable = health.value("mergeable").toString().toUpper();
+    const auto mergeState = health.value("mergeStateStatus").toString().toUpper();
+    if (mergeable == "CONFLICTING" || mergeState == "DIRTY") {
+        result.append(healthSignal("Merge", "Conflicting", "negative", "!"));
+    } else if (mergeable == "MERGEABLE") {
+        result.append(healthSignal("Merge", "Mergeable", "positive", "✓"));
+    } else if (!mergeable.isEmpty()) {
+        result.append(healthSignal("Merge", mergeable.toLower().replace('_', ' '), "neutral", "?"));
+    }
+    return result;
+}
+
 QString frictionSummary(const QJsonObject &friction) {
     QStringList facts;
     for (const auto &contributor : friction.value("contributors").toArray()) {
@@ -83,6 +126,7 @@ QVariant PullRequestModel::data(const QModelIndex &index, int role) const {
     case ExplanationHeadingRole: return card.explanationHeading;
     case ReasonsRole: return card.reasons;
     case HealthRole: return card.health;
+    case HealthSignalsRole: return card.healthSignals;
     case NextActionLabelRole: return card.nextActionLabel;
     case NextActionUrlRole: return card.nextActionUrl;
     case FrictionStatusRole: return card.frictionStatus;
@@ -100,6 +144,7 @@ QHash<int, QByteArray> PullRequestModel::roleNames() const {
             {TitleRole, "title"}, {UrlRole, "url"}, {ActionLabelRole, "actionLabel"},
             {AttentionRequiredRole, "attentionRequired"}, {FingerprintRole, "currentFingerprint"},
              {ExplanationHeadingRole, "explanationHeading"}, {ReasonsRole, "reasons"}, {HealthRole, "health"},
+             {HealthSignalsRole, "healthSignals"},
             {NextActionLabelRole, "nextActionLabel"}, {NextActionUrlRole, "nextActionUrl"},
              {FrictionStatusRole, "frictionStatus"}, {FrictionLevelRole, "frictionLevel"},
              {FrictionDetailRole, "frictionDetail"},
@@ -139,12 +184,13 @@ void PullRequestModel::replace(const QJsonArray &cards) {
                        object.value("title").toString(), object.value("url").toString(),
                        object.value("actionLabel").toString(), object.value("currentFingerprint").toString(),
                         explanation.value("heading").toString(), healthSummary(explanation.value("health").toObject()),
+                        healthSignals(explanation.value("health").toObject()),
                          nextAction.value("label").toString(), nextAction.value("url").toString(),
-                         friction.value("status").toString(), friction.value("level").toString(),
+                          friction.value("status").toString(), friction.value("level").toString(),
                          frictionSummary(friction), object.value("number").toInt(),
                          object.value("attentionRequired").toBool(), reasonList(reasons),
-                         eventList(object.value("events").toArray()),
-                         object.value("lifecycle").toString(), object.value("updatedAt").toString()});
+                          eventList(object.value("events").toArray()),
+                          object.value("lifecycle").toString(), object.value("updatedAt").toString()});
     }
     endResetModel();
 }

@@ -74,7 +74,14 @@ Rectangle {
                 }
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Style.line }
                 Label { text: "PR HEALTH"; color: Style.muted; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1 }
-                Label { Layout.fillWidth: true; text: panel.entry.health || "No health information available."; textFormat: Text.PlainText; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Repeater {
+                        model: panel.entry.healthSignals || []
+                        delegate: HealthSignal { required property var modelData; label: modelData.label; value: modelData.value; tone: modelData.tone; icon: modelData.icon }
+                    }
+                }
                 Label { text: "REVIEW FRICTION"; color: Style.muted; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1 }
                 Badge { text: Style.humanize(panel.entry.frictionLevel || panel.entry.frictionStatus || "not assessed"); color: Style.secondary; tint: Style.sidebar }
                 Label { Layout.fillWidth: true; text: panel.entry.frictionDetail || "No additional review history available."; textFormat: Text.PlainText; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }

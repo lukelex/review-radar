@@ -14,7 +14,7 @@ public:
     enum Role {
         IdRole = Qt::UserRole + 1, RepositoryRole, NumberRole, TitleRole, UrlRole,
         ActionLabelRole, AttentionRequiredRole, FingerprintRole, ExplanationHeadingRole,
-        ReasonsRole, HealthRole, NextActionLabelRole, NextActionUrlRole, FrictionStatusRole,
+        ReasonsRole, HealthRole, HealthSignalsRole, NextActionLabelRole, NextActionUrlRole, FrictionStatusRole,
         FrictionLevelRole, FrictionDetailRole, EventsRole,
         LifecycleRole, UpdatedAtRole,
     };
@@ -30,6 +30,7 @@ public:
 private:
     struct Card {
         QString id, repository, title, url, actionLabel, fingerprint, explanationHeading, health;
+        QVariantList healthSignals;
         QString nextActionLabel, nextActionUrl, frictionStatus, frictionLevel, frictionDetail;
         int number = 0;
         bool attentionRequired = false;
