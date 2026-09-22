@@ -21,6 +21,14 @@ struct NotificationRequest {
     QList<NotificationAction> actions;
 };
 
+struct BarSnapshot {
+    bool available = false;
+    QString workspace;
+    int attentionCount = 0;
+    QString capturedAt;
+    QString syncState = "unavailable";
+};
+
 // Boundary for operating-system effects used by a native shell. The controller
 // depends only on this contract; platform and toolkit integrations live behind it.
 class OsIntegration : public QObject {
@@ -37,6 +45,9 @@ public:
     virtual bool trayAvailable() const = 0;
     virtual void configureTray(bool enabled, bool attentionDot) = 0;
     virtual void setTrayAttention(int count) = 0;
+    virtual void configureBar(bool enabled) = 0;
+    virtual bool barActive() const = 0;
+    virtual void publishBarSnapshot(const BarSnapshot &snapshot) = 0;
 
 signals:
     void notificationActivated(const QUrl &url);

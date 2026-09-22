@@ -12,6 +12,7 @@ on:
       - compose.yaml
       - .github/workflows/core.yml
       - apps/linux-qt/**
+      - apps/quickshell/**
       - docs/assets/logo.svg
   pull_request:
     paths:
@@ -23,6 +24,7 @@ on:
       - compose.yaml
       - .github/workflows/core.yml
       - apps/linux-qt/**
+      - apps/quickshell/**
       - docs/assets/logo.svg
   workflow_dispatch:
 
@@ -222,6 +224,7 @@ jobs:
       - name: Install Qt test dependencies
         run: >-
           sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          dbus-daemon systemd
           cmake g++ make qt6-base-dev qt6-declarative-dev qt6-qpa-plugins libqt6svg6
           qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls
           qml6-module-qtquick-layouts qml6-module-qtquick-templates qml6-module-qtqml-workerscript

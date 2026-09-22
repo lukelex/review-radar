@@ -293,6 +293,41 @@ menu runtime. QML controls explicitly use Basic style to avoid inheriting an
 unavailable widget theme. Other native shells should preserve these behaviors
 using their own tray or menu-bar APIs.
 
+### Optional Quickshell bar adapter
+
+Bar integration is a separate, persisted opt-in under Desktop integration and
+defaults off. Saving registers a same-user status/command interface through the
+OS adapter. Failure to register (for example, a competing app instance) is shown
+in Preferences; it does not silently claim that the bar is connected. The saved
+opt-in can be toggled to retry. Disabling withdraws the interface immediately.
+
+The bar renders only a versioned summary of the last successful workspace
+projection: workspace ID, attention-required count, capture timestamp, and sync
+state. Counts are of unsuppressed cards in that workspace, independent of text
+search. A workspace switch keeps the predecessor workspace label until its new
+projection succeeds, avoiding a mismatched label/count. No successful projection
+means unavailable, not zero attention. Failed sync retains the last count with an
+error state. No card identities, tokens, or database paths cross this interface.
+
+Primary activation restores the existing app; the context menu offers Open,
+Refresh, and Preferences. These invoke the existing app commands. The bar never
+launches a second collector, classifies cards, persists state, or sends alerts.
+The reference component reads cached local status every three seconds (no GitHub
+requests); invalid/failed responses clear its count, with a ten-second watchdog
+for a nonresponding helper. Explicit Refresh alone starts a GitHub refresh.
+
+Closing/exiting the app disconnects the bar. Keeping the app running hidden still
+requires the separate tray and close-to-tray preferences. Quickshell setup is
+manual so enabling a preference never edits the user's bar configuration.
+
+Acceptance: saved opt-in survives restart; disabled interface is inaccessible;
+available zero and disconnected are distinct; labels/counts stay coherent across
+view switches; controls reach the running app; failed/restarted service connections
+recover; bar reads leave capture and attention state untouched. Linux reference:
+`apps/quickshell/README.md` specifies the DBus v1 contract. Tests use a private
+session bus and, when installed, the real Quickshell runtime. Other platforms can
+implement the same summary/commands using their own IPC.
+
 Linux notifications identify the installed `review-radar-linux` application icon
 and expose explicit actions from the shared projected card: its relevant next
 action (when it has a URL) and a canonical Open pull request action when distinct.

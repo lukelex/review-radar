@@ -30,6 +30,8 @@ class PreviewQueue final : public QObject {
     Q_PROPERTY(bool closeToTray MEMBER closeToTray NOTIFY preferencesChanged)
     Q_PROPERTY(bool trayAttentionDot MEMBER trayAttentionDot NOTIFY preferencesChanged)
     Q_PROPERTY(bool trayAvailable MEMBER trayAvailable CONSTANT)
+    Q_PROPERTY(bool barEnabled MEMBER barEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool barActive MEMBER barEnabled NOTIFY preferencesChanged)
 public:
     PullRequestModel model;
     QString view = "tailored", ranking = "tailored", status = "Cached on this device · Updated just now";
@@ -38,6 +40,12 @@ public:
     int sourceCount = 3, suppressedCount = 0;
     bool notificationsEnabled = true;
     bool trayEnabled = false, closeToTray = false, trayAttentionDot = true, trayAvailable = true;
+    bool barEnabled = false;
+    Q_INVOKABLE bool saveIntegrationPreferences(bool notifications, bool tray, bool background, bool dot, bool bar) {
+        if (!saveSucceeds) return false;
+        barEnabled = bar;
+        return saveDesktopPreferences(notifications, tray, background, dot);
+    }
     Q_INVOKABLE bool shouldCloseToTray() const { return trayEnabled && closeToTray && trayAvailable; }
     Q_INVOKABLE bool saveDesktopPreferences(bool notifications, bool tray, bool background, bool dot) {
         if (!saveSucceeds) return false;
@@ -82,6 +90,11 @@ public:
     bool trayAvailable() const override { return available; }
     void configureTray(bool enabled, bool attentionDot) override { trayEnabled = enabled; dot = attentionDot; }
     void setTrayAttention(int) override {}
+    bool bar = false;
+    ReviewRadar::BarSnapshot snapshot;
+    void configureBar(bool enabled) override { bar = enabled; }
+    bool barActive() const override { return bar; }
+    void publishBarSnapshot(const ReviewRadar::BarSnapshot &value) override { snapshot = value; }
     QString applicationDataFile(const QString &name) const override { return directory.filePath(name); }
 
     ReviewRadar::NotificationRequest notification;
@@ -135,6 +148,18 @@ void WorkspaceTest::osIntegrationBoundary() {
     QVERIFY(trayRestored.saveDesktopPreferences(false, false, true, true));
     QVERIFY(!trayRestored.closeToTray());
     QVERIFY(!osIntegration.trayEnabled);
+    QVERIFY(!trayRestored.barEnabled());
+    QVERIFY(trayRestored.saveIntegrationPreferences(false, false, false, true, true));
+    QVERIFY(osIntegration.bar);
+    QVERIFY(!osIntegration.snapshot.available);
+    QCOMPARE(osIntegration.snapshot.syncState, QString("unavailable"));
+    QueueController barRestored(&osIntegration, nullptr);
+    QVERIFY(barRestored.barEnabled());
+    QVERIFY(barRestored.barActive());
+    QVERIFY(barRestored.savePreferences(true));
+    QVERIFY(barRestored.barEnabled()); // Notification-only saves retain the integration.
+    QVERIFY(barRestored.saveIntegrationPreferences(false, false, false, true, false));
+    QVERIFY(!osIntegration.bar);
     QVERIFY(restarted.testNotification());
     QCOMPARE(osIntegration.notification.id, QString("preferences-test"));
     QVERIFY(osIntegration.notification.activationUrl.isEmpty());
@@ -384,7 +409,13 @@ void WorkspaceTest::workspace() {
         QVERIFY(QMetaObject::invokeMethod(traySetting, "changed", Q_ARG(bool, false)));
         QVERIFY(!preferences->property("draftTray").toBool());
         QVERIFY(!preferences->property("draftCloseToTray").toBool());
+        auto *barSetting = window->findChild<QObject *>("bar-setting");
+        QVERIFY(barSetting);
+        QVERIFY(QMetaObject::invokeMethod(barSetting, "changed", Q_ARG(bool, true)));
+        QVERIFY(preferences->property("draftBar").toBool());
+        QVERIFY(!queue.barEnabled);
         QVERIFY(QMetaObject::invokeMethod(save, "clicked"));
+        QVERIFY(queue.barEnabled);
         QTRY_VERIFY(!preferences->property("visible").toBool());
         QVERIFY(!queue.shouldCloseToTray());
         auto replacement = fixture.array();

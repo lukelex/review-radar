@@ -60,6 +60,8 @@ class QueueController final : public QObject {
     Q_PROPERTY(bool closeToTray READ closeToTray NOTIFY preferencesChanged)
     Q_PROPERTY(bool trayAttentionDot READ trayAttentionDot NOTIFY preferencesChanged)
     Q_PROPERTY(bool trayAvailable READ trayAvailable NOTIFY trayAvailabilityChanged)
+    Q_PROPERTY(bool barEnabled READ barEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool barActive READ barActive NOTIFY preferencesChanged)
 
 public:
     explicit QueueController(QObject *parent = nullptr);
@@ -79,6 +81,9 @@ public:
     bool notificationsEnabled() const { return notificationsEnabled_; }
     Q_INVOKABLE bool savePreferences(bool notificationsEnabled);
     Q_INVOKABLE bool saveDesktopPreferences(bool notificationsEnabled, bool trayEnabled, bool closeToTray, bool attentionDot);
+    Q_INVOKABLE bool saveIntegrationPreferences(bool notificationsEnabled, bool trayEnabled, bool closeToTray, bool attentionDot, bool barEnabled);
+    bool barEnabled() const { return barEnabled_; }
+    bool barActive() const { return osIntegration_->barActive(); }
     bool trayEnabled() const { return trayEnabled_; }
     bool closeToTray() const { return closeToTray_; }
     bool trayAttentionDot() const { return trayAttentionDot_; }
@@ -115,6 +120,7 @@ private:
     QString stateDatabase() const;
     QString commandFromEnvironment(const char *name, const QString &fallback) const;
     void initialize();
+    void publishBarSnapshot();
     void loadProjection(bool collectAfter = false);
     void startCollection();
     void runStateCommand(const QStringList &arguments);
@@ -126,6 +132,10 @@ private:
     bool trayEnabled_ = false;
     bool closeToTray_ = false;
     bool trayAttentionDot_ = true;
+    bool barEnabled_ = false;
+    bool barError_ = false;
+    ReviewRadar::BarSnapshot barSnapshot_;
+    QString requestedView_;
     PullRequestModel model_;
     QString view_ = QStringLiteral("tailored");
     QString ranking_ = QStringLiteral("tailored");

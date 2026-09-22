@@ -21,6 +21,7 @@ qt_add_executable(review-radar-linux
     linuxosintegration.cpp
     linuxosintegration.h
     osintegration.h
+    barservice.h
     queuecontroller.cpp
     queuecontroller.h
 )
@@ -47,7 +48,19 @@ target_link_libraries(review-radar-linux PRIVATE Qt6::Core Qt6::DBus Qt6::Gui Qt
 
 if(BUILD_TESTING)
     find_package(Qt6 REQUIRED COMPONENTS Test)
-    qt_add_executable(review-radar-ui-test tests/workspace.cpp linuxosintegration.cpp linuxosintegration.h osintegration.h queuecontroller.cpp queuecontroller.h)
+    find_program(DBUS_RUN_SESSION dbus-run-session)
+    find_program(BUSCTL busctl)
+    if(DBUS_RUN_SESSION AND BUSCTL)
+        qt_add_executable(review-radar-bar-test tests/bar.cpp linuxosintegration.cpp linuxosintegration.h osintegration.h barservice.h)
+        target_include_directories(review-radar-bar-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+        target_compile_definitions(review-radar-bar-test PRIVATE QUICKSHELL_SMOKE_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/../quickshell/smoke.qml")
+        target_link_libraries(review-radar-bar-test PRIVATE Qt6::Test Qt6::DBus Qt6::Widgets)
+        qt_add_resources(review-radar-bar-test brand
+            PREFIX "/assets" BASE "${brand_assets}" FILES "${brand_assets}/logo.svg")
+        add_test(NAME review-radar-bar COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:review-radar-bar-test>)
+        set_tests_properties(review-radar-bar PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    endif()
+    qt_add_executable(review-radar-ui-test tests/workspace.cpp linuxosintegration.cpp linuxosintegration.h osintegration.h barservice.h queuecontroller.cpp queuecontroller.h)
     qt_add_resources(review-radar-ui-test brand
         PREFIX "/assets" BASE "${brand_assets}" FILES "${brand_assets}/logo.svg"
     )

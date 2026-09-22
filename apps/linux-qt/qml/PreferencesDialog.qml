@@ -9,6 +9,7 @@ Dialog {
     property bool draftTray: false
     property bool draftCloseToTray: false
     property bool draftAttentionDot: true
+    property bool draftBar: false
     property string errorMessage: ""
     property string testMessage: ""
     property bool testSucceeded: false
@@ -16,6 +17,7 @@ Dialog {
     readonly property bool dirty: draftNotifications !== controller.notificationsEnabled
         || draftTray !== controller.trayEnabled || draftCloseToTray !== controller.closeToTray
         || draftAttentionDot !== controller.trayAttentionDot
+        || draftBar !== controller.barEnabled
     readonly property bool compact: width < 900
     readonly property var sections: ["General", "Workspace", "Notifications", "Desktop integration", "Appearance", "Keyboard", "Account & sync", "Local data", "Advanced"]
     readonly property var descriptions: ({
@@ -55,6 +57,7 @@ Dialog {
         draftTray = controller.trayEnabled
         draftCloseToTray = controller.closeToTray
         draftAttentionDot = controller.trayAttentionDot
+        draftBar = controller.barEnabled
         errorMessage = ""; testMessage = ""; section = "Notifications"
     }
     onOpened: toggle.forceActiveFocus()
@@ -271,7 +274,24 @@ Dialog {
                         onChanged: function(value) { preferences.draftCloseToTray = value }
                     }
                     Label { Layout.topMargin: 10; text: "QUICKSHELL"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
-                    Label { Layout.fillWidth: true; text: "Bar integration · Planned"; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
+                    SettingSwitch {
+                        objectName: "bar-setting"
+                        label: "Enable bar integration"
+                        description: "Let Quickshell display this workspace's attention count and sync state. Review Radar must remain running."
+                        checked: preferences.draftBar
+                        onChanged: function(value) { preferences.draftBar = value }
+                    }
+                    Label {
+                        Layout.fillWidth: true; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap
+                        text: preferences.draftBar !== preferences.controller.barEnabled
+                            ? "Save to apply your bar integration choice."
+                            : !preferences.controller.barEnabled ? "Bar integration is off."
+                            : preferences.controller.barActive ? "Status interface available. Add the ReviewRadar component to your Quickshell bar."
+                            : "Could not publish the status interface. Check the session bus and whether another Review Radar instance is running; toggle off and on to retry."
+                    }
+                    Label {
+                        Layout.fillWidth: true; text: "Setup: copy apps/quickshell/review-radar into your Quickshell configuration, import that directory, and add ReviewRadar {} to your bar. Requires busctl. See apps/quickshell/README.md for an example."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.5
+                    }
                 }
                 ColumnLayout {
                     visible: preferences.section !== "Notifications" && preferences.section !== "Desktop integration"
@@ -317,7 +337,7 @@ Dialog {
             RadarButton {
                 objectName: "save-preferences"; text: "Save changes"; primary: true; enabled: preferences.dirty
                 onClicked: {
-                    if (preferences.controller.saveDesktopPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot)) preferences.close()
+                    if (preferences.controller.saveIntegrationPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot, preferences.draftBar)) preferences.close()
                     else preferences.errorMessage = "Could not save preferences. Your changes have not been applied. Try again."
                 }
             }

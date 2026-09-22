@@ -63,6 +63,12 @@ refresh, and quit requests; the client owns window visibility and saved preferen
 Qt Widgets is required for the native tray menu, while the main workspace remains
 Qt Quick/QML.
 
+`apps/quickshell` is now a thin opt-in bar adapter. LinuxOsIntegration publishes a
+versioned summary over a session-bus service only while enabled; the controller
+supplies counts of already-classified cards and explicit sync state. Quickshell
+reads cached status through `busctl` and invokes workspace/refresh/preferences
+commands. It does not run shared-core executables or own any notification state.
+
 ## Client boundaries
 
 Clients receive an already-ranked snapshot plus explicit commands. `Acknowledge`

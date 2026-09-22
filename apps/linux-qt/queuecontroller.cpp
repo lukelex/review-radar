@@ -207,7 +207,13 @@ void QueueController::initialize() {
         trayEnabled_ = object.value("trayEnabled").toBool(false);
         closeToTray_ = trayEnabled_ && object.value("closeToTray").toBool(false);
         trayAttentionDot_ = object.value("trayAttentionDot").toBool(true);
+        barEnabled_ = object.value("barEnabled").toBool(false);
     }
+    osIntegration_->configureBar(barEnabled_);
+    connect(this, &QueueController::loadingChanged, this, &QueueController::publishBarSnapshot);
+    connect(this, &QueueController::refreshingChanged, this, &QueueController::publishBarSnapshot);
+    connect(this, &QueueController::staleChanged, this, &QueueController::publishBarSnapshot);
+    publishBarSnapshot();
     osIntegration_->configureTray(trayEnabled_, trayAttentionDot_);
     connect(osIntegration_, &ReviewRadar::OsIntegration::showWorkspaceRequested, this, &QueueController::showWorkspaceRequested);
     connect(osIntegration_, &ReviewRadar::OsIntegration::showPreferencesRequested, this, &QueueController::showPreferencesRequested);
@@ -234,8 +240,10 @@ void QueueController::initialize() {
              [this](int exitCode, QProcess::ExitStatus exitStatus) {
          refreshing_ = false;
          emit refreshingChanged();
-         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-             setStatus("Could not refresh GitHub: " + QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed());
+          if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+              barError_ = true;
+              publishBarSnapshot();
+              setStatus("Could not refresh GitHub: " + QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed());
              return;
          }
          loadProjection();
@@ -252,14 +260,18 @@ void QueueController::initialize() {
          emit loadingChanged();
          const bool shouldCollect = collectAfterProjection_;
          collectAfterProjection_ = false;
-         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-             setStatus("Could not load workspace: " + QString::fromUtf8(queueProcess_.readAllStandardError()).trimmed());
+          if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+              barError_ = true;
+              publishBarSnapshot();
+              setStatus("Could not load workspace: " + QString::fromUtf8(queueProcess_.readAllStandardError()).trimmed());
              if (shouldCollect) startCollection();
              return;
         }
         QJsonParseError error;
         const auto response = QJsonDocument::fromJson(queueProcess_.readAllStandardOutput(), &error);
-         if (error.error != QJsonParseError::NoError || !response.isObject()) {
+          if (error.error != QJsonParseError::NoError || !response.isObject()) {
+              barError_ = true;
+              publishBarSnapshot();
              setStatus("Could not read queue response: " + error.errorString());
              if (shouldCollect) startCollection();
              return;
@@ -271,6 +283,11 @@ void QueueController::initialize() {
          for (const auto &card : cards)
              if (card.toObject().value("attentionRequired").toBool()) ++attentionCount;
          osIntegration_->setTrayAttention(attentionCount);
+         barSnapshot_.available = true;
+         barSnapshot_.workspace = requestedView_;
+         barSnapshot_.attentionCount = attentionCount;
+         barSnapshot_.capturedAt = result.value("capturedAt").toString();
+         barError_ = false;
         if (stale_) {
             stale_ = false;
             emit staleChanged();
@@ -279,7 +296,8 @@ void QueueController::initialize() {
         suppressedCount_ = result.value("suppressedCount").toInt();
         emit countsChanged();
          sendNotifications(cards, result.value("notificationEligibleIds").toArray());
-         setStatus("Updated " + result.value("capturedAt").toString());
+          setStatus("Updated " + result.value("capturedAt").toString());
+          publishBarSnapshot();
          if (shouldCollect) startCollection();
     });
     connect(&stateProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
@@ -329,6 +347,7 @@ void QueueController::start() { loadProjection(true); }
 void QueueController::startCollection() {
     if (refreshing_ || qEnvironmentVariableIsSet("REVIEW_RADAR_SKIP_COLLECTION")) return;
     refreshing_ = true;
+    barError_ = false;
     emit refreshingChanged();
     if (!stale_) {
         stale_ = true;
@@ -350,6 +369,7 @@ void QueueController::loadProjection(bool collectAfter) {
     emit loadingChanged();
     setStatus("Loading workspace…");
     queueProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_QUEUE_COMMAND", "review-radar-queue"));
+    requestedView_ = view_;
     queueProcess_.setArguments({"--database", captureDatabase(),
                                 "--state-database", stateDatabase(),
                                 "--view", view_, "--ranking", ranking_,
@@ -435,16 +455,24 @@ bool QueueController::savePreferences(bool notificationsEnabled) {
 
 bool QueueController::saveDesktopPreferences(bool notificationsEnabled, bool trayEnabled,
                                              bool closeToTray, bool attentionDot) {
+    return saveIntegrationPreferences(notificationsEnabled, trayEnabled, closeToTray, attentionDot, barEnabled_);
+}
+
+bool QueueController::saveIntegrationPreferences(bool notificationsEnabled, bool trayEnabled,
+                                                bool closeToTray, bool attentionDot, bool barEnabled) {
     QSaveFile file(applicationDataFile("preferences.json"));
     const auto bytes = QJsonDocument(QJsonObject{{"notificationsEnabled", notificationsEnabled},
         {"trayEnabled", trayEnabled}, {"closeToTray", trayEnabled && closeToTray},
-        {"trayAttentionDot", attentionDot}}).toJson();
+        {"trayAttentionDot", attentionDot}, {"barEnabled", barEnabled}}).toJson();
     if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
         return false;
     notificationsEnabled_ = notificationsEnabled;
     trayEnabled_ = trayEnabled;
     closeToTray_ = trayEnabled && closeToTray;
     trayAttentionDot_ = attentionDot;
+    barEnabled_ = barEnabled;
+    osIntegration_->configureBar(barEnabled_);
+    publishBarSnapshot();
     osIntegration_->configureTray(trayEnabled_, trayAttentionDot_);
     if (!shouldCloseToTray()) emit showWorkspaceRequested();
     emit preferencesChanged();
@@ -455,4 +483,10 @@ bool QueueController::testNotification() {
     return osIntegration_->showNotification({
         "preferences-test", "Review Radar test notification",
         "Desktop notifications are working. Your preferences have not changed.", {}, {}});
+}
+
+void QueueController::publishBarSnapshot() {
+    barSnapshot_.syncState = barError_ ? "error" : refreshing_ ? "syncing"
+        : loading_ ? "loading" : stale_ ? "stale" : barSnapshot_.available ? "ready" : "unavailable";
+    osIntegration_->publishBarSnapshot(barSnapshot_);
 }

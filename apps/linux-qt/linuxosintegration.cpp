@@ -11,10 +11,15 @@
 #include <QStandardPaths>
 #include <QVariant>
 #include <QPainter>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 namespace ReviewRadar {
 
 LinuxOsIntegration::LinuxOsIntegration(QObject *parent) : OsIntegration(parent) {
+    connect(&barService_, &BarService::openRequested, this, &OsIntegration::showWorkspaceRequested);
+    connect(&barService_, &BarService::preferencesRequested, this, &OsIntegration::showPreferencesRequested);
+    connect(&barService_, &BarService::refreshRequested, this, &OsIntegration::refreshRequested);
     trayAvailable_ = QSystemTrayIcon::isSystemTrayAvailable();
     trayMenu_.addAction("Open Review Radar", this, &OsIntegration::showWorkspaceRequested);
     trayMenu_.addAction("Refresh", this, &OsIntegration::refreshRequested);
@@ -42,6 +47,35 @@ LinuxOsIntegration::LinuxOsIntegration(QObject *parent) : OsIntegration(parent) 
 }
 
 bool LinuxOsIntegration::trayAvailable() const { return QSystemTrayIcon::isSystemTrayAvailable(); }
+
+LinuxOsIntegration::~LinuxOsIntegration() { configureBar(false); }
+
+void LinuxOsIntegration::configureBar(bool enabled) {
+    auto bus = QDBusConnection::sessionBus();
+    if (!enabled) {
+        if (barActive_) {
+            bus.unregisterObject("/org/reviewradar/Bar");
+            bus.unregisterService("org.reviewradar.App");
+        }
+        barActive_ = false;
+        return;
+    }
+    if (barActive_ || !bus.isConnected()) return;
+    if (!bus.registerService("org.reviewradar.App")) return;
+    if (!bus.registerObject("/org/reviewradar/Bar", &barService_, QDBusConnection::ExportAllSlots)) {
+        bus.unregisterService("org.reviewradar.App");
+        return;
+    }
+    barActive_ = true;
+}
+
+void LinuxOsIntegration::publishBarSnapshot(const BarSnapshot &snapshot) {
+    barService_.snapshot = QString::fromUtf8(QJsonDocument(QJsonObject{
+        {"version", 1}, {"available", snapshot.available}, {"workspace", snapshot.workspace},
+        {"attentionCount", snapshot.attentionCount}, {"capturedAt", snapshot.capturedAt},
+        {"syncState", snapshot.syncState}
+    }).toJson(QJsonDocument::Compact));
+}
 
 void LinuxOsIntegration::configureTray(bool enabled, bool attentionDot) {
     trayEnabled_ = enabled;

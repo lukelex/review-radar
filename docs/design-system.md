@@ -54,8 +54,14 @@ exploration label. The prototype establishes presentation, not shipped settings.
 
 Native Desktop integration now offers tray, attention-dot, and close-to-tray
 switches in the same bordered setting groups. Unsupported tray environments have
-an explicit explanation. Quickshell stays labeled Planned. An attention dot is
+an explicit explanation. Quickshell has its own opt-in with registration status
+and setup instructions. An attention dot is
 paired with a tooltip count and its current-workspace scope.
+
+The compact Quickshell entry shows “Radar” and the current workspace's attention
+count, plus non-ready sync state in text. Disconnected is “Radar —”, not zero.
+Its tooltip supplies the workspace name and capture timestamp. It uses the same
+light neutral surface and indigo hover/focus treatment as the native sidebar.
 
 ## Brand
 

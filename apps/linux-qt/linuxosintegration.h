@@ -1,6 +1,7 @@
 #pragma once
 
 #include "osintegration.h"
+#include "barservice.h"
 
 #include <QHash>
 #include <QSystemTrayIcon>
@@ -14,6 +15,7 @@ class LinuxOsIntegration final : public OsIntegration {
 
 public:
     explicit LinuxOsIntegration(QObject *parent = nullptr);
+    ~LinuxOsIntegration() override;
 
     bool showNotification(const NotificationRequest &request) override;
     bool openUrl(const QUrl &url) override;
@@ -22,11 +24,16 @@ public:
     bool trayAvailable() const override;
     void configureTray(bool enabled, bool attentionDot) override;
     void setTrayAttention(int count) override;
+    void configureBar(bool enabled) override;
+    bool barActive() const override { return barActive_; }
+    void publishBarSnapshot(const BarSnapshot &snapshot) override;
 
 private slots:
     void notificationActionInvoked(uint notificationId, const QString &action);
 
 private:
+    BarService barService_;
+    bool barActive_ = false;
     void updateTray();
     QSystemTrayIcon tray_;
     QMenu trayMenu_;
