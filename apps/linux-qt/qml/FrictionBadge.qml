@@ -6,14 +6,15 @@ Label {
     required property string level
     required property string status
     readonly property string normalizedLevel: String(level || "").toLowerCase()
-    readonly property bool assessed: normalizedLevel === "low" || normalizedLevel === "medium" || normalizedLevel === "high"
-    readonly property string value: assessed ? Style.humanize(normalizedLevel) : "Unknown"
+    readonly property bool assessed: normalizedLevel === "low" || normalizedLevel === "moderate" || normalizedLevel === "high"
+    readonly property string value: assessed ? Style.humanize(normalizedLevel)
+                                            : Style.humanize(status || "unknown")
     readonly property string icon: normalizedLevel === "low" ? "▁"
-                               : normalizedLevel === "medium" ? "▂"
+                               : normalizedLevel === "moderate" ? "▂"
                                : normalizedLevel === "high" ? "▃" : "?"
     text: "Friction · " + icon + " " + value
     color: normalizedLevel === "low" ? Style.frictionLow
-         : normalizedLevel === "medium" ? Style.frictionMedium
+         : normalizedLevel === "moderate" ? Style.frictionMedium
          : normalizedLevel === "high" ? Style.frictionHigh : Style.frictionUnknown
     padding: 8
     topPadding: 5
@@ -25,7 +26,7 @@ Label {
     background: Rectangle {
         radius: 6
         color: badge.normalizedLevel === "low" ? Style.frictionLowTint
-             : badge.normalizedLevel === "medium" ? Style.frictionMediumTint
+             : badge.normalizedLevel === "moderate" ? Style.frictionMediumTint
              : badge.normalizedLevel === "high" ? Style.frictionHighTint : Style.frictionUnknownTint
     }
 }

@@ -99,7 +99,8 @@ may choose platform-native chip or badge layouts.
 Review friction uses a separate semantic low/medium/high/unknown color scale.
 It communicates accumulated review difficulty, not urgency or PR health. Clients
 must retain the explicit friction label, level, and a non-color cue; insufficient
-history remains unknown rather than low.
+history retains its explicit limited-history status rather than being presented
+as low.
 
 ## Loading and refresh states
 

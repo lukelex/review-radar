@@ -91,8 +91,9 @@ symbol; color is never the only indicator.
 
 Review friction has a dedicated teal-to-burnt-orange scale, separate from health
 status colors. Its badge explicitly says `Friction`, retains the level, and uses
-one, two, or three stepped marks for low, medium, or high. Missing or incomplete
-history is `Unknown` with a question mark; it must never receive the low treatment.
+one, two, or three stepped marks for low, moderate, or high. Missing or incomplete
+history retains its explicit status (such as `Limited history`) with a question
+mark and the slate treatment; it must never receive the low treatment.
 
 New reusable colors should become semantic tokens in `Style.qml`, rather than
 unrelated per-component hex values. The current palette is a light-theme
