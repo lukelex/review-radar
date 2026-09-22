@@ -47,7 +47,9 @@ Each successful run appends one immutable capture in a single transaction:
   whether collection was truncated.
 - `pull_requests`: indexed summary fields plus the complete GraphQL PR object as
   JSON. The JSON retains bounded reviews, comments, review threads, review requests,
-  latest commit, and check contexts for later normalization experiments.
+  and latest-commit aggregate check state. Check-context counts and pagination are
+  retained, but individual check-context nodes are omitted because no projection
+  consumes them.
 - `search_memberships`: many-to-many links recording why each PR was discovered.
 
 The database contains real repository names, titles, URLs, actors, node IDs, and
@@ -184,7 +186,9 @@ searches for recent completions.
   latest 20 reviews, issue comments, review threads, comments per thread, timeline
   lifecycle items, and commits per PR. Each bounded event/history connection
   preserves its page flag in the payload.
-- Current review requests and latest-commit check contexts are bounded at 100.
+- Current review requests are bounded at 100. Latest-commit check contexts retain
+  a count and pagination metadata but omit individual context nodes; the aggregate
+  check-rollup state is sufficient for the current health projection.
 - Defaults permit at most 25 requests: one viewer query plus six searches of four
   pages. GitHub search itself exposes at most 1,000 results per search.
 - `truncated` is set when another search page exists or the reported count exceeds

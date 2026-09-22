@@ -777,6 +777,16 @@ mod tests {
     }
 
     #[test]
+    fn hydration_keeps_check_summary_and_truncation_without_nested_check_payloads() {
+        assert!(HYDRATE_QUERY.contains("statusCheckRollup"));
+        assert!(HYDRATE_QUERY.contains("contexts(first: 100)"));
+        assert!(HYDRATE_QUERY.contains("totalCount"));
+        assert!(HYDRATE_QUERY.contains("hasNextPage"));
+        assert!(!HYDRATE_QUERY.contains("... on CheckRun"));
+        assert!(!HYDRATE_QUERY.contains("... on StatusContext"));
+    }
+
+    #[test]
     fn hydration_batches_adapt_with_rate_limit_and_request_pressure() {
         assert_eq!(hydration_batch_size(1_000), INITIAL_HYDRATION_BATCH);
         assert_eq!(hydration_batch_size(400), 4);

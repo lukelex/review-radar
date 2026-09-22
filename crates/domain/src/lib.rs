@@ -815,7 +815,9 @@ mod tests {
                 && (card.memberships.contains(&"recent".into())
                     || card.memberships.contains(&"recent_review_involved".into()))
         }));
-        assert!(recent.iter().any(|card| card.lifecycle == Lifecycle::Merged));
+        assert!(recent
+            .iter()
+            .any(|card| card.lifecycle == Lifecycle::Merged));
         assert!(WorkspaceView::parse("my-prs").is_some());
         assert!(WorkspaceView::parse("unknown").is_none());
     }

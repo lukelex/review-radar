@@ -42,6 +42,9 @@ Current behavior:
   `updatedAt` values.
 - PR IDs are deduplicated across all search memberships before hydration.
 - Full nested PR data is hydrated once per unique new or changed PR.
+- Hydration retains aggregate check-rollup state plus check-context count and
+  truncation metadata, but omits individual check-context nodes until a shared
+  projection consumes them.
 - The latest stored payload is reused when `updatedAt` is unchanged.
 - If changed-PR hydration fails and a previous payload exists, that payload may be
   used as stale fallback. It is marked with `_reviewRadar.hydrationStale` and

@@ -61,11 +61,6 @@ query HydratePullRequests($ids: [ID!]!, $eventLimit: Int!) {
               contexts(first: 100) {
                 totalCount
                 pageInfo { hasNextPage }
-                nodes {
-                  __typename
-                  ... on CheckRun { id name status conclusion startedAt completedAt }
-                  ... on StatusContext { id context state createdAt }
-                }
               }
             }
           }
