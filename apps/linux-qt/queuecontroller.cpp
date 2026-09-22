@@ -212,6 +212,9 @@ void QueueController::initialize() {
         notifyFeedback_ = object.value("notifyFeedback").toBool(true);
         notifyChecks_ = object.value("notifyChecks").toBool(true);
         notifyConflicts_ = object.value("notifyConflicts").toBool(true);
+        quietHours_ = object.value("quietHours").toBool(false);
+        quietHoursStart_ = object.value("quietHoursStart").toString("18:00");
+        quietHoursEnd_ = object.value("quietHoursEnd").toString("09:00");
     }
     osIntegration_->configureBar(barEnabled_);
     connect(this, &QueueController::loadingChanged, this, &QueueController::publishBarSnapshot);
@@ -452,6 +455,13 @@ void QueueController::runStateCommand(const QStringList &arguments) {
 void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds) {
     // Observation/deduplication already happened in the shared state projection.
     if (!notificationsEnabled_) return;
+    const auto now = QTime::currentTime();
+    const auto start = QTime::fromString(quietHoursStart_, "HH:mm");
+    const auto end = QTime::fromString(quietHoursEnd_, "HH:mm");
+    const bool overnight = start.isValid() && end.isValid() && start > end;
+    const bool quiet = quietHours_ && start.isValid() && end.isValid()
+        && (overnight ? now >= start || now < end : now >= start && now < end);
+    if (quiet) return;
     for (const auto &eligibleId : eligibleIds) {
         const auto id = eligibleId.toString();
         QJsonObject card;
@@ -518,20 +528,25 @@ bool QueueController::saveDesktopPreferences(bool notificationsEnabled, bool tra
 bool QueueController::saveIntegrationPreferences(bool notificationsEnabled, bool trayEnabled,
                                                 bool closeToTray, bool attentionDot, bool barEnabled) {
     return saveAllPreferences(notificationsEnabled, trayEnabled, closeToTray, attentionDot, barEnabled,
-                              notifyReviewRequests_, notifyFeedback_, notifyChecks_, notifyConflicts_);
+                              notifyReviewRequests_, notifyFeedback_, notifyChecks_, notifyConflicts_,
+                              quietHours_, quietHoursStart_, quietHoursEnd_);
 }
 
 bool QueueController::saveAllPreferences(bool notificationsEnabled, bool trayEnabled,
                                          bool closeToTray, bool attentionDot, bool barEnabled,
-                                         bool reviewRequests, bool feedback, bool checks, bool conflicts) {
+                                         bool reviewRequests, bool feedback, bool checks, bool conflicts,
+                                         bool quietHours, const QString &quietHoursStart,
+                                         const QString &quietHoursEnd) {
     QSaveFile file(applicationDataFile("preferences.json"));
+    if (!QTime::fromString(quietHoursStart, "HH:mm").isValid()
+        || !QTime::fromString(quietHoursEnd, "HH:mm").isValid()) return false;
     const auto bytes = QJsonDocument(QJsonObject{{"notificationsEnabled", notificationsEnabled},
         {"trayEnabled", trayEnabled}, {"closeToTray", trayEnabled && closeToTray},
         {"trayAttentionDot", attentionDot}, {"barEnabled", barEnabled},
         {"notifyReviewRequests", reviewRequests}, {"notifyFeedback", feedback},
-        {"notifyChecks", checks}, {"notifyConflicts", conflicts}}).toJson();
-    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
-        return false;
+        {"notifyChecks", checks}, {"notifyConflicts", conflicts}, {"quietHours", quietHours},
+        {"quietHoursStart", quietHoursStart}, {"quietHoursEnd", quietHoursEnd}}).toJson();
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) return false;
     notificationsEnabled_ = notificationsEnabled;
     trayEnabled_ = trayEnabled;
     closeToTray_ = trayEnabled && closeToTray;
@@ -541,6 +556,9 @@ bool QueueController::saveAllPreferences(bool notificationsEnabled, bool trayEna
     notifyFeedback_ = feedback;
     notifyChecks_ = checks;
     notifyConflicts_ = conflicts;
+    quietHours_ = quietHours;
+    quietHoursStart_ = quietHoursStart;
+    quietHoursEnd_ = quietHoursEnd;
     osIntegration_->configureBar(barEnabled_);
     publishBarSnapshot();
     osIntegration_->configureTray(trayEnabled_, trayAttentionDot_);

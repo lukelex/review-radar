@@ -61,6 +61,8 @@ paired with a tooltip count and its current-workspace scope.
 Notification settings group a master switch with independent review-request,
 feedback, failed-check, and merge-conflict delivery filters. Filters are explicit
 text settings and never replace the shared attention explanation.
+Quiet hours appear directly beneath those filters as a local-time control, with
+the continued-observation behavior stated in its supporting copy.
 
 The compact Quickshell entry shows “Radar” and the current workspace's attention
 count, plus non-ready sync state in text. Disconnected is “Radar —”, not zero.

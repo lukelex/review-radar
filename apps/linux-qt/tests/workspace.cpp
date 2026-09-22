@@ -37,6 +37,9 @@ class PreviewQueue final : public QObject {
     Q_PROPERTY(bool notifyFeedback MEMBER notifyFeedback NOTIFY preferencesChanged)
     Q_PROPERTY(bool notifyChecks MEMBER notifyChecks NOTIFY preferencesChanged)
     Q_PROPERTY(bool notifyConflicts MEMBER notifyConflicts NOTIFY preferencesChanged)
+    Q_PROPERTY(bool quietHours MEMBER quietHours NOTIFY preferencesChanged)
+    Q_PROPERTY(QString quietHoursStart MEMBER quietHoursStart NOTIFY preferencesChanged)
+    Q_PROPERTY(QString quietHoursEnd MEMBER quietHoursEnd NOTIFY preferencesChanged)
 public:
     PullRequestModel model;
     QString view = "tailored", ranking = "tailored", status = "Cached on this device · Updated just now";
@@ -47,9 +50,13 @@ public:
     bool trayEnabled = false, closeToTray = false, trayAttentionDot = true, trayAvailable = true;
     bool barEnabled = false;
     bool notifyReviewRequests = true, notifyFeedback = true, notifyChecks = true, notifyConflicts = true;
+    bool quietHours = false;
+    QString quietHoursStart = "18:00", quietHoursEnd = "09:00";
     Q_INVOKABLE bool saveAllPreferences(bool notifications, bool tray, bool background, bool dot, bool bar,
-                                        bool review, bool feedback, bool checks, bool conflicts) {
+                                        bool review, bool feedback, bool checks, bool conflicts, bool quiet,
+                                        const QString &start, const QString &end) {
         notifyReviewRequests = review; notifyFeedback = feedback; notifyChecks = checks; notifyConflicts = conflicts;
+        quietHours = quiet; quietHoursStart = start; quietHoursEnd = end;
         return saveIntegrationPreferences(notifications, tray, background, dot, bar);
     }
     Q_INVOKABLE bool saveIntegrationPreferences(bool notifications, bool tray, bool background, bool dot, bool bar) {
@@ -153,12 +160,18 @@ void WorkspaceTest::osIntegrationBoundary() {
     QVERIFY(trayRestored.trayEnabled());
     QVERIFY(trayRestored.closeToTray());
     QVERIFY(!trayRestored.trayAttentionDot());
-    QVERIFY(trayRestored.saveAllPreferences(false, true, true, false, false, false, true, false, true));
+    QVERIFY(trayRestored.saveAllPreferences(false, true, true, false, false, false, true, false, true, true, "22:00", "07:00"));
     QueueController categoryRestored(&osIntegration, nullptr);
     QVERIFY(!categoryRestored.notifyReviewRequests());
     QVERIFY(categoryRestored.notifyFeedback());
     QVERIFY(!categoryRestored.notifyChecks());
     QVERIFY(categoryRestored.notifyConflicts());
+    QVERIFY(categoryRestored.quietHours());
+    QCOMPARE(categoryRestored.quietHoursStart(), QString("22:00"));
+    QCOMPARE(categoryRestored.quietHoursEnd(), QString("07:00"));
+    QVERIFY(!categoryRestored.saveAllPreferences(false, true, true, false, false, false, true, false, true, true, "bad", "07:00"));
+    QVERIFY(categoryRestored.quietHours());
+    QCOMPARE(categoryRestored.quietHoursStart(), QString("22:00"));
     QSignalSpy restore(&trayRestored, &QueueController::showWorkspaceRequested);
     osIntegration.available = false;
     emit osIntegration.trayAvailabilityChanged();

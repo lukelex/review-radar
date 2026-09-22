@@ -14,6 +14,9 @@ Dialog {
     property bool draftFeedback: true
     property bool draftChecks: true
     property bool draftConflicts: true
+    property bool draftQuietHours: false
+    property string draftQuietStart: "18:00"
+    property string draftQuietEnd: "09:00"
     property string errorMessage: ""
     property string testMessage: ""
     property bool testSucceeded: false
@@ -26,6 +29,8 @@ Dialog {
         || draftFeedback !== controller.notifyFeedback
         || draftChecks !== controller.notifyChecks
         || draftConflicts !== controller.notifyConflicts
+        || draftQuietHours !== controller.quietHours || draftQuietStart !== controller.quietHoursStart
+        || draftQuietEnd !== controller.quietHoursEnd
     readonly property bool compact: width < 900
     readonly property var sections: ["General", "Workspace", "Notifications", "Desktop integration", "Appearance", "Keyboard", "Account & sync", "Local data", "Advanced"]
     readonly property var descriptions: ({
@@ -70,6 +75,9 @@ Dialog {
         draftFeedback = controller.notifyFeedback
         draftChecks = controller.notifyChecks
         draftConflicts = controller.notifyConflicts
+        draftQuietHours = controller.quietHours
+        draftQuietStart = controller.quietHoursStart
+        draftQuietEnd = controller.quietHoursEnd
         errorMessage = ""; testMessage = ""; section = "Notifications"
     }
     onOpened: toggle.forceActiveFocus()
@@ -234,6 +242,14 @@ Dialog {
                     SettingSwitch { label: "Feedback requiring your response"; description: "A reviewer has feedback on your pull request."; checked: preferences.draftFeedback; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftFeedback = value } }
                     SettingSwitch { label: "Failed checks on your PRs"; description: "Checks require your attention."; checked: preferences.draftChecks; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftChecks = value } }
                     SettingSwitch { label: "Merge conflicts"; description: "Your pull request needs conflict resolution."; checked: preferences.draftConflicts; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftConflicts = value } }
+                    SettingSwitch { label: "Quiet hours"; description: "Pause desktop alerts during a local-time window. Attention tracking continues."; checked: preferences.draftQuietHours; enabled: preferences.draftNotifications; onChanged: function(value) { preferences.draftQuietHours = value } }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 10; visible: preferences.draftQuietHours && preferences.draftNotifications
+                        Label { text: "Local time"; color: Style.secondary; font.pixelSize: 11 }
+                        TextField { objectName: "quiet-start"; text: preferences.draftQuietStart; placeholderText: "18:00"; Layout.preferredWidth: 90; onTextChanged: preferences.draftQuietStart = text }
+                        Label { text: "–"; color: Style.secondary }
+                        TextField { objectName: "quiet-end"; text: preferences.draftQuietEnd; placeholderText: "09:00"; Layout.preferredWidth: 90; onTextChanged: preferences.draftQuietEnd = text }
+                    }
                     Rectangle {
                         Layout.fillWidth: true; implicitHeight: preview.implicitHeight + 34; color: Style.canvas; radius: 10
                         ColumnLayout {
@@ -354,7 +370,7 @@ Dialog {
             RadarButton {
                 objectName: "save-preferences"; text: "Save changes"; primary: true; enabled: preferences.dirty
                 onClicked: {
-                    if (preferences.controller.saveAllPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot, preferences.draftBar, preferences.draftReviewRequests, preferences.draftFeedback, preferences.draftChecks, preferences.draftConflicts)) preferences.close()
+                    if (preferences.controller.saveAllPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot, preferences.draftBar, preferences.draftReviewRequests, preferences.draftFeedback, preferences.draftChecks, preferences.draftConflicts, preferences.draftQuietHours, preferences.draftQuietStart, preferences.draftQuietEnd)) preferences.close()
                     else preferences.errorMessage = "Could not save preferences. Your changes have not been applied. Try again."
                 }
             }

@@ -294,6 +294,14 @@ records every attention observation and deduplicates every meaningful fingerprin
 before the client filters delivery. Turning a category back on does not replay
 transitions observed while it was muted.
 
+The same section provides optional local quiet hours with start/end `HH:mm`
+values. During the window, the client suppresses delivery only; projection,
+attention observation, fingerprints, and category evaluation continue. Windows
+may cross midnight, use the device's local clock, and are validated before an
+atomic save. Invalid times keep the draft open with no partial preference update.
+Quiet hours are not a GitHub setting and do not replay suppressed transitions
+when they end.
+
 ### Optional desktop tray
 
 The system-tray icon defaults off. Preferences → Desktop integration saves the
