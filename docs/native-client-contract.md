@@ -177,6 +177,23 @@ clients may use native equivalents, but must preserve the same state meanings.
 
 ## Information hierarchy and interaction
 
+### macOS SwiftUI foundation
+
+`apps/macos` is a macOS 14+ Swift Package shell around the existing helper
+process/JSON contract. Its first screen renders only the already-ranked Tailored
+projection, local search, card selection/details, refresh-on-open/five-minute
+cadence, and loading/fresh/stale/failed states. It stores helper databases under
+Application Support using the shared `review-radar` directory name. The delivery
+checklist is `docs/macos-client-plan.md`.
+
+The scaffold deliberately does not claim notification, menu-bar, acknowledgement,
+snooze, or full workspace parity. Those are explicit checklist items. Acceptance:
+the Swift process consumes stdout as one queue JSON response, leaves stderr as
+diagnostics, never runs GitHub work outside the collector helper, and keeps the
+last successful projection visible across a failed refresh. Its local
+`MacOsIntegration` owns Application Support paths, browser opening, and copying;
+the queue view model does not call those host APIs directly.
+
 Every PR card communicates, in order:
 
 1. repository, PR number, and activity age;

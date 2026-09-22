@@ -94,6 +94,13 @@ It sends acknowledgement and snooze commands back to the state executable. Its
 QML layer only presents cards and client-side text search; it does not duplicate
 GitHub, domain, ranking, or SQLite behavior.
 
+`apps/macos` starts the SwiftUI implementation with the same process boundary:
+the shell runs the collector and queue helpers, decodes queue stdout, and renders
+the ranked projection. It keeps macOS-only UI/integration work out of the Rust
+core and does not make Swift a second source of GitHub/domain behavior. Its
+shell-local `MacOsIntegration` owns Application Support paths, default-browser
+opening, and clipboard effects.
+
 On Linux, `LinuxOsIntegration` delivers notifications through
 `org.freedesktop.Notifications`. The client receives only the queue projection's
 persisted `notificationEligibleIds`, and its OS adapter opens the relevant PR in
