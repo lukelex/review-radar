@@ -102,7 +102,9 @@ shell-local `MacOsIntegration` owns Application Support paths, default-browser
 opening, and clipboard effects. The shell sends acknowledgement and snooze back
 to the state helper with the projection's current fingerprint. Its same adapter
 owns UserNotifications delivery/action activation; Swift only filters already
-deduplicated queue eligibility using saved local preferences.
+deduplicated queue eligibility using saved local preferences. The SwiftUI shell
+owns its optional menu-bar scene and delegates only last-window termination policy
+to its AppKit application delegate.
 
 On Linux, `LinuxOsIntegration` delivers notifications through
 `org.freedesktop.Notifications`. The client receives only the queue projection's

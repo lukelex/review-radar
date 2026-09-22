@@ -37,11 +37,11 @@ contract; no item authorizes duplicating them in Swift.
   Application Support paths behind the same OS-effect boundary.
 - [x] Deliver state-deduplicated attention transitions through UserNotifications,
   with next-action and canonical-PR actions plus deep links.
-- [ ] Add a menu-bar item as an independent opt-in, including a discoverable
+- [x] Add a menu-bar item as an independent opt-in, including a discoverable
   Quit command and capability-aware preference state.
 - [x] Implement native Preferences with the shared notification, category, and
   quiet-hours semantics; preserve drafts, atomic saves, and failure copy.
-- [ ] Complete menu-bar preference application and last-window lifecycle behavior.
+- [x] Complete menu-bar preference application and last-window lifecycle behavior.
 
 ## Release and quality
 

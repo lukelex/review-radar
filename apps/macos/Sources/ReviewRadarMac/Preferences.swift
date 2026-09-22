@@ -64,6 +64,8 @@ final class PreferencesStore: ObservableObject {
 
     func save(_ preferences: Preferences) throws {
         guard preferences.validatesQuietHours() else { throw PreferencesError.invalidQuietHours }
+        var preferences = preferences
+        if !preferences.menuBarEnabled { preferences.keepRunningWhenWindowCloses = false }
         let data = try JSONEncoder().encode(preferences)
         try data.write(to: file, options: .atomic)
         value = preferences

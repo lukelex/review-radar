@@ -108,6 +108,7 @@ final class QueueStore: ObservableObject {
     @Published var navigationCardID: PullRequestCard.ID?
     @Published var search = ""
     @Published var controlHeld = false
+    @Published var preferencesRequested = false
 
     private struct ProjectionKey: Hashable {
         let workspace: Workspace
@@ -120,9 +121,9 @@ final class QueueStore: ObservableObject {
     private var refreshTask: Task<Void, Never>?
     private var timer: Timer?
 
-    init(osIntegration: OsIntegration = MacOsIntegration()) {
+    init(osIntegration: OsIntegration = MacOsIntegration(), preferences: PreferencesStore? = nil) {
         self.osIntegration = osIntegration
-        preferences = PreferencesStore(directory: osIntegration.applicationDataDirectory)
+        self.preferences = preferences ?? PreferencesStore(directory: osIntegration.applicationDataDirectory)
         osIntegration.setNotificationActivationHandler { [weak self] url in
             Task { @MainActor in self?.openURL(url) }
         }
@@ -140,6 +141,8 @@ final class QueueStore: ObservableObject {
     var navigationCard: PullRequestCard? {
         cards.first(where: { $0.id == navigationCardID })
     }
+
+    var attentionCount: Int { cards.filter(\.attentionRequired).count }
 
     var filteredCards: [PullRequestCard] {
         let needle = search.trimmingCharacters(in: .whitespacesAndNewlines)

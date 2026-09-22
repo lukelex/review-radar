@@ -187,8 +187,8 @@ for acknowledgement and snooze with the projected current fingerprint. It stores
 helper databases under Application Support using the shared `review-radar`
 directory name. The delivery checklist is `docs/macos-client-plan.md`.
 
-The shell deliberately does not yet claim menu-bar parity. Its AppKit key monitor applies the documented
-navigation shortcuts only while the first responder is not a text editor; it
+Its AppKit key monitor applies the documented navigation shortcuts only while the
+first responder is not a text editor; it
 supports local search focus, workspace cycling/direct selection, paging, shortcut
 help, and Control-held numeric hints. Acceptance: the Swift process consumes stdout
 as one queue JSON response, leaves stderr as diagnostics, never runs GitHub work
@@ -207,6 +207,14 @@ notification title/body and next-action URL; the canonical PR remains a separate
 Notification Center action when it differs. Test alerts bypass delivery filters
 and carry no PR action. Activation follows the same host-browser path as card
 actions.
+
+macOS provides an independent, persisted, opt-in menu-bar item rather than a
+Linux tray or Quickshell adapter. It exposes Open Review Radar, Refresh,
+Preferences, and Quit, and labels the current workspace's attention-required
+count. Keeping the app alive after its last window closes requires both the
+menu-bar item and its dependent saved preference; turning the menu-bar item off
+also clears that background preference. This preserves a discoverable path back
+to a hidden running app.
 
 Every PR card communicates, in order:
 

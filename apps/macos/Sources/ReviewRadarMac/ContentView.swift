@@ -113,6 +113,12 @@ struct ContentView: View {
             PreferencesDialog(testNotification: { await queue.testNotification() })
                 .environmentObject(queue.preferences)
         }
+        .onChange(of: queue.preferencesRequested) { requested in
+            if requested {
+                showPreferences = true
+                queue.preferencesRequested = false
+            }
+        }
         .onAppear {
             keyboard.start(handleKeyboardAction, controlChanged: { queue.controlHeld = $0 })
         }
