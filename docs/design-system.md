@@ -45,13 +45,14 @@ business logic.
 ## Brand
 
 Use the repository SVG directly for the sidebar mark and application icon. It
-contains a periwinkle PR branch within a dark indigo radar, with an amber
+contains a dark indigo PR branch within a light periwinkle radar, with an amber
 attention signal.
 Preserve its proportions, colors, and built-in rounded background. Do not replace
 it with a Unicode radar symbol or redraw it separately in each client.
 
-The logo's indigo and periwinkle intentionally align with the interface's
-indigo interaction accent; amber remains a small, dedicated attention cue.
+The logo's light field and dark indigo branch intentionally invert the interface
+surface treatment for clear small-size contrast, while staying aligned with the
+indigo interaction accent. Amber remains a small, dedicated attention cue.
 Neither replaces the semantic status colors used in cards. Keep the adjacent
 product name **Review Radar** in title case. The current sidebar mark is 34 × 34
 logical pixels; render it sharply at the display's scale factor. Decorative marks
