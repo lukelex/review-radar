@@ -25,17 +25,26 @@ bool LinuxOsIntegration::showNotification(const NotificationRequest &request) {
                                  "org.freedesktop.Notifications", QDBusConnection::sessionBus());
     if (!notifications.isValid()) return false;
 
-    const QStringList actions = request.activationUrl.isEmpty()
-        ? QStringList{} : QStringList{"open", "Open pull request"};
+    QStringList actions;
+    for (const auto &action : request.actions) {
+        if (!action.id.isEmpty() && !action.label.isEmpty() && !action.activationUrl.isEmpty()) {
+            actions.append(action.id);
+            actions.append(action.label);
+        }
+    }
     QVariantMap hints{{"desktop-entry", "review-radar-linux"}};
     QDBusReply<uint> reply = notifications.call(
-        "Notify", "Review Radar", notificationIds_.value(request.id), QString(), request.title,
+        "Notify", "Review Radar", notificationIds_.value(request.id), "review-radar-linux", request.title,
         request.body, actions, hints, -1);
     if (!reply.isValid()) return false;
 
     notificationIds_.insert(request.id, reply.value());
-    if (request.activationUrl.isEmpty()) notificationUrls_.remove(reply.value());
-    else notificationUrls_.insert(reply.value(), request.activationUrl);
+    QHash<QString, QUrl> actionUrls;
+    for (const auto &action : request.actions) {
+        if (!action.id.isEmpty() && !action.activationUrl.isEmpty())
+            actionUrls.insert(action.id, action.activationUrl);
+    }
+    notificationActions_.insert(reply.value(), actionUrls);
     return true;
 }
 
@@ -63,8 +72,9 @@ QString LinuxOsIntegration::applicationDataFile(const QString &name) const {
 }
 
 void LinuxOsIntegration::notificationActionInvoked(uint notificationId, const QString &action) {
-    if (action != "open" || !notificationUrls_.contains(notificationId)) return;
-    emit notificationActivated(notificationUrls_.take(notificationId));
+    const auto notification = notificationActions_.value(notificationId);
+    if (!notification.contains(action)) return;
+    emit notificationActivated(notification.value(action));
 }
 
 } // namespace ReviewRadar

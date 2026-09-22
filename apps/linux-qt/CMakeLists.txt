@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(review-radar-linux VERSION 0.1.0 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 include(CTest)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core DBus Gui Qml Quick)
@@ -67,3 +69,9 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS review-radar-linux)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../docs/assets/logo.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME review-radar-linux.svg)
+configure_file(review-radar-linux.desktop.in review-radar-linux.desktop @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/review-radar-linux.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

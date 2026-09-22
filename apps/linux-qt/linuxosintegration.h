@@ -22,7 +22,7 @@ private slots:
 
 private:
     QHash<QString, uint> notificationIds_;
-    QHash<uint, QUrl> notificationUrls_;
+    QHash<uint, QHash<QString, QUrl>> notificationActions_;
 };
 
 } // namespace ReviewRadar

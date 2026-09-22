@@ -101,6 +101,7 @@ void WorkspaceTest::osIntegrationBoundary() {
     QVERIFY(restarted.testNotification());
     QCOMPARE(osIntegration.notification.id, QString("preferences-test"));
     QVERIFY(osIntegration.notification.activationUrl.isEmpty());
+    QVERIFY(osIntegration.notification.actions.isEmpty());
     QVERIFY(!restarted.notificationsEnabled());
     osIntegration.notificationSucceeds = false;
     QVERIFY(!restarted.testNotification());
@@ -309,6 +310,10 @@ void WorkspaceTest::workspace() {
         QVERIFY(QMetaObject::invokeMethod(save, "clicked"));
         QTRY_VERIFY(!preferences->property("visible").toBool());
         QVERIFY(!queue.notificationsEnabled);
+        const auto notificationAction = ReviewRadar::NotificationAction{
+            "next-action", "Start review", QUrl("https://github.com/example/api/pull/142/files")};
+        QCOMPARE(notificationAction.label, QString("Start review"));
+        QVERIFY(!notificationAction.activationUrl.isEmpty());
         QVERIFY(QMetaObject::invokeMethod(preferences, "open"));
         QTRY_VERIFY(preferences->property("opened").toBool());
         QVERIFY(!preferences->property("draftNotifications").toBool());

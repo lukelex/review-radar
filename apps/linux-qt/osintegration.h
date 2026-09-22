@@ -1,16 +1,24 @@
 #pragma once
 
 #include <QObject>
+#include <QList>
 #include <QString>
 #include <QUrl>
 
 namespace ReviewRadar {
+
+struct NotificationAction {
+    QString id;
+    QString label;
+    QUrl activationUrl;
+};
 
 struct NotificationRequest {
     QString id;
     QString title;
     QString body;
     QUrl activationUrl;
+    QList<NotificationAction> actions;
 };
 
 // Boundary for operating-system effects used by a native shell. The controller

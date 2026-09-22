@@ -262,7 +262,27 @@ ApplicationWindow {
                 Label { Layout.fillWidth: true; text: "Read and snoozed items stay quiet until something meaningful changes."; color: Style.muted; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.3 }
                 Label { visible: queue.suppressedCount > 0; text: queue.suppressedCount + " hidden in this view"; color: Style.secondary; font.pixelSize: 11 }
                 Item { Layout.fillHeight: true }
-                RadarButton { objectName: "open-preferences"; text: "⚙  Preferences"; Accessible.name: "Preferences"; quiet: true; onClicked: preferencesDialog.open() }
+                Button {
+                    id: preferencesButton
+                    objectName: "open-preferences"
+                    Layout.fillWidth: true; implicitHeight: 43
+                    hoverEnabled: true
+                    text: "Preferences"
+                    Accessible.name: text
+                    Accessible.role: Accessible.Button
+                    onClicked: preferencesDialog.open()
+                    background: Rectangle {
+                        radius: 8
+                        color: preferencesButton.hovered ? "#e9ecf3" : "transparent"
+                        border.color: preferencesButton.activeFocus ? Style.accent : "transparent"
+                        border.width: preferencesButton.activeFocus ? 2 : 1
+                    }
+                    contentItem: RowLayout {
+                        spacing: 12
+                        Label { text: "⚙"; color: Style.muted; font.pixelSize: 18; Layout.leftMargin: 8; Accessible.ignored: true }
+                        Label { Layout.fillWidth: true; text: preferencesButton.text; color: Style.secondary; font.pixelSize: 12 }
+                    }
+                }
                 Label { text: "●  github.com"; color: Style.secondary; font.pixelSize: 12; font.weight: Font.DemiBold }
                 Label { Layout.fillWidth: true; text: "A quieter place for pull requests."; color: Style.muted; font.pixelSize: 10; wrapMode: Text.Wrap; Layout.bottomMargin: 4 }
             }

@@ -264,6 +264,13 @@ activation URL or browser action. Report adapter acceptance as sent, not proof o
 on-screen display (desktop quiet modes may suppress it); report delivery failure
 inline. This makes the platform integration independently diagnosable.
 
+Linux notifications identify the installed `review-radar-linux` application icon
+and expose explicit actions from the shared projected card: its relevant next
+action (when it has a URL) and a canonical Open pull request action when distinct.
+The OS adapter maps action IDs back to URLs; the queue supplies no DBus details.
+Tests and notifications have no PR action. Action labels remain text, rather than
+icon-only affordances, and a notification service may choose its own rendering.
+
 The native preferences shell follows the high-fidelity reference: a wide modal
 with a section rail, white bordered setting groups, a notification example, and
 persistent header/footer. At narrower sizes the rail becomes horizontal and the

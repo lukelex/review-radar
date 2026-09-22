@@ -396,8 +396,19 @@ void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArra
                               .arg(card.value("repository").toString())
                               .arg(card.value("number").toInt())
                               .arg(reason);
+        const auto pullRequestUrl = QUrl(card.value("url").toString());
+        const auto nextAction = reasons.isEmpty() ? QJsonObject{}
+                                                  : reasons.first().toObject().value("nextAction").toObject();
+        const auto nextActionUrl = QUrl(nextAction.value("url").toString());
+        QList<ReviewRadar::NotificationAction> actions;
+        if (!nextActionUrl.isEmpty()) {
+            actions.append({"next-action", nextAction.value("label").toString("Open next action"),
+                            nextActionUrl});
+        }
+        if (!pullRequestUrl.isEmpty() && pullRequestUrl != nextActionUrl)
+            actions.append({"open-pull-request", "Open pull request", pullRequestUrl});
         osIntegration_->showNotification({card.value("currentFingerprint").toString(), title, body,
-                                           QUrl(card.value("url").toString())});
+                                           pullRequestUrl, actions});
     }
 }
 void QueueController::setStatus(const QString &status) { if (status_ != status) { status_ = status; emit statusChanged(); } }
@@ -415,5 +426,5 @@ bool QueueController::savePreferences(bool notificationsEnabled) {
 bool QueueController::testNotification() {
     return osIntegration_->showNotification({
         "preferences-test", "Review Radar test notification",
-        "Desktop notifications are working. Your preferences have not changed.", {}});
+        "Desktop notifications are working. Your preferences have not changed.", {}, {}});
 }

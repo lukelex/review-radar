@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Review Radar
+Comment=A quieter place for pull requests
+Exec=review-radar-linux
+Icon=review-radar-linux
+Categories=Development;Office;
+Terminal=false
