@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "captureId": 1,
+  "capturedAt": "2026-09-23T12:00:00Z",
+  "view": "tailored",
+  "ranking": "tailored",
+  "sourceCount": 1,
+  "suppressedCount": 0,
+  "count": 1,
+  "notificationEligibleIds": [],
+  "pullRequests": [
+    {
+      "id": "pr-001",
+      "repository": "example/repository",
+      "number": 42,
+      "title": "Example pull request",
+      "url": "https://github.com/example/repository/pull/42",
+      "updatedAt": "2026-09-23T11:00:00Z",
+      "lifecycle": "OPEN",
+      "memberships": ["review_requested"],
+      "priority": "review-requested",
+      "relationship": "review-requested",
+      "action": "review-requested",
+      "actionLabel": "Review requested",
+      "attentionRequired": true,
+      "explanation": {
+        "heading": "Why this needs your attention",
+        "reasons": [{
+          "code": "review-requested",
+          "summary": "Your review is requested and remains outstanding.",
+          "evidence": ["search:review_requested"],
+          "nextAction": {
+            "label": "Start review",
+            "url": "https://github.com/example/repository/pull/42/files"
+          }
+        }],
+        "health": {
+          "reviewDecision": null,
+          "checks": "SUCCESS",
+          "mergeable": "MERGEABLE",
+          "mergeStateStatus": "CLEAN",
+          "isDraft": false
+        }
+      },
+      "reviewFriction": {
+        "status": "limited-history",
+        "level": null,
+        "historical": false,
+        "coverage": "partial",
+        "reviewRounds": null,
+        "reviewSeconds": null,
+        "reworkLines": null,
+        "contributors": [],
+        "limitations": ["missing-review-history"]
+      },
+      "currentFingerprint": "current:pr-001",
+      "events": []
+    }
+  ]
+}

@@ -26,3 +26,6 @@ Set `REVIEW_RADAR_CAPTURE_DATABASE`, `REVIEW_RADAR_STATE_DATABASE`,
 
 See [`docs/macos-client-plan.md`](../../docs/macos-client-plan.md) for the
 remaining parity, integration, testing, and release checklists.
+
+The `macOS SwiftUI CI` workflow runs `swift build --build-tests` and `swift test`
+on a macOS 14 runner. Its fixture test locks the versioned queue-response shape.

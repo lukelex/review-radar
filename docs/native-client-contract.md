@@ -216,6 +216,11 @@ menu-bar item and its dependent saved preference; turning the menu-bar item off
 also clears that background preference. This preserves a discoverable path back
 to a hidden running app.
 
+The macOS package carries fixture-driven decoding and local-preference tests, run
+by `.github/workflows/macos.yml` on a macOS 14 runner. Linux hosts may validate
+the shared Rust queue schema but cannot substitute for SwiftUI/AppKit compilation
+or Notification Center interaction tests.
+
 Every PR card communicates, in order:
 
 1. repository, PR number, and activity age;

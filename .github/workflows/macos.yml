@@ -1,0 +1,33 @@
+name: macOS SwiftUI CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/macos/**
+      - .github/workflows/macos.yml
+  pull_request:
+    paths:
+      - apps/macos/**
+      - .github/workflows/macos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  swift:
+    name: Build and test macOS client
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build
+        working-directory: apps/macos
+        run: swift build --build-tests
+
+      - name: Test
+        working-directory: apps/macos
+        run: swift test

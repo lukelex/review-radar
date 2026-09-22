@@ -15,8 +15,7 @@ contract; no item authorizes duplicating them in Swift.
   shared `review-radar` directory name.
 - [x] Present ranked Tailored cards, selection, an empty state, cached/stale
   status, and an explicit refresh action.
-- [ ] Build and run the package on a supported macOS runner and add fixture-driven
-  Swift tests to CI.
+- [ ] Confirm the macOS CI runner builds and runs the fixture-driven Swift tests.
 
 ## Workspace parity
 
@@ -51,8 +50,8 @@ contract; no item authorizes duplicating them in Swift.
   stale state, notification/category/quiet-hour behavior, and restart persistence.
 - [ ] Audit VoiceOver labels, focus order, Dynamic Type, reduced motion, contrast,
   and keyboard access.
-- [ ] Add macOS CI build/test and release-notarization preparation separately from
-  Linux packaging.
+- [x] Add macOS CI build/test separately from Linux packaging.
+- [ ] Prepare macOS code-signing and notarization separately from Linux packaging.
 
 ## Completion criteria
 
