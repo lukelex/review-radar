@@ -100,6 +100,13 @@ Red health treatment is reserved for failing or errored checks. Changes requeste
 and merge conflicts are amber follow-up states with distinct non-color symbols;
 they must not be presented as equivalent to a failed check.
 
+### Selection and keyboard navigation
+
+A rendered PR card has at most one active outline in a workspace. Mouse selection
+and keyboard navigation resolve to the same selected PR when details are open;
+otherwise the keyboard-navigation target alone receives the outline. Toolkit
+button focus and hover styling must not create a second active-outline indication.
+
 Review friction uses a separate semantic low/medium/high/unknown color scale.
 It communicates accumulated review difficulty, not urgency or PR health. Clients
 must retain the explicit friction label, level, and a non-color cue; insufficient

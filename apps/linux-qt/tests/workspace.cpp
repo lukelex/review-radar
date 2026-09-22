@@ -171,22 +171,29 @@ void WorkspaceTest::workspace() {
         auto *card = findItem(window->contentItem(), "card-0");
         QVERIFY(card);
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
-                          card->mapToScene(QPointF(30, 30)).toPoint());
+                           card->mapToScene(QPointF(30, 30)).toPoint());
         QTRY_VERIFY(window->findChild<QObject *>("detail-panel"));
+        auto *nextCard = findItem(window->contentItem(), "card-1");
+        QVERIFY(nextCard);
+        QCOMPARE(card->property("selected").toBool(), true);
+        QTest::keyClick(window, Qt::Key_J);
+        QTRY_COMPARE(nextCard->property("selected").toBool(), true);
+        QCOMPARE(card->property("selected").toBool(), false);
+        QCOMPARE(card->property("keyboardActive").toBool(), false);
         auto *open = window->findChild<QQuickItem *>("detail-open");
         QVERIFY(open);
         QTest::qWait(50); // Allow the new detail layout to settle before hit testing.
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
                           open->mapToScene(QPointF(open->width() / 2, open->height() / 2)).toPoint());
-        QCOMPARE(queue.opened, QString("https://github.com/example/api/pull/142/files"));
+        QCOMPARE(queue.opened, QString("https://github.com/example/web/pull/87"));
         QTest::keyClick(window, Qt::Key_O);
-        QCOMPARE(queue.opened, QString("https://github.com/example/api/pull/142"));
+        QCOMPARE(queue.opened, QString("https://github.com/example/web/pull/87"));
         auto *read = window->findChild<QQuickItem *>("detail-read");
         QVERIFY(read);
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
                           read->mapToScene(QPointF(read->width() / 2, read->height() / 2)).toPoint());
-        QCOMPARE(queue.acknowledged, QString("pr-142"));
-        QCOMPARE(queue.fingerprint, QString("event-142"));
+        QCOMPARE(queue.acknowledged, QString("pr-87"));
+        QCOMPARE(queue.fingerprint, QString("event-87"));
         screenshot("detail");
         window->resize(860, 640);
         QTRY_VERIFY(window->property("narrow").toBool());
@@ -209,11 +216,11 @@ void WorkspaceTest::workspace() {
         QCOMPARE(queue.acknowledged, previousAcknowledgement);
         // A cache update retains selection by identity and refreshes its data.
         auto replacement = fixture.array();
-        auto first = replacement.first().toObject();
-        first["title"] = "Updated pagination title";
-        replacement[0] = first;
+        auto selected = replacement.at(1).toObject();
+        selected["title"] = "Updated keyboard navigation title";
+        replacement[1] = selected;
         queue.model.replace(replacement);
-        QTRY_COMPARE(window->findChild<QObject *>("detail-panel")->property("entry").toMap().value("title").toString(), QString("Updated pagination title"));
+        QTRY_COMPARE(window->findChild<QObject *>("detail-panel")->property("entry").toMap().value("title").toString(), QString("Updated keyboard navigation title"));
         queue.model.replace({});
         QTRY_COMPARE(window->property("matchingCount").toInt(), 0);
         QTRY_VERIFY(!window->findChild<QObject *>("detail-panel"));

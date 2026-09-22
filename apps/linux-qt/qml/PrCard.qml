@@ -13,8 +13,10 @@ Rectangle {
     implicitHeight: content.implicitHeight + 38
     color: "white"
     radius: 12
-    border.color: selected || keyboardActive || hit.activeFocus ? Style.accent : hit.hovered ? "#c3bedf" : Style.line
-    border.width: selected || keyboardActive || hit.activeFocus ? 2 : 1
+    // Button focus is an implementation detail of mouse activation. The card
+    // outline represents the single selected PR or keyboard-navigation target.
+    border.color: selected || keyboardActive ? Style.accent : hit.hovered ? "#c3bedf" : Style.line
+    border.width: selected || keyboardActive ? 2 : 1
 
     Button {
         id: hit
