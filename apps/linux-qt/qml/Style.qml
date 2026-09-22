@@ -16,6 +16,14 @@ QtObject {
     readonly property color cautionTint: "#fff4dc"
     readonly property color negative: "#b33f4a"
     readonly property color negativeTint: "#fdecef"
+    readonly property color frictionLow: "#176b70"
+    readonly property color frictionLowTint: "#e5f4f3"
+    readonly property color frictionMedium: "#855b16"
+    readonly property color frictionMediumTint: "#fff3d6"
+    readonly property color frictionHigh: "#a34420"
+    readonly property color frictionHighTint: "#fceadf"
+    readonly property color frictionUnknown: "#566176"
+    readonly property color frictionUnknownTint: "#edf0f5"
 
     function humanize(value) {
         const text = String(value || "").replace(/[-_]/g, " ");

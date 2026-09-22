@@ -73,6 +73,10 @@ not create duplicate screen-reader announcements.
 | Positive foreground / background | `#287a55` / `#e8f6ee` | Passing, approved, and mergeable values |
 | Caution foreground / background | `#94631b` / `#fff4dc` | Pending or waiting values |
 | Negative foreground / background | `#b33f4a` / `#fdecef` | Failing, conflicting, or requested-change values |
+| Friction low foreground / background | `#176b70` / `#e5f4f3` | Low assessed review friction |
+| Friction medium foreground / background | `#855b16` / `#fff3d6` | Medium assessed review friction |
+| Friction high foreground / background | `#a34420` / `#fceadf` | High assessed review friction |
+| Friction unknown foreground / background | `#566176` / `#edf0f5` | Missing or insufficient friction evidence |
 
 Pair color with text or another explicit indicator. Indigo can identify an
 interaction or attention summary; it is not evidence of a failing PR. Amber
@@ -84,6 +88,11 @@ scannable without reading a sentence: `Review`, `Checks`, and `Merge` retain
 neutral labels while the values use positive, caution, negative, or neutral
 foreground/background pairs. Each colored value also carries a text label and
 symbol; color is never the only indicator.
+
+Review friction has a dedicated teal-to-burnt-orange scale, separate from health
+status colors. Its badge explicitly says `Friction`, retains the level, and uses
+one, two, or three stepped marks for low, medium, or high. Missing or incomplete
+history is `Unknown` with a question mark; it must never receive the low treatment.
 
 New reusable colors should become semantic tokens in `Style.qml`, rather than
 unrelated per-component hex values. The current palette is a light-theme

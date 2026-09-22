@@ -6,3 +6,4 @@ PrCard 1.0 PrCard.qml
 DetailPanel 1.0 DetailPanel.qml
 ShortcutRow 1.0 ShortcutRow.qml
 HealthSignal 1.0 HealthSignal.qml
+FrictionBadge 1.0 FrictionBadge.qml

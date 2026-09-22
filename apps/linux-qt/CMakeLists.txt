@@ -29,7 +29,7 @@ qt_add_resources(review-radar-linux brand
 
 set(workspace_qml qml/Main.qml qml/Style.qml qml/RadarButton.qml qml/Badge.qml
                    qml/PrCard.qml qml/DetailPanel.qml qml/ActivityTimeline.qml
-                   qml/SkeletonCard.qml qml/ShortcutRow.qml qml/HealthSignal.qml qml/RadarModal.qml)
+                   qml/SkeletonCard.qml qml/ShortcutRow.qml qml/HealthSignal.qml qml/FrictionBadge.qml qml/RadarModal.qml)
 
 qt_add_qml_module(review-radar-linux
     URI ReviewRadar

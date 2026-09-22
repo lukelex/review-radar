@@ -79,11 +79,7 @@ Rectangle {
                 color: card.entry.lifecycle === "merged" ? Style.accent : Style.secondary
                 tint: card.entry.lifecycle === "merged" ? Style.tint : Style.sidebar
             }
-            Badge {
-                text: "Friction · " + Style.humanize(card.entry.frictionLevel || card.entry.frictionStatus || "not assessed")
-                color: card.entry.frictionLevel === "high" ? "#a35b2a" : Style.secondary
-                tint: card.entry.frictionLevel === "high" ? "#fff0e4" : Style.sidebar
-            }
+            FrictionBadge { level: card.entry.frictionLevel || ""; status: card.entry.frictionStatus || "" }
         }
         RowLayout {
             Layout.fillWidth: true
