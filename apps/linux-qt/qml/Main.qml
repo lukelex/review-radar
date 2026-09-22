@@ -199,6 +199,7 @@ ApplicationWindow {
             root.selected = updated;
         }
     }
+    PreferencesDialog { id: preferencesDialog; controller: queue }
     Connections { target: queue; function onViewChanged() { root.selected = null; cards.positionViewAtBeginning() } }
 
     RowLayout {
@@ -261,6 +262,7 @@ ApplicationWindow {
                 Label { Layout.fillWidth: true; text: "Read and snoozed items stay quiet until something meaningful changes."; color: Style.muted; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.3 }
                 Label { visible: queue.suppressedCount > 0; text: queue.suppressedCount + " hidden in this view"; color: Style.secondary; font.pixelSize: 11 }
                 Item { Layout.fillHeight: true }
+                RadarButton { objectName: "open-preferences"; text: "⚙  Preferences"; Accessible.name: "Preferences"; quiet: true; onClicked: preferencesDialog.open() }
                 Label { text: "●  github.com"; color: Style.secondary; font.pixelSize: 12; font.weight: Font.DemiBold }
                 Label { Layout.fillWidth: true; text: "A quieter place for pull requests."; color: Style.muted; font.pixelSize: 10; wrapMode: Text.Wrap; Layout.bottomMargin: 4 }
             }

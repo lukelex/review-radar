@@ -42,6 +42,16 @@ business logic.
    opening, and keyboard behavior. Future SwiftUI and WinUI clients should share
    the information hierarchy without copying every Qt pixel.
 
+## Preferences exploration
+
+The [interactive preferences reference](mockups/high/preferences.html) uses a
+two-column modal: a quiet section rail, grouped setting rows with labels and
+supporting descriptions, and persistent Cancel / Save changes actions. On narrow
+windows the section rail becomes horizontally scrollable. Notification, tray,
+and bar integrations have independent switches; dependent settings stay visible
+with explanatory disabled states. Future-option previews carry an explicit design
+exploration label. The prototype establishes presentation, not shipped settings.
+
 ## Brand
 
 Use the repository SVG directly for the sidebar mark and application icon. It

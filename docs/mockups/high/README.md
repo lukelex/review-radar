@@ -1,5 +1,17 @@
 # High-fidelity workspace references
 
+## Preferences exploration
+
+Open [preferences.html](preferences.html) in a browser for the interactive,
+responsive preferences design. It includes nine sections, independent notification,
+tray and Quickshell switches, draft/save/cancel behavior, notification availability
+states, and illustrative previews. Serve the repository with a local HTTP server
+to inspect it using browser tooling. No dependencies or build step are required.
+
+Settings are exploratory candidates, not implemented application capabilities.
+Changes live only in page memory; no desktop effects, GitHub requests, credentials,
+or application databases are used. Reloading resets the prototype.
+
 Six editable SVGs and matching 1440 × 1000 PNGs, created before the Qt rewrite.
 Run `python3 docs/mockups/high/render.py` to regenerate (requires `rsvg-convert`).
 
@@ -45,6 +57,8 @@ fixture, rather than the SVG generator:
 - [Implemented workspace](implemented-workspace.png)
 - [Implemented detail panel](implemented-detail.png)
 - [Implemented narrow window (860 × 640)](implemented-narrow.png)
+- [Implemented Preferences](implemented-preferences.png)
+- [Implemented Preferences at 860 × 640](implemented-preferences-narrow.png)
 
 Set `UI_SCREENSHOT_DIR` to an existing writable directory when running
 `review-radar-ui-test` to capture these three frames again. Screenshots use

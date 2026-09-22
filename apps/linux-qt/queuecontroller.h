@@ -55,6 +55,7 @@ class QueueController final : public QObject {
     Q_PROPERTY(bool controlHeld READ controlHeld NOTIFY controlHeldChanged)
     Q_PROPERTY(int sourceCount READ sourceCount NOTIFY countsChanged)
     Q_PROPERTY(int suppressedCount READ suppressedCount NOTIFY countsChanged)
+    Q_PROPERTY(bool notificationsEnabled READ notificationsEnabled NOTIFY preferencesChanged)
 
 public:
     explicit QueueController(QObject *parent = nullptr);
@@ -71,6 +72,9 @@ public:
     bool controlHeld() const;
     int sourceCount() const;
     int suppressedCount() const;
+    bool notificationsEnabled() const { return notificationsEnabled_; }
+    Q_INVOKABLE bool savePreferences(bool notificationsEnabled);
+    Q_INVOKABLE bool testNotification();
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void start();
@@ -81,6 +85,7 @@ public:
                             const QString &preset);
 
 signals:
+    void preferencesChanged();
     void viewChanged();
     void rankingChanged();
     void statusChanged();
@@ -102,8 +107,8 @@ private:
     void sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds);
     void setStatus(const QString &status);
 
-private slots:
 private:
+    bool notificationsEnabled_ = true;
     PullRequestModel model_;
     QString view_ = QStringLiteral("tailored");
     QString ranking_ = QStringLiteral("tailored");

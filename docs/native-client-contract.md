@@ -211,8 +211,8 @@ readable title, scrolling body, and persistent footer. This keeps longer help
 content usable on smaller windows. Escape dismisses; confirmations initially
 focus Cancel and capture their target when opened so refresh cannot redirect
 the action to a different PR. Shortcuts use grouped keycaps and Done.
-Future preferences reuse the same hierarchy with grouped settings and explicit
-Save/Cancel for draft edits; no preferences screen is implemented yet.
+Preferences reuse the same hierarchy with grouped settings and explicit
+Save/Cancel for draft edits; the first implemented setting controls desktop alerts.
 Acceptance: header and actions stay reachable at the minimum window size,
 confirmation cancellation causes no state mutation, and all variants use shared
 design tokens. Linux reference: `apps/linux-qt/qml/RadarModal.qml`.
@@ -238,6 +238,46 @@ Implementation reference: `LinuxOsIntegration::applicationDataFile` in
 `apps/linux-qt/linuxosintegration.cpp`.
 
 ### Native OS-effect adapters
+
+Preferences design direction: OS integrations are independently optional. The
+proposed modal groups notifications, desktop integration, workspace, appearance,
+keyboard, account/sync, local data, general, and advanced settings. Changes remain
+draft across sections and apply together on Save; Cancel and Escape offer discard
+when dirty. Unsupported capabilities must be explained rather than shown as
+working controls. Notification opt-out should keep attention observations current,
+so opting back in does not replay a backlog. Delivery filters may narrow core
+eligibility but must never create new eligibility in the UI. Tray-dependent
+background operation must not leave an undiscoverable running application.
+
+The first native preference is the desktop-notification master switch, enabled by
+default. Linux stores it atomically in `preferences.json` under the OS adapter's
+application-data directory, separately from captures and attention state. Save
+applies only after persistence succeeds; failure keeps the modal and draft open.
+Cancel or Escape with a dirty draft requires discard confirmation. Delivery is
+gated after projection, so muted observations still update shared deduplication
+state. Restart restores the saved choice. Other settings remain design proposals.
+
+Preferences includes an explicit Test notification action. It sends one synthetic
+alert through the OS adapter even when automatic alerts are disabled, without
+saving draft preferences or touching attention observations. The test has no PR
+activation URL or browser action. Report adapter acceptance as sent, not proof of
+on-screen display (desktop quiet modes may suppress it); report delivery failure
+inline. This makes the platform integration independently diagnosable.
+
+The native preferences shell follows the high-fidelity reference: a wide modal
+with a section rail, white bordered setting groups, a notification example, and
+persistent header/footer. At narrower sizes the rail becomes horizontal and the
+content scrolls independently. All nine planned sections remain discoverable;
+unimplemented options are labeled Planned and cannot change behavior. This keeps
+the approved information hierarchy while making the initial functional scope
+explicit. Acceptance: switching sections preserves unsaved notification edits,
+and Save/Cancel remain reachable at the minimum application window size.
+`docs/mockups/high/preferences.html` explores the layout and candidate options;
+simulated availability and future settings are explicitly marked. The prototype
+uses a contained scrolling body and persistent actions, adapts navigation to a
+horizontal rail on narrow windows, and retains native keyboard focus and labeled
+controls. Keeping this first step isolated permits option selection before adding
+storage, platform capability detection, and delivery-policy changes.
 
 Native clients isolate operating-system effects behind a client-local interface.
 The interface accepts already-classified, state-deduplicated requests and owns

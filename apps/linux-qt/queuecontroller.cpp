@@ -5,6 +5,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QFile>
+#include <QSaveFile>
 #include <QTime>
 #include <QTimeZone>
 
@@ -198,6 +200,11 @@ QueueController::QueueController(ReviewRadar::OsIntegration *osIntegration, QObj
 }
 
 void QueueController::initialize() {
+    QFile preferences(applicationDataFile("preferences.json"));
+    if (preferences.open(QIODevice::ReadOnly)) {
+        const auto object = QJsonDocument::fromJson(preferences.readAll()).object();
+        notificationsEnabled_ = object.value("notificationsEnabled").toBool(true);
+    }
     refreshTimer_.setInterval(5 * 60 * 1000);
     connect(&refreshTimer_, &QTimer::timeout, this, &QueueController::refresh);
     refreshTimer_.start();
@@ -370,6 +377,8 @@ void QueueController::runStateCommand(const QStringList &arguments) {
     stateProcess_.start();
 }
 void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds) {
+    // Observation/deduplication already happened in the shared state projection.
+    if (!notificationsEnabled_) return;
     for (const auto &eligibleId : eligibleIds) {
         const auto id = eligibleId.toString();
         QJsonObject card;
@@ -392,3 +401,19 @@ void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArra
     }
 }
 void QueueController::setStatus(const QString &status) { if (status_ != status) { status_ = status; emit statusChanged(); } }
+
+bool QueueController::savePreferences(bool notificationsEnabled) {
+    QSaveFile file(applicationDataFile("preferences.json"));
+    const auto bytes = QJsonDocument(QJsonObject{{"notificationsEnabled", notificationsEnabled}}).toJson();
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
+        return false;
+    notificationsEnabled_ = notificationsEnabled;
+    emit preferencesChanged();
+    return true;
+}
+
+bool QueueController::testNotification() {
+    return osIntegration_->showNotification({
+        "preferences-test", "Review Radar test notification",
+        "Desktop notifications are working. Your preferences have not changed.", {}});
+}

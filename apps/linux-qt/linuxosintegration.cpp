@@ -25,7 +25,8 @@ bool LinuxOsIntegration::showNotification(const NotificationRequest &request) {
                                  "org.freedesktop.Notifications", QDBusConnection::sessionBus());
     if (!notifications.isValid()) return false;
 
-    const QStringList actions{"open", "Open pull request"};
+    const QStringList actions = request.activationUrl.isEmpty()
+        ? QStringList{} : QStringList{"open", "Open pull request"};
     QVariantMap hints{{"desktop-entry", "review-radar-linux"}};
     QDBusReply<uint> reply = notifications.call(
         "Notify", "Review Radar", notificationIds_.value(request.id), QString(), request.title,
@@ -33,7 +34,8 @@ bool LinuxOsIntegration::showNotification(const NotificationRequest &request) {
     if (!reply.isValid()) return false;
 
     notificationIds_.insert(request.id, reply.value());
-    notificationUrls_.insert(reply.value(), request.activationUrl);
+    if (request.activationUrl.isEmpty()) notificationUrls_.remove(reply.value());
+    else notificationUrls_.insert(reply.value(), request.activationUrl);
     return true;
 }
 

@@ -9,6 +9,7 @@
 #include <QQuickWindow>
 #include <QTest>
 #include <QDir>
+#include <QTemporaryDir>
 
 // Presentation contract only: no network, SQLite, notifications, or host actions.
 class PreviewQueue final : public QObject {
@@ -22,12 +23,21 @@ class PreviewQueue final : public QObject {
     Q_PROPERTY(bool stale MEMBER stale CONSTANT)
     Q_PROPERTY(int sourceCount MEMBER sourceCount CONSTANT)
     Q_PROPERTY(int suppressedCount MEMBER suppressedCount CONSTANT)
+    Q_PROPERTY(bool notificationsEnabled MEMBER notificationsEnabled NOTIFY preferencesChanged)
 public:
     PullRequestModel model;
     QString view = "tailored", ranking = "tailored", status = "Cached on this device · Updated just now";
     QString opened, acknowledged, fingerprint;
     bool loading = false, refreshing = false, stale = false;
     int sourceCount = 3, suppressedCount = 0;
+    bool notificationsEnabled = true;
+    bool saveSucceeds = true;
+    bool notificationSucceeds = true;
+    Q_INVOKABLE bool testNotification() { return notificationSucceeds; }
+    Q_INVOKABLE bool savePreferences(bool enabled) {
+        if (!saveSucceeds) return false;
+        notificationsEnabled = enabled; emit preferencesChanged(); return true;
+    }
     PullRequestModel *pullRequests() { return &model; }
     Q_INVOKABLE void refresh() {}
     Q_INVOKABLE void openUrl(const QString &url) { opened = url; }
@@ -35,6 +45,7 @@ public:
     Q_INVOKABLE void snooze(const QString &, const QString &, const QString &) {}
     Q_INVOKABLE void copyText(const QString &) {}
 signals:
+    void preferencesChanged();
     void viewChanged();
     void rankingChanged();
 };
@@ -43,16 +54,18 @@ class RecordingOsIntegration final : public ReviewRadar::OsIntegration {
 public:
     bool showNotification(const ReviewRadar::NotificationRequest &request) override {
         notification = request;
-        return true;
+        return notificationSucceeds;
     }
     bool openUrl(const QUrl &value) override {
         opened = value;
         return true;
     }
     void copyText(const QString &value) override { copied = value; }
-    QString applicationDataFile(const QString &name) const override { return "/tmp/" + name; }
+    QTemporaryDir directory;
+    QString applicationDataFile(const QString &name) const override { return directory.filePath(name); }
 
     ReviewRadar::NotificationRequest notification;
+    bool notificationSucceeds = true;
     QUrl opened;
     QString copied;
 };
@@ -81,6 +94,19 @@ void WorkspaceTest::osIntegrationBoundary() {
     QCOMPARE(osIntegration.opened,
              QUrl("https://github.com/example/repository/pull/1"));
     QCOMPARE(osIntegration.copied, QString("https://github.com/example/repository/pull/1"));
+    QVERIFY(controller.notificationsEnabled());
+    QVERIFY(controller.savePreferences(false));
+    QueueController restarted(&osIntegration, nullptr);
+    QVERIFY(!restarted.notificationsEnabled());
+    QVERIFY(restarted.testNotification());
+    QCOMPARE(osIntegration.notification.id, QString("preferences-test"));
+    QVERIFY(osIntegration.notification.activationUrl.isEmpty());
+    QVERIFY(!restarted.notificationsEnabled());
+    osIntegration.notificationSucceeds = false;
+    QVERIFY(!restarted.testNotification());
+    osIntegration.directory.remove();
+    QVERIFY(!restarted.savePreferences(true));
+    QVERIFY(!restarted.notificationsEnabled());
 }
 
 void WorkspaceTest::workspace() {
@@ -201,12 +227,13 @@ void WorkspaceTest::workspace() {
         QTRY_VERIFY(findItem(window->contentItem(), "card-0"));
         auto *card = findItem(window->contentItem(), "card-0");
         QVERIFY(card);
+        QTest::qWait(50); // Settle the list layout before hit testing.
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
                            card->mapToScene(QPointF(30, 30)).toPoint());
         QTRY_VERIFY(window->findChild<QObject *>("detail-panel"));
         auto *nextCard = findItem(window->contentItem(), "card-1");
         QVERIFY(nextCard);
-        QCOMPARE(card->property("selected").toBool(), true);
+        QTRY_COMPARE(card->property("selected").toBool(), true);
         QTest::keyClick(window, Qt::Key_J);
         QTRY_COMPARE(nextCard->property("selected").toBool(), true);
         QCOMPARE(card->property("selected").toBool(), false);
@@ -245,6 +272,58 @@ void WorkspaceTest::workspace() {
         const auto previousAcknowledgement = queue.acknowledged;
         QVERIFY(QMetaObject::invokeMethod(confirmation, "reject"));
         QCOMPARE(queue.acknowledged, previousAcknowledgement);
+        auto *preferences = window->findChild<QObject *>("preferences-dialog");
+        QVERIFY(preferences);
+        QVERIFY(QMetaObject::invokeMethod(preferences, "open"));
+        QTRY_VERIFY(preferences->property("opened").toBool());
+        screenshot("preferences-narrow");
+        window->resize(1440, 1000);
+        QTest::qWait(50);
+        screenshot("preferences");
+        QTest::keyClick(window, Qt::Key_Space);
+        QTRY_VERIFY(!preferences->property("draftNotifications").toBool());
+        QVERIFY(queue.notificationsEnabled); // Draft has no effect until Save.
+        auto *testNotification = window->findChild<QObject *>("test-notification");
+        QVERIFY(testNotification);
+        QVERIFY(QMetaObject::invokeMethod(testNotification, "clicked"));
+        QVERIFY(preferences->property("testSucceeded").toBool());
+        QVERIFY(!preferences->property("testMessage").toString().isEmpty());
+        queue.notificationSucceeds = false;
+        QVERIFY(QMetaObject::invokeMethod(testNotification, "clicked"));
+        QVERIFY(!preferences->property("testSucceeded").toBool());
+        QVERIFY(preferences->property("dirty").toBool());
+        QVERIFY(queue.notificationsEnabled);
+        preferences->setProperty("section", "Desktop integration");
+        screenshot("preferences-integrations");
+        QVERIFY(preferences->property("dirty").toBool());
+        preferences->setProperty("section", "Notifications");
+        QVERIFY(!preferences->property("draftNotifications").toBool());
+        auto *save = window->findChild<QObject *>("save-preferences");
+        QVERIFY(save);
+        queue.saveSucceeds = false;
+        QVERIFY(QMetaObject::invokeMethod(save, "clicked"));
+        QVERIFY(preferences->property("visible").toBool());
+        QVERIFY(!preferences->property("errorMessage").toString().isEmpty());
+        QVERIFY(queue.notificationsEnabled);
+        queue.saveSucceeds = true;
+        QVERIFY(QMetaObject::invokeMethod(save, "clicked"));
+        QTRY_VERIFY(!preferences->property("visible").toBool());
+        QVERIFY(!queue.notificationsEnabled);
+        QVERIFY(QMetaObject::invokeMethod(preferences, "open"));
+        QTRY_VERIFY(preferences->property("opened").toBool());
+        QVERIFY(!preferences->property("draftNotifications").toBool());
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!preferences->property("visible").toBool());
+        QVERIFY(QMetaObject::invokeMethod(preferences, "open"));
+        QTRY_VERIFY(preferences->property("opened").toBool());
+        QTest::keyClick(window, Qt::Key_Space);
+        QTest::keyClick(window, Qt::Key_Escape);
+        auto *discard = window->findChild<QObject *>("discard-preferences");
+        QVERIFY(discard);
+        QTRY_VERIFY(discard->property("visible").toBool());
+        QVERIFY(QMetaObject::invokeMethod(discard, "accept"));
+        QTRY_VERIFY(!preferences->property("visible").toBool());
+        QVERIFY(!queue.notificationsEnabled);
         // A cache update retains selection by identity and refreshes its data.
         auto replacement = fixture.array();
         auto selected = replacement.at(1).toObject();
