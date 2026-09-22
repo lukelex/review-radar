@@ -5,24 +5,11 @@ query HydratePullRequests($ids: [ID!]!, $eventLimit: Int!) {
       author { login __typename }
       repository { nameWithOwner }
       reviewDecision mergeable mergeStateStatus
-      reviewRequests(first: 100) {
-        totalCount
-        pageInfo { hasNextPage }
-        nodes {
-          requestedReviewer {
-            __typename
-            ... on User { login }
-            ... on Team { slug organization { login } }
-          }
-        }
-      }
       reviews(last: $eventLimit) {
-        totalCount
         pageInfo { hasPreviousPage }
         nodes { id author { login __typename } state submittedAt updatedAt }
       }
       timelineItems(last: $eventLimit, itemTypes: [READY_FOR_REVIEW_EVENT, CONVERT_TO_DRAFT_EVENT, CLOSED_EVENT, REOPENED_EVENT]) {
-        totalCount
         pageInfo { hasPreviousPage }
         nodes {
           __typename
@@ -33,24 +20,19 @@ query HydratePullRequests($ids: [ID!]!, $eventLimit: Int!) {
         }
       }
       comments(last: $eventLimit) {
-        totalCount
         pageInfo { hasPreviousPage }
         nodes { id author { login __typename } createdAt updatedAt }
       }
       reviewThreads(last: $eventLimit) {
-        totalCount
         pageInfo { hasPreviousPage }
         nodes {
-          id isResolved
           comments(last: $eventLimit) {
-            totalCount
             pageInfo { hasPreviousPage }
             nodes { id author { login __typename } createdAt updatedAt }
           }
         }
       }
       commits(last: $eventLimit) {
-        totalCount
         pageInfo { hasPreviousPage }
         nodes {
           commit {

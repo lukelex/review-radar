@@ -784,6 +784,9 @@ mod tests {
         assert!(HYDRATE_QUERY.contains("hasNextPage"));
         assert!(!HYDRATE_QUERY.contains("... on CheckRun"));
         assert!(!HYDRATE_QUERY.contains("... on StatusContext"));
+        assert!(!HYDRATE_QUERY.contains("reviewRequests"));
+        assert!(!HYDRATE_QUERY.contains("isResolved"));
+        assert!(!HYDRATE_QUERY.contains("reviews(last: $eventLimit) {\n        totalCount"));
     }
 
     #[test]

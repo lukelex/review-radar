@@ -45,11 +45,13 @@ Each successful run appends one immutable capture in a single transaction:
   and remaining rate-limit information.
 - `searches`: exact search query, GitHub's reported count, fetched count/pages, and
   whether collection was truncated.
-- `pull_requests`: indexed summary fields plus the complete GraphQL PR object as
-  JSON. The JSON retains bounded reviews, comments, review threads, review requests,
-  and latest-commit aggregate check state. Check-context counts and pagination are
-  retained, but individual check-context nodes are omitted because no projection
-  consumes them.
+- `pull_requests`: indexed summary fields plus the bounded GraphQL PR object as
+  JSON. The JSON retains only review, comment, review-thread comment, lifecycle,
+  commit-diff, and latest-commit aggregate check evidence consumed by projection.
+  Review-request nodes and unused connection totals are not fetched; review
+  membership is already explicit in `search_memberships`. Check-context counts
+  and pagination are retained, but individual check-context nodes are omitted
+  because no projection consumes them.
 - `search_memberships`: many-to-many links recording why each PR was discovered.
 
 The database contains real repository names, titles, URLs, actors, node IDs, and

@@ -76,8 +76,9 @@ Design: [attention and review friction](docs/attention-and-review-friction.md).
 - [x] **Parallelize independent searches:** search categories now run concurrently
   with sequential pagination per category; a low remaining rate-limit budget
   falls back to independent sequential workers.
-- [ ] **Reduce nested payloads:** fetch detailed event data only when required by
-  the selected view, or tune the bounded event window based on measurements.
+- [x] **Reduce nested payloads:** remove unused review-request and connection
+  totals from hydration while retaining the bounded evidence required by all
+  workspace projections. Check-context nodes remain omitted.
 - [x] **Add sync progress reporting:** the collector reports search/page and
   hydration-batch progress to native clients.
 - [x] **Instrument collector requests:** the collector reports request duration,

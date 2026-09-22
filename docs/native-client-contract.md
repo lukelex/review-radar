@@ -65,6 +65,11 @@ slow, expensive, or rate-limit-constrained requests. A failed or timed-out
 request retains the existing stale-fallback behavior; adaptive sizing must not
 create a partial projection.
 
+Hydration requests omit unused review-request nodes, connection totals, and
+individual check-context nodes. They retain the bounded review, comment,
+review-thread comment, lifecycle, commit-diff, and aggregate check evidence
+needed to produce the same complete shared projection.
+
 During refresh it also emits progress for each search/page and hydration batch.
 Native clients should surface that as concise progress copy (for example,
 “Searching 3 of 6 · page 2 of 4” or “Hydrating batch 4 of 9”), while retaining
