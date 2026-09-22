@@ -99,7 +99,8 @@ the shell runs the collector and queue helpers, decodes queue stdout, and render
 the ranked projection. It keeps macOS-only UI/integration work out of the Rust
 core and does not make Swift a second source of GitHub/domain behavior. Its
 shell-local `MacOsIntegration` owns Application Support paths, default-browser
-opening, and clipboard effects.
+opening, and clipboard effects. The shell sends acknowledgement and snooze back
+to the state helper with the projection's current fingerprint.
 
 On Linux, `LinuxOsIntegration` delivers notifications through
 `org.freedesktop.Notifications`. The client receives only the queue projection's

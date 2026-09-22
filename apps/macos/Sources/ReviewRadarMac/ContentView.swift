@@ -3,54 +3,131 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var queue: QueueStore
     @State private var search = ""
+    @State private var showAcknowledgement = false
+    @State private var copied = false
 
     private var visibleCards: [PullRequestCard] {
         let needle = search.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return queue.cards }
         return queue.cards.filter { card in
-            [card.title, card.repository, String(card.number)].localizedCaseInsensitiveContains(needle)
+            [card.title, card.repository, String(card.number)]
+                .localizedCaseInsensitiveContains(needle)
         }
     }
 
     var body: some View {
         NavigationSplitView {
-            List {
-                Label(Workspace.tailored.title, systemImage: icon(for: .tailored))
+            List(selection: workspaceSelection) {
+                ForEach(Workspace.allCases) { workspace in
+                    Label(workspace.title, systemImage: workspace.symbol).tag(workspace)
+                }
             }
             .navigationTitle("Review Radar")
-            .safeAreaInset(edge: .bottom) {
-                Text("Local to this device")
-                    .font(.caption).foregroundStyle(.secondary).padding()
-            }
+            .safeAreaInset(edge: .bottom) { localStateSummary }
         } content: {
-            List(selection: $queue.selectedCardID) {
-                if visibleCards.isEmpty { emptyState }
-                ForEach(visibleCards) { card in CardRow(card: card).tag(card.id) }
+            VStack(spacing: 0) {
+                workspaceHeader
+                List(selection: $queue.selectedCardID) {
+                    if visibleCards.isEmpty { emptyState }
+                    ForEach(visibleCards) { card in
+                        CardRow(card: card)
+                            .tag(card.id)
+                            .contextMenu { cardActions(card) }
+                    }
+                }
+                .searchable(text: $search, prompt: "Search title, repository, or PR number")
+                .safeAreaInset(edge: .bottom) { statusLine }
             }
-            .searchable(text: $search, prompt: "Search title, repository, or PR number")
-            .navigationTitle(Workspace.tailored.title)
-            .toolbar { ToolbarItem(placement: .primaryAction) { refreshButton } }
-            .safeAreaInset(edge: .bottom) { statusLine }
+            .navigationTitle(queue.workspace.title)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) { refreshButton }
+                ToolbarItem(placement: .automatic) {
+                    Picker("Sort pull requests", selection: $queue.ranking) {
+                        ForEach(Ranking.allCases) { ranking in Text(ranking.title).tag(ranking) }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel("Sort pull requests")
+                }
+            }
         } detail: {
-            if let card = queue.cards.first(where: { $0.id == queue.selectedCardID }) {
-                DetailView(card: card)
+            if let card = queue.selectedCard {
+                DetailView(card: card, copied: $copied) { action in
+                    perform(action, for: card)
+                }
             } else {
-                ContentUnavailableView("Select a pull request", systemImage: "rectangle.stack", description: Text("The ranked queue remains visible while you inspect details."))
+                ContentUnavailableView(
+                    "Select a pull request",
+                    systemImage: "rectangle.stack",
+                    description: Text("The ranked queue remains visible while you inspect details.")
+                )
             }
         }
         .frame(minWidth: 860, minHeight: 600)
+        .confirmationDialog(
+            "Mark pull request as read?",
+            isPresented: $showAcknowledgement,
+            titleVisibility: .visible
+        ) {
+            Button("Mark read") {
+                if let card = queue.selectedCard { Task { _ = await queue.acknowledge(card) } }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This pull request stays quiet until a meaningful event changes.")
+        }
+        .alert("Could not update local state", isPresented: actionErrorBinding) {
+            Button("OK", role: .cancel) { queue.clearActionError() }
+        } message: {
+            Text(queue.actionError ?? "Try again.")
+        }
+    }
+
+    private var actionErrorBinding: Binding<Bool> {
+        Binding(get: { queue.actionError != nil }, set: { if !$0 { queue.clearActionError() } })
+    }
+
+    private var workspaceSelection: Binding<Workspace?> {
+        Binding(
+            get: { queue.workspace },
+            set: { if let workspace = $0 { queue.workspace = workspace } }
+        )
+    }
+
+    private var workspaceHeader: some View {
+        HStack(alignment: .bottom, spacing: 16) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("WORKSPACE / \(queue.workspace.title.uppercased())")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(queue.workspace.title).font(.title2.weight(.semibold))
+                Text(queue.workspace.subtitle).font(.subheadline).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text("\(visibleCards.count) \(visibleCards.count == 1 ? "pull request" : "pull requests")")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 9).padding(.vertical, 6)
+                .background(.quaternary, in: Capsule())
+        }
+        .padding(.horizontal, 24).padding(.vertical, 20)
     }
 
     private var refreshButton: some View {
-        Button { Task { await queue.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-            .disabled(queue.phase == .syncing || queue.phase == .loading)
+        Button { Task { await queue.refresh() } } label: {
+            Label("Refresh", systemImage: "arrow.clockwise")
+        }
+        .disabled(queue.phase == .syncing || queue.phase == .loading)
+        .keyboardShortcut("r", modifiers: [.command])
     }
 
     @ViewBuilder private var emptyState: some View {
         switch queue.phase {
-        case .loading: ContentUnavailableView("Loading workspace", systemImage: "arrow.triangle.2.circlepath")
-        case .failed(let message): ContentUnavailableView("Could not load workspace", systemImage: "exclamationmark.triangle", description: Text(message))
-        default: ContentUnavailableView("No pull requests here", systemImage: "checkmark.circle", description: Text("There are no matching cards in this workspace."))
+        case .loading:
+            ContentUnavailableView("Loading workspace", systemImage: "arrow.triangle.2.circlepath")
+        case .failed(let message):
+            ContentUnavailableView("Could not load workspace", systemImage: "exclamationmark.triangle", description: Text(message))
+        default:
+            ContentUnavailableView("No pull requests here", systemImage: "checkmark.circle", description: Text("There are no matching cards in this workspace."))
         }
     }
 
@@ -59,8 +136,25 @@ struct ContentView: View {
             Circle().frame(width: 6, height: 6).foregroundStyle(statusColor)
             Text(statusText).font(.caption).foregroundStyle(.secondary)
             Spacer()
-            if queue.suppressedCount > 0 { Text("\(queue.suppressedCount) hidden on this device").font(.caption).foregroundStyle(.secondary) }
-        }.padding(.horizontal).padding(.vertical, 8).background(.bar)
+            if queue.suppressedCount > 0 {
+                Text("\(queue.suppressedCount) hidden on this device")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal).padding(.vertical, 8).background(.bar)
+    }
+
+    private var localStateSummary: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("LOCAL TO THIS DEVICE").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Read and snoozed items stay quiet until something meaningful changes.")
+                .font(.caption).foregroundStyle(.secondary)
+            if queue.suppressedCount > 0 {
+                Text("\(queue.suppressedCount) hidden in this view")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding()
     }
 
     private var statusText: String {
@@ -72,45 +166,193 @@ struct ContentView: View {
         case .failed(let message): "Could not load workspace · \(message)"
         }
     }
-    private var statusColor: Color { if case .failed = queue.phase { return .red }; if case .stale = queue.phase { return .orange }; return .indigo }
-    private func icon(for workspace: Workspace) -> String { switch workspace { case .tailored: "scope"; case .action: "flag"; case .myPrs: "diamond"; case .following: "eye"; case .recent: "clock" } }
+
+    private var statusColor: Color {
+        if case .failed = queue.phase { return .red }
+        if case .stale = queue.phase { return .orange }
+        return .indigo
+    }
+
+    @ViewBuilder private func cardActions(_ card: PullRequestCard) -> some View {
+        Button(card.explanation.reasons.first?.nextAction.label ?? "Open pull request") {
+            openNextAction(for: card)
+        }
+        Button("Copy link") { queue.copyText(card.url) }
+        Divider()
+        Button("Mark read") { queue.selectedCardID = card.id; showAcknowledgement = true }
+        Menu("Snooze") {
+            ForEach(SnoozePreset.allCases) { preset in
+                Button(preset.title) { Task { _ = await queue.snooze(card, preset: preset) } }
+            }
+        }
+    }
+
+    private func perform(_ action: DetailAction, for card: PullRequestCard) {
+        switch action {
+        case .openNextAction: openNextAction(for: card)
+        case .openCanonical: if let url = URL(string: card.url) { queue.openURL(url) }
+        case .copy: queue.copyText(card.url); copied = true
+        case .acknowledge: showAcknowledgement = true
+        case .snooze(let preset): Task { _ = await queue.snooze(card, preset: preset) }
+        }
+    }
+
+    private func openNextAction(for card: PullRequestCard) {
+        let destination = card.explanation.reasons.first?.nextAction.url ?? card.url
+        if let url = URL(string: destination) { queue.openURL(url) }
+    }
 }
 
 private struct CardRow: View {
     let card: PullRequestCard
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack { Text("\(card.repository) #\(card.number)").font(.caption).foregroundStyle(.secondary); Spacer(); Text(card.updatedAt).font(.caption2).foregroundStyle(.tertiary) }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("\(card.repository) #\(card.number)").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Text(Display.age(card.updatedAt)).font(.caption2).foregroundStyle(.tertiary)
+            }
             Text(card.title).font(.headline).lineLimit(2)
-            Text(card.explanation.heading).font(.subheadline).foregroundStyle(.indigo).lineLimit(1)
-            Text(card.explanation.reasons.first?.summary ?? card.actionLabel).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            HStack { Text(card.actionLabel).font(.caption.weight(.semibold)).padding(.horizontal, 7).padding(.vertical, 4).background(.indigo.opacity(0.12), in: Capsule()); if let friction = card.reviewFriction { Text("Friction · \(friction.level ?? friction.status)").font(.caption).foregroundStyle(.secondary) } }
-        }.padding(.vertical, 6)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(card.explanation.heading).font(.subheadline.weight(.semibold))
+                    .foregroundStyle(card.attentionRequired ? .indigo : .secondary)
+                ForEach(card.explanation.reasons, id: \.code) { reason in
+                    Text(reason.summary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+            HealthSummary(health: card.explanation.health)
+            HStack(spacing: 7) {
+                Text(card.actionLabel).font(.caption.weight(.semibold)).padding(.horizontal, 7).padding(.vertical, 4)
+                    .background(card.attentionRequired ? .indigo.opacity(0.12) : .quaternary, in: Capsule())
+                Text(Display.humanize(card.lifecycle)).font(.caption).foregroundStyle(.secondary)
+                FrictionLabel(friction: card.reviewFriction)
+            }
+        }
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(card.repository) pull request \(card.number). \(card.title). \(card.explanation.heading).")
     }
+}
+
+private enum DetailAction {
+    case openNextAction, openCanonical, copy, acknowledge, snooze(SnoozePreset)
 }
 
 private struct DetailView: View {
     let card: PullRequestCard
+    @Binding var copied: Bool
+    let perform: (DetailAction) -> Void
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 20) {
                 Text("\(card.repository) #\(card.number)").font(.subheadline).foregroundStyle(.secondary)
                 Text(card.title).font(.title2.weight(.semibold))
-                GroupBox(card.explanation.heading) { VStack(alignment: .leading, spacing: 9) { ForEach(card.explanation.reasons, id: \.code) { reason in Text(reason.summary) } } }
-                GroupBox("Health") { LabeledContent("Review", value: card.explanation.health.reviewDecision ?? (card.explanation.health.isDraft ? "Draft" : "Unknown")); LabeledContent("Checks", value: card.explanation.health.checks ?? "Unknown"); LabeledContent("Merge", value: card.explanation.health.mergeable) }
-                HStack {
-                    if let url = URL(string: card.explanation.reasons.first?.nextAction?.url ?? card.url) {
-                        Button(card.explanation.reasons.first?.nextAction?.label ?? "Open pull request") {
-                            queue.openURL(url)
+                HStack(spacing: 8) {
+                    Text(Display.humanize(card.lifecycle)).badgeStyle()
+                    Text(card.actionLabel).badgeStyle()
+                }
+                GroupBox(card.explanation.heading) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(card.explanation.reasons, id: \.code) { reason in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(reason.summary)
+                                Text("Evidence: \(reason.evidence.map(Display.humanize).joined(separator: ", "))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
                         }
-                        .buttonStyle(.borderedProminent)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                HStack {
+                    Button(card.explanation.reasons.first?.nextAction.label ?? "Open pull request") {
+                        perform(.openNextAction)
+                    }.buttonStyle(.borderedProminent)
+                    Button("Mark read") { perform(.acknowledge) }
+                    Menu("Snooze") {
+                        ForEach(SnoozePreset.allCases) { preset in
+                            Button(preset.title) { perform(.snooze(preset)) }
+                        }
                     }
-                    if let url = URL(string: card.url) {
-                        Button("Copy link") { queue.copyText(url.absoluteString) }
+                    Button(copied ? "Copied" : "Copy link") { perform(.copy) }
+                }
+                GroupBox("PR health") { HealthSummary(health: card.explanation.health).frame(maxWidth: .infinity, alignment: .leading) }
+                GroupBox("Review friction") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        FrictionLabel(friction: card.reviewFriction)
+                        Text(Display.frictionDetail(card.reviewFriction)).font(.subheadline).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                GroupBox("Activity") {
+                    if card.events.isEmpty {
+                        Text("No captured activity is available.").foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(card.events) { event in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(Display.humanize(event.kind)) · \(event.actor ?? "Unknown actor")")
+                                    Text([event.state.map(Display.humanize), Display.age(event.occurredAt)].compactMap { $0 }.joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
                     }
                 }
-                Spacer()
-            }.padding(28)
-        }.navigationTitle("Pull request")
+                Button("Open full conversation on GitHub") { perform(.openCanonical) }
+                Spacer(minLength: 8)
+            }
+            .padding(28)
+        }
+        .navigationTitle("Pull request")
+    }
+}
+
+private struct HealthSummary: View {
+    let health: PullRequestCard.Health
+
+    var body: some View {
+        HStack(spacing: 7) {
+            if let review = health.reviewDecision {
+                HealthChip(label: "Review", value: Display.humanize(review), tone: review == "APPROVED" ? .green : .orange)
+            } else if health.isDraft {
+                HealthChip(label: "Review", value: "Draft", tone: .secondary)
+            }
+            if let checks = health.checks {
+                HealthChip(label: "Checks", value: Display.humanize(checks), tone: ["FAILURE", "ERROR"].contains(checks) ? .red : checks == "SUCCESS" ? .green : .orange)
+            }
+            HealthChip(label: "Merge", value: Display.humanize(health.mergeable), tone: health.mergeable == "MERGEABLE" ? .green : health.mergeable == "CONFLICTING" ? .orange : .secondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct HealthChip: View {
+    let label: String
+    let value: String
+    let tone: Color
+
+    var body: some View {
+        Text("\(label): \(value)").font(.caption)
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .foregroundStyle(tone)
+            .background(tone.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+private struct FrictionLabel: View {
+    let friction: PullRequestCard.ReviewFriction
+
+    var body: some View {
+        Text("Friction: \(Display.humanize(friction.level ?? friction.status))")
+            .font(.caption).foregroundStyle(.secondary)
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+private extension Text {
+    func badgeStyle() -> some View {
+        font(.caption).foregroundStyle(.secondary).padding(.horizontal, 7).padding(.vertical, 4)
+            .background(.quaternary, in: Capsule())
     }
 }
