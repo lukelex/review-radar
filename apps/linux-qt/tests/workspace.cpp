@@ -39,9 +39,28 @@ signals:
     void rankingChanged();
 };
 
+class RecordingOsIntegration final : public ReviewRadar::OsIntegration {
+public:
+    bool showNotification(const ReviewRadar::NotificationRequest &request) override {
+        notification = request;
+        return true;
+    }
+    bool openUrl(const QUrl &value) override {
+        opened = value;
+        return true;
+    }
+    void copyText(const QString &value) override { copied = value; }
+    QString applicationDataFile(const QString &name) const override { return "/tmp/" + name; }
+
+    ReviewRadar::NotificationRequest notification;
+    QUrl opened;
+    QString copied;
+};
+
 class WorkspaceTest final : public QObject {
     Q_OBJECT
 private slots:
+    void osIntegrationBoundary();
     void workspace();
 };
 
@@ -50,6 +69,18 @@ QQuickItem *findItem(QQuickItem *parent, const QString &name) {
     for (auto *child : parent->childItems())
         if (auto *found = findItem(child, name)) return found;
     return nullptr;
+}
+
+void WorkspaceTest::osIntegrationBoundary() {
+    RecordingOsIntegration osIntegration;
+    QueueController controller(&osIntegration, nullptr);
+
+    controller.openUrl("https://github.com/example/repository/pull/1");
+    controller.copyText("https://github.com/example/repository/pull/1");
+
+    QCOMPARE(osIntegration.opened,
+             QUrl("https://github.com/example/repository/pull/1"));
+    QCOMPARE(osIntegration.copied, QString("https://github.com/example/repository/pull/1"));
 }
 
 void WorkspaceTest::workspace() {

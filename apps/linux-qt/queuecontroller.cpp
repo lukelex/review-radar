@@ -1,20 +1,12 @@
 #include "queuecontroller.h"
+#include "linuxosintegration.h"
 
-#include <QClipboard>
-#include <QDBusConnection>
-#include <QDBusInterface>
-#include <QDBusMessage>
-#include <QDBusReply>
-#include <QDesktopServices>
-#include <QDir>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QStandardPaths>
 #include <QTime>
 #include <QTimeZone>
-#include <QUrl>
 
 namespace {
 QVariantList eventList(const QJsonArray &source) {
@@ -195,7 +187,17 @@ void PullRequestModel::replace(const QJsonArray &cards) {
     endResetModel();
 }
 
-QueueController::QueueController(QObject *parent) : QObject(parent), model_(this) {
+QueueController::QueueController(QObject *parent)
+    : QObject(parent), model_(this), osIntegration_(new ReviewRadar::LinuxOsIntegration(this)) {
+    initialize();
+}
+
+QueueController::QueueController(ReviewRadar::OsIntegration *osIntegration, QObject *parent)
+    : QObject(parent), model_(this), osIntegration_(osIntegration) {
+    initialize();
+}
+
+void QueueController::initialize() {
     refreshTimer_.setInterval(5 * 60 * 1000);
     connect(&refreshTimer_, &QTimer::timeout, this, &QueueController::refresh);
     refreshTimer_.start();
@@ -207,10 +209,8 @@ QueueController::QueueController(QObject *parent) : QObject(parent), model_(this
         emit controlHeldChanged();
     });
     modifierTimer_.start();
-    QDBusConnection::sessionBus().connect(
-        "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
-        "org.freedesktop.Notifications", "ActionInvoked", this,
-        SLOT(notificationActionInvoked(uint,QString)));
+    connect(osIntegration_, &ReviewRadar::OsIntegration::notificationActivated, this,
+            [this](const QUrl &url) { openUrl(url.toString()); });
     connect(&collectorProcess_, &QProcess::finished, this,
              [this](int exitCode, QProcess::ExitStatus exitStatus) {
          refreshing_ = false;
@@ -335,19 +335,9 @@ void QueueController::loadProjection(bool collectAfter) {
 }
 
 void QueueController::openUrl(const QString &url) {
-    const auto bus = QDBusConnection::sessionBus();
-    if (bus.isConnected()) {
-        QDBusMessage request = QDBusMessage::createMethodCall(
-            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
-            "org.freedesktop.portal.OpenURI", "OpenURI");
-        request << QString() << url << QVariant::fromValue(QVariantMap{});
-        const auto reply = bus.call(request, QDBus::AutoDetect, 3000);
-        if (reply.type() == QDBusMessage::ReplyMessage) return;
-    }
-    // Native sessions without an available portal retain the desktop fallback.
-    QDesktopServices::openUrl(QUrl(url));
+    osIntegration_->openUrl(QUrl(url));
 }
-void QueueController::copyText(const QString &text) { QGuiApplication::clipboard()->setText(text); }
+void QueueController::copyText(const QString &text) { osIntegration_->copyText(text); }
 void QueueController::acknowledge(const QString &id, const QString &fingerprint) {
     runStateCommand({"acknowledge", "--pull-request-id", id, "--fingerprint", fingerprint});
 }
@@ -357,12 +347,7 @@ void QueueController::snooze(const QString &id, const QString &fingerprint, cons
 }
 
 QString QueueController::applicationDataFile(const QString &name) const {
-    // Keep Linux aligned with the shared local-state contract instead of Qt's
-    // organization/application nesting ("Review Radar/Review Radar").
-    const auto dataRoot = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-    const auto directory = QDir(dataRoot).filePath(QStringLiteral("review-radar"));
-    QDir().mkpath(directory);
-    return QDir(directory).filePath(name);
+    return osIntegration_->applicationDataFile(name);
 }
 QString QueueController::captureDatabase() const {
     const auto configured = qEnvironmentVariable("REVIEW_RADAR_CAPTURE_DATABASE");
@@ -385,9 +370,6 @@ void QueueController::runStateCommand(const QStringList &arguments) {
     stateProcess_.start();
 }
 void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds) {
-    QDBusInterface notifications("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
-                                 "org.freedesktop.Notifications", QDBusConnection::sessionBus());
-    if (!notifications.isValid()) return;
     for (const auto &eligibleId : eligibleIds) {
         const auto id = eligibleId.toString();
         QJsonObject card;
@@ -405,16 +387,8 @@ void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArra
                               .arg(card.value("repository").toString())
                               .arg(card.value("number").toInt())
                               .arg(reason);
-        const QStringList actions{"open", "Open pull request"};
-        QVariantMap hints{{"desktop-entry", "review-radar-linux"}};
-        QDBusReply<uint> reply = notifications.call("Notify", "Review Radar", 0U, QString(),
-                                                     title, body, actions, hints, -1);
-        if (reply.isValid()) notificationUrls_.insert(reply.value(), card.value("url").toString());
-    }
-}
-void QueueController::notificationActionInvoked(uint notificationId, const QString &action) {
-    if (action == "open" && notificationUrls_.contains(notificationId)) {
-        openUrl(notificationUrls_.take(notificationId));
+        osIntegration_->showNotification({card.value("currentFingerprint").toString(), title, body,
+                                           QUrl(card.value("url").toString())});
     }
 }
 void QueueController::setStatus(const QString &status) { if (status_ != status) { status_ = status; emit statusChanged(); } }

@@ -229,8 +229,27 @@ Acceptance criteria:
 - Existing override environment variables continue to take precedence.
 - The path contains no GitHub token or other credential.
 
-Implementation reference: `QueueController::applicationDataFile` in
-`apps/linux-qt/queuecontroller.cpp`.
+Implementation reference: `LinuxOsIntegration::applicationDataFile` in
+`apps/linux-qt/linuxosintegration.cpp`.
+
+### Native OS-effect adapters
+
+Native clients isolate operating-system effects behind a client-local interface.
+The interface accepts already-classified, state-deduplicated requests and owns
+their platform delivery, including notification actions. It must not classify PRs,
+decide notification eligibility, or access GitHub.
+
+Acceptance criteria:
+
+- Queue and view-model code import no platform notification API directly.
+- A notification request carries a stable ID, presentation text, and optional
+  activation URL; the OS adapter may use the ID to replace a prior visible alert.
+- A notification activation reaches the same browser-opening command path as a
+  card action.
+- The adapter can expand to URL, clipboard, and storage-path effects without
+  changing domain, state, or queue semantics.
+
+Linux reference: `OsIntegration` and `LinuxOsIntegration` in `apps/linux-qt/`.
 
 ### Atomic projections over progressive classification
 

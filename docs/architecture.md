@@ -51,6 +51,12 @@ for a notification.
 receive only transitions already deduplicated by `crates/state`; a native client
 implements `PlatformEffects` for its own toolkit and operating system.
 
+Each native shell must also isolate host effects behind a shell-local OS adapter.
+The adapter owns platform APIs such as notification delivery, notification action
+handling, URL launching, clipboard access, and application-data paths; queue and
+view-model code depend only on its interface. Linux Qt's first adapter is
+`OsIntegration`, with `LinuxOsIntegration` providing the DBus and portal details.
+
 ## Client boundaries
 
 Clients receive an already-ranked snapshot plus explicit commands. `Acknowledge`
@@ -76,9 +82,10 @@ It sends acknowledgement and snooze commands back to the state executable. Its
 QML layer only presents cards and client-side text search; it does not duplicate
 GitHub, domain, ranking, or SQLite behavior.
 
-On Linux, notification delivery uses `org.freedesktop.Notifications`. The client
-receives only the queue projection's persisted `notificationEligibleIds`, and
-opens the relevant PR in the browser from the notification action.
+On Linux, `LinuxOsIntegration` delivers notifications through
+`org.freedesktop.Notifications`. The client receives only the queue projection's
+persisted `notificationEligibleIds`, and its OS adapter opens the relevant PR in
+the browser from the notification action.
 
 ## Local state
 

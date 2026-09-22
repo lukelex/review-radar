@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QVariantList>
 
+#include "osintegration.h"
+
 class PullRequestModel final : public QAbstractListModel {
     Q_OBJECT
 
@@ -56,6 +58,7 @@ class QueueController final : public QObject {
 
 public:
     explicit QueueController(QObject *parent = nullptr);
+    QueueController(ReviewRadar::OsIntegration *osIntegration, QObject *parent);
     PullRequestModel *pullRequests();
     QString view() const;
     void setView(const QString &view);
@@ -92,6 +95,7 @@ private:
     QString captureDatabase() const;
     QString stateDatabase() const;
     QString commandFromEnvironment(const char *name, const QString &fallback) const;
+    void initialize();
     void loadProjection(bool collectAfter = false);
     void startCollection();
     void runStateCommand(const QStringList &arguments);
@@ -99,8 +103,6 @@ private:
     void setStatus(const QString &status);
 
 private slots:
-    void notificationActionInvoked(uint notificationId, const QString &action);
-
 private:
     PullRequestModel model_;
     QString view_ = QStringLiteral("tailored");
@@ -118,5 +120,5 @@ private:
     QTimer refreshTimer_;
     QTimer modifierTimer_;
     bool controlHeld_ = false;
-    QHash<uint, QString> notificationUrls_;
+    ReviewRadar::OsIntegration *osIntegration_;
 };

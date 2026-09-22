@@ -16,6 +16,9 @@ endif()
 
 qt_add_executable(review-radar-linux
     main.cpp
+    linuxosintegration.cpp
+    linuxosintegration.h
+    osintegration.h
     queuecontroller.cpp
     queuecontroller.h
 )
@@ -42,7 +45,7 @@ target_link_libraries(review-radar-linux PRIVATE Qt6::Core Qt6::DBus Qt6::Gui Qt
 
 if(BUILD_TESTING)
     find_package(Qt6 REQUIRED COMPONENTS Test)
-    qt_add_executable(review-radar-ui-test tests/workspace.cpp queuecontroller.cpp queuecontroller.h)
+    qt_add_executable(review-radar-ui-test tests/workspace.cpp linuxosintegration.cpp linuxosintegration.h osintegration.h queuecontroller.cpp queuecontroller.h)
     qt_add_resources(review-radar-ui-test brand
         PREFIX "/assets" BASE "${brand_assets}" FILES "${brand_assets}/logo.svg"
     )
