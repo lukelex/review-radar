@@ -59,6 +59,7 @@ fixture, rather than the SVG generator:
 - [Implemented narrow window (860 × 640)](implemented-narrow.png)
 - [Implemented Preferences](implemented-preferences.png)
 - [Implemented Preferences at 860 × 640](implemented-preferences-narrow.png)
+- [Implemented Desktop integration preferences](implemented-desktop-integration.png)
 
 Set `UI_SCREENSHOT_DIR` to an existing writable directory when running
 `review-radar-ui-test` to capture these three frames again. Screenshots use

@@ -7,6 +7,19 @@ ApplicationWindow {
     width: 1440; height: 940
     minimumWidth: 860; minimumHeight: 600
     visible: true
+    onClosing: function(close) {
+        if (queue.shouldCloseToTray()) {
+            close.accepted = false
+            root.hide()
+        }
+    }
+    function restoreWindow() { root.showNormal(); root.raise(); root.requestActivate() }
+    Connections {
+        target: queue
+        function onShowWorkspaceRequested() { root.restoreWindow() }
+        function onShowPreferencesRequested() { root.restoreWindow(); preferencesDialog.open() }
+        function onQuitRequested() { Qt.quit() }
+    }
     title: "Review Radar"
     color: Style.canvas
     font.family: "DejaVu Sans"

@@ -52,6 +52,11 @@ and bar integrations have independent switches; dependent settings stay visible
 with explanatory disabled states. Future-option previews carry an explicit design
 exploration label. The prototype establishes presentation, not shipped settings.
 
+Native Desktop integration now offers tray, attention-dot, and close-to-tray
+switches in the same bordered setting groups. Unsupported tray environments have
+an explicit explanation. Quickshell stays labeled Planned. An attention dot is
+paired with a tooltip count and its current-workspace scope.
+
 ## Brand
 
 Use the repository SVG directly for the sidebar mark and application icon. It

@@ -56,6 +56,10 @@ class QueueController final : public QObject {
     Q_PROPERTY(int sourceCount READ sourceCount NOTIFY countsChanged)
     Q_PROPERTY(int suppressedCount READ suppressedCount NOTIFY countsChanged)
     Q_PROPERTY(bool notificationsEnabled READ notificationsEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool trayEnabled READ trayEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool closeToTray READ closeToTray NOTIFY preferencesChanged)
+    Q_PROPERTY(bool trayAttentionDot READ trayAttentionDot NOTIFY preferencesChanged)
+    Q_PROPERTY(bool trayAvailable READ trayAvailable NOTIFY trayAvailabilityChanged)
 
 public:
     explicit QueueController(QObject *parent = nullptr);
@@ -74,6 +78,12 @@ public:
     int suppressedCount() const;
     bool notificationsEnabled() const { return notificationsEnabled_; }
     Q_INVOKABLE bool savePreferences(bool notificationsEnabled);
+    Q_INVOKABLE bool saveDesktopPreferences(bool notificationsEnabled, bool trayEnabled, bool closeToTray, bool attentionDot);
+    bool trayEnabled() const { return trayEnabled_; }
+    bool closeToTray() const { return closeToTray_; }
+    bool trayAttentionDot() const { return trayAttentionDot_; }
+    bool trayAvailable() const { return osIntegration_->trayAvailable(); }
+    Q_INVOKABLE bool shouldCloseToTray() const { return trayEnabled_ && closeToTray_ && trayAvailable(); }
     Q_INVOKABLE bool testNotification();
 
     Q_INVOKABLE void refresh();
@@ -85,6 +95,10 @@ public:
                             const QString &preset);
 
 signals:
+    void trayAvailabilityChanged();
+    void showWorkspaceRequested();
+    void showPreferencesRequested();
+    void quitRequested();
     void preferencesChanged();
     void viewChanged();
     void rankingChanged();
@@ -109,6 +123,9 @@ private:
 
 private:
     bool notificationsEnabled_ = true;
+    bool trayEnabled_ = false;
+    bool closeToTray_ = false;
+    bool trayAttentionDot_ = true;
     PullRequestModel model_;
     QString view_ = QStringLiteral("tailored");
     QString ranking_ = QStringLiteral("tailored");

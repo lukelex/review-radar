@@ -264,6 +264,35 @@ activation URL or browser action. Report adapter acceptance as sent, not proof o
 on-screen display (desktop quiet modes may suppress it); report delivery failure
 inline. This makes the platform integration independently diagnosable.
 
+### Optional desktop tray
+
+The system-tray icon defaults off. Preferences → Desktop integration saves the
+tray switch, attention-dot switch, and separate keep-running-on-close switch with
+the notification setting in one atomic update. Disabling the tray clears the
+close-to-tray preference. Draft edits do not affect the running tray.
+
+An available, enabled tray provides Open Review Radar, Refresh, Preferences, and
+Quit. Primary activation restores the workspace; Preferences restores the window
+and opens the modal. Quit always exits. Closing the window hides it only when
+both saved switches are on and the OS adapter currently reports a tray host.
+Otherwise closing behaves normally. Host loss restores a hidden window; the
+reference adapter checks for host changes every two seconds. This avoids leaving
+a background app without a discoverable way back to its workspace.
+
+The optional attention dot and tooltip count reflect unsuppressed,
+attention-required cards in the current projected workspace, not a fabricated
+global count. Switching workspaces updates that scope. A failed sync keeps the
+last projected indicator, just as it keeps the last workspace. Ranking and
+attention classification remain in the shared core.
+
+Acceptance: defaults exit on close; saved tray choices survive restart; no-host
+close exits normally; host loss restores the window; disabling the tray clears
+background behavior; refresh and notification observation continue while hidden.
+Linux uses QSystemTrayIcon/QMenu behind OsIntegration and QApplication for the
+menu runtime. QML controls explicitly use Basic style to avoid inheriting an
+unavailable widget theme. Other native shells should preserve these behaviors
+using their own tray or menu-bar APIs.
+
 Linux notifications identify the installed `review-radar-linux` application icon
 and expose explicit actions from the shared projected card: its relevant next
 action (when it has a URL) and a canonical Open pull request action when distinct.

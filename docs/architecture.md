@@ -57,6 +57,12 @@ handling, URL launching, clipboard access, and application-data paths; queue and
 view-model code depend only on its interface. Linux Qt's first adapter is
 `OsIntegration`, with `LinuxOsIntegration` providing the DBus and portal details.
 
+The Linux adapter also owns QSystemTrayIcon, its native menu, icon decoration,
+and host-availability monitoring. It emits platform-neutral workspace, preferences,
+refresh, and quit requests; the client owns window visibility and saved preferences.
+Qt Widgets is required for the native tray menu, while the main workspace remains
+Qt Quick/QML.
+
 ## Client boundaries
 
 Clients receive an already-ranked snapshot plus explicit commands. `Acknowledge`

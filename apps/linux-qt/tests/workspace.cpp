@@ -1,6 +1,8 @@
 #include "queuecontroller.h"
 
-#include <QGuiApplication>
+#include <QApplication>
+#include <QQuickStyle>
+#include <QSignalSpy>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QQmlApplicationEngine>
@@ -24,6 +26,10 @@ class PreviewQueue final : public QObject {
     Q_PROPERTY(int sourceCount MEMBER sourceCount CONSTANT)
     Q_PROPERTY(int suppressedCount MEMBER suppressedCount CONSTANT)
     Q_PROPERTY(bool notificationsEnabled MEMBER notificationsEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool trayEnabled MEMBER trayEnabled NOTIFY preferencesChanged)
+    Q_PROPERTY(bool closeToTray MEMBER closeToTray NOTIFY preferencesChanged)
+    Q_PROPERTY(bool trayAttentionDot MEMBER trayAttentionDot NOTIFY preferencesChanged)
+    Q_PROPERTY(bool trayAvailable MEMBER trayAvailable CONSTANT)
 public:
     PullRequestModel model;
     QString view = "tailored", ranking = "tailored", status = "Cached on this device · Updated just now";
@@ -31,6 +37,13 @@ public:
     bool loading = false, refreshing = false, stale = false;
     int sourceCount = 3, suppressedCount = 0;
     bool notificationsEnabled = true;
+    bool trayEnabled = false, closeToTray = false, trayAttentionDot = true, trayAvailable = true;
+    Q_INVOKABLE bool shouldCloseToTray() const { return trayEnabled && closeToTray && trayAvailable; }
+    Q_INVOKABLE bool saveDesktopPreferences(bool notifications, bool tray, bool background, bool dot) {
+        if (!saveSucceeds) return false;
+        trayEnabled = tray; closeToTray = tray && background; trayAttentionDot = dot;
+        return savePreferences(notifications);
+    }
     bool saveSucceeds = true;
     bool notificationSucceeds = true;
     Q_INVOKABLE bool testNotification() { return notificationSucceeds; }
@@ -45,6 +58,9 @@ public:
     Q_INVOKABLE void snooze(const QString &, const QString &, const QString &) {}
     Q_INVOKABLE void copyText(const QString &) {}
 signals:
+    void showWorkspaceRequested();
+    void showPreferencesRequested();
+    void quitRequested();
     void preferencesChanged();
     void viewChanged();
     void rankingChanged();
@@ -62,6 +78,10 @@ public:
     }
     void copyText(const QString &value) override { copied = value; }
     QTemporaryDir directory;
+    bool available = true, trayEnabled = false, dot = true;
+    bool trayAvailable() const override { return available; }
+    void configureTray(bool enabled, bool attentionDot) override { trayEnabled = enabled; dot = attentionDot; }
+    void setTrayAttention(int) override {}
     QString applicationDataFile(const QString &name) const override { return directory.filePath(name); }
 
     ReviewRadar::NotificationRequest notification;
@@ -98,6 +118,23 @@ void WorkspaceTest::osIntegrationBoundary() {
     QVERIFY(controller.savePreferences(false));
     QueueController restarted(&osIntegration, nullptr);
     QVERIFY(!restarted.notificationsEnabled());
+    QVERIFY(!restarted.trayEnabled());
+    QVERIFY(restarted.saveDesktopPreferences(false, true, true, false));
+    QVERIFY(restarted.shouldCloseToTray());
+    QVERIFY(osIntegration.trayEnabled);
+    QVERIFY(!osIntegration.dot);
+    QueueController trayRestored(&osIntegration, nullptr);
+    QVERIFY(trayRestored.trayEnabled());
+    QVERIFY(trayRestored.closeToTray());
+    QVERIFY(!trayRestored.trayAttentionDot());
+    QSignalSpy restore(&trayRestored, &QueueController::showWorkspaceRequested);
+    osIntegration.available = false;
+    emit osIntegration.trayAvailabilityChanged();
+    QVERIFY(!trayRestored.shouldCloseToTray());
+    QCOMPARE(restore.count(), 1);
+    QVERIFY(trayRestored.saveDesktopPreferences(false, false, true, true));
+    QVERIFY(!trayRestored.closeToTray());
+    QVERIFY(!osIntegration.trayEnabled);
     QVERIFY(restarted.testNotification());
     QCOMPARE(osIntegration.notification.id, QString("preferences-test"));
     QVERIFY(osIntegration.notification.activationUrl.isEmpty());
@@ -330,6 +367,26 @@ void WorkspaceTest::workspace() {
         QTRY_VERIFY(!preferences->property("visible").toBool());
         QVERIFY(!queue.notificationsEnabled);
         // A cache update retains selection by identity and refreshes its data.
+        queue.trayEnabled = true;
+        queue.closeToTray = true;
+        window->close();
+        QTRY_VERIFY(!window->isVisible());
+        emit queue.showWorkspaceRequested();
+        QTRY_VERIFY(window->isVisible());
+        emit queue.showPreferencesRequested();
+        QTRY_VERIFY(preferences->property("opened").toBool());
+        preferences->setProperty("section", "Desktop integration");
+        QVERIFY(preferences->property("draftTray").toBool());
+        QVERIFY(preferences->property("draftCloseToTray").toBool());
+        screenshot("preferences-integrations");
+        auto *traySetting = window->findChild<QObject *>("tray-setting");
+        QVERIFY(traySetting);
+        QVERIFY(QMetaObject::invokeMethod(traySetting, "changed", Q_ARG(bool, false)));
+        QVERIFY(!preferences->property("draftTray").toBool());
+        QVERIFY(!preferences->property("draftCloseToTray").toBool());
+        QVERIFY(QMetaObject::invokeMethod(save, "clicked"));
+        QTRY_VERIFY(!preferences->property("visible").toBool());
+        QVERIFY(!queue.shouldCloseToTray());
         auto replacement = fixture.array();
         auto selected = replacement.at(1).toObject();
         selected["title"] = "Updated keyboard navigation title";
@@ -343,7 +400,8 @@ void WorkspaceTest::workspace() {
 }
 
 int main(int argc, char **argv) {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
+    QQuickStyle::setStyle("Basic");
     WorkspaceTest test;
     return QTest::qExec(&test, argc, argv);
 }

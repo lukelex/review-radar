@@ -34,9 +34,17 @@ public:
     virtual bool openUrl(const QUrl &url) = 0;
     virtual void copyText(const QString &text) = 0;
     virtual QString applicationDataFile(const QString &name) const = 0;
+    virtual bool trayAvailable() const = 0;
+    virtual void configureTray(bool enabled, bool attentionDot) = 0;
+    virtual void setTrayAttention(int count) = 0;
 
 signals:
     void notificationActivated(const QUrl &url);
+    void trayAvailabilityChanged();
+    void showWorkspaceRequested();
+    void showPreferencesRequested();
+    void refreshRequested();
+    void quitRequested();
 };
 
 } // namespace ReviewRadar

@@ -9,6 +9,7 @@ Button {
     implicitHeight: 36
     implicitWidth: Math.max(36, contentItem.implicitWidth + 26)
     padding: 12
+    horizontalPadding: 12
     verticalPadding: 7
     font.pixelSize: 12
     font.weight: Font.DemiBold

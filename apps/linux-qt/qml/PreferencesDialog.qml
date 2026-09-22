@@ -6,11 +6,16 @@ Dialog {
     id: preferences
     required property var controller
     property bool draftNotifications: true
+    property bool draftTray: false
+    property bool draftCloseToTray: false
+    property bool draftAttentionDot: true
     property string errorMessage: ""
     property string testMessage: ""
     property bool testSucceeded: false
     property string section: "Notifications"
     readonly property bool dirty: draftNotifications !== controller.notificationsEnabled
+        || draftTray !== controller.trayEnabled || draftCloseToTray !== controller.closeToTray
+        || draftAttentionDot !== controller.trayAttentionDot
     readonly property bool compact: width < 900
     readonly property var sections: ["General", "Workspace", "Notifications", "Desktop integration", "Appearance", "Keyboard", "Account & sync", "Local data", "Advanced"]
     readonly property var descriptions: ({
@@ -27,7 +32,6 @@ Dialog {
     readonly property var planned: ({
         "General": [{ title: "WHEN YOU OPEN THE APP", rows: ["Startup workspace", "Restore previous selection"] }, { title: "STARTUP", rows: ["Launch at login", "Start minimized"] }],
         "Workspace": [{ title: "ORDERING", rows: ["Default ranking"] }, { title: "CARDS", rows: ["Card density", "Show health chips", "Show review friction", "Activity preview"] }],
-        "Desktop integration": [{ title: "SYSTEM TRAY", rows: ["Show system-tray icon", "Tray badge", "On click"] }, { title: "WINDOW BEHAVIOR", rows: ["Keep running when the window closes"] }, { title: "QUICKSHELL", rows: ["Enable bar integration", "Summary style"] }],
         "Appearance": [{ title: "THEME", rows: ["Color theme"] }, { title: "READABILITY", rows: ["Text size", "Increase contrast", "Reduce motion"] }],
         "Keyboard": [{ title: "NAVIGATION PREFERENCES", rows: ["Vim-style navigation", "Workspace shortcut hints"] }],
         "Account & sync": [{ title: "REFRESH PREFERENCES", rows: ["Refresh on open", "Refresh interval"] }],
@@ -46,10 +50,49 @@ Dialog {
     closePolicy: Popup.NoAutoClose
     background: Rectangle { color: "white"; radius: 16; border.color: Style.line }
     Overlay.modal: Rectangle { color: "#6620283f" }
-    onAboutToShow: { draftNotifications = controller.notificationsEnabled; errorMessage = ""; testMessage = ""; section = "Notifications" }
+    onAboutToShow: {
+        draftNotifications = controller.notificationsEnabled
+        draftTray = controller.trayEnabled
+        draftCloseToTray = controller.closeToTray
+        draftAttentionDot = controller.trayAttentionDot
+        errorMessage = ""; testMessage = ""; section = "Notifications"
+    }
     onOpened: toggle.forceActiveFocus()
     function requestClose() { if (dirty) discard.open(); else close() }
     Shortcut { sequence: "Escape"; enabled: preferences.opened && !discard.opened; onActivated: preferences.requestClose() }
+
+    component SettingSwitch: Rectangle {
+        id: row
+        required property string label
+        required property string description
+        property bool checked: false
+        signal changed(bool value)
+        Layout.fillWidth: true
+        implicitHeight: settingRow.implicitHeight + 36
+        color: "white"; radius: 11; border.color: Style.line
+        RowLayout {
+            id: settingRow
+            anchors.fill: parent; anchors.margins: 18; spacing: 18
+            ColumnLayout {
+                Layout.fillWidth: true; spacing: 6
+                Label { Layout.fillWidth: true; text: row.label; color: Style.ink; font.pixelSize: 13; font.weight: Font.DemiBold; wrapMode: Text.Wrap }
+                Label { Layout.fillWidth: true; text: row.description; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
+            }
+            Switch {
+                id: settingToggle
+                checked: row.checked
+                onToggled: row.changed(checked)
+                Accessible.name: row.label
+                padding: 3
+                indicator: Rectangle {
+                    implicitWidth: 36; implicitHeight: 21; x: 3; y: 3; radius: 11
+                    color: !settingToggle.enabled ? "#d3d7e1" : settingToggle.checked ? Style.accent : "#b4bbca"
+                    border.width: settingToggle.activeFocus ? 2 : 0; border.color: Style.ink
+                    Rectangle { x: settingToggle.checked ? 18 : 3; y: 3; width: 15; height: 15; radius: 8; color: "white" }
+                }
+            }
+        }
+    }
 
     header: Rectangle {
         implicitHeight: 112
@@ -197,7 +240,41 @@ Dialog {
                     Label { Layout.fillWidth: true; text: "Category filters, sound, preview detail, and quiet hours are planned. The master switch above is available now."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.5 }
                 }
                 ColumnLayout {
-                    visible: preferences.section !== "Notifications"
+                    visible: preferences.section === "Desktop integration"
+                    Layout.fillWidth: true; Layout.leftMargin: 30; Layout.rightMargin: 30; spacing: 12
+                    Label { text: "SYSTEM TRAY"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
+                    Label {
+                        Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: 12; color: Style.secondary
+                        text: preferences.controller.trayAvailable
+                            ? "Your desktop supports a system-tray icon."
+                            : "No system tray is available on this desktop. Closing the window will exit normally."
+                    }
+                    SettingSwitch {
+                        objectName: "tray-setting"
+                        label: "Show system-tray icon"
+                        description: "Keep your review queue within reach. Click to open; use the menu to refresh, open Preferences, or quit."
+                        checked: preferences.draftTray
+                        enabled: preferences.controller.trayAvailable || preferences.draftTray
+                        onChanged: function(value) { preferences.draftTray = value; if (!value) preferences.draftCloseToTray = false }
+                    }
+                    SettingSwitch {
+                        label: "Show attention dot"
+                        description: "Highlight attention-required PRs in the current workspace. The tooltip shows their count."
+                        checked: preferences.draftAttentionDot; enabled: preferences.draftTray
+                        onChanged: function(value) { preferences.draftAttentionDot = value }
+                    }
+                    Label { Layout.topMargin: 10; text: "WINDOW BEHAVIOR"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
+                    SettingSwitch {
+                        label: "Keep running when the window closes"
+                        description: "Continue refreshing and notifying from the tray. Use Quit in the tray menu to exit. Requires an available tray."
+                        checked: preferences.draftCloseToTray; enabled: preferences.draftTray && preferences.controller.trayAvailable
+                        onChanged: function(value) { preferences.draftCloseToTray = value }
+                    }
+                    Label { Layout.topMargin: 10; text: "QUICKSHELL"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
+                    Label { Layout.fillWidth: true; text: "Bar integration · Planned"; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
+                }
+                ColumnLayout {
+                    visible: preferences.section !== "Notifications" && preferences.section !== "Desktop integration"
                     Layout.fillWidth: true; Layout.leftMargin: 30; Layout.rightMargin: 30; spacing: 12
                     Label { Layout.fillWidth: true; text: "Planned preferences · These options are not configurable yet."; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
                     Repeater {
@@ -240,7 +317,7 @@ Dialog {
             RadarButton {
                 objectName: "save-preferences"; text: "Save changes"; primary: true; enabled: preferences.dirty
                 onClicked: {
-                    if (preferences.controller.savePreferences(preferences.draftNotifications)) preferences.close()
+                    if (preferences.controller.saveDesktopPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot)) preferences.close()
                     else preferences.errorMessage = "Could not save preferences. Your changes have not been applied. Try again."
                 }
             }

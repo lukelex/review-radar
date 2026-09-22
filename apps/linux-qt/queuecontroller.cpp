@@ -204,7 +204,19 @@ void QueueController::initialize() {
     if (preferences.open(QIODevice::ReadOnly)) {
         const auto object = QJsonDocument::fromJson(preferences.readAll()).object();
         notificationsEnabled_ = object.value("notificationsEnabled").toBool(true);
+        trayEnabled_ = object.value("trayEnabled").toBool(false);
+        closeToTray_ = trayEnabled_ && object.value("closeToTray").toBool(false);
+        trayAttentionDot_ = object.value("trayAttentionDot").toBool(true);
     }
+    osIntegration_->configureTray(trayEnabled_, trayAttentionDot_);
+    connect(osIntegration_, &ReviewRadar::OsIntegration::showWorkspaceRequested, this, &QueueController::showWorkspaceRequested);
+    connect(osIntegration_, &ReviewRadar::OsIntegration::showPreferencesRequested, this, &QueueController::showPreferencesRequested);
+    connect(osIntegration_, &ReviewRadar::OsIntegration::refreshRequested, this, &QueueController::refresh);
+    connect(osIntegration_, &ReviewRadar::OsIntegration::quitRequested, this, &QueueController::quitRequested);
+    connect(osIntegration_, &ReviewRadar::OsIntegration::trayAvailabilityChanged, this, [this] {
+        emit trayAvailabilityChanged();
+        if (!trayAvailable()) emit showWorkspaceRequested();
+    });
     refreshTimer_.setInterval(5 * 60 * 1000);
     connect(&refreshTimer_, &QTimer::timeout, this, &QueueController::refresh);
     refreshTimer_.start();
@@ -254,7 +266,11 @@ void QueueController::initialize() {
         }
         const auto result = response.object();
         const auto cards = result.value("pullRequests").toArray();
-        model_.replace(cards);
+         model_.replace(cards);
+         int attentionCount = 0;
+         for (const auto &card : cards)
+             if (card.toObject().value("attentionRequired").toBool()) ++attentionCount;
+         osIntegration_->setTrayAttention(attentionCount);
         if (stale_) {
             stale_ = false;
             emit staleChanged();
@@ -414,11 +430,23 @@ void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArra
 void QueueController::setStatus(const QString &status) { if (status_ != status) { status_ = status; emit statusChanged(); } }
 
 bool QueueController::savePreferences(bool notificationsEnabled) {
+    return saveDesktopPreferences(notificationsEnabled, trayEnabled_, closeToTray_, trayAttentionDot_);
+}
+
+bool QueueController::saveDesktopPreferences(bool notificationsEnabled, bool trayEnabled,
+                                             bool closeToTray, bool attentionDot) {
     QSaveFile file(applicationDataFile("preferences.json"));
-    const auto bytes = QJsonDocument(QJsonObject{{"notificationsEnabled", notificationsEnabled}}).toJson();
+    const auto bytes = QJsonDocument(QJsonObject{{"notificationsEnabled", notificationsEnabled},
+        {"trayEnabled", trayEnabled}, {"closeToTray", trayEnabled && closeToTray},
+        {"trayAttentionDot", attentionDot}}).toJson();
     if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
         return false;
     notificationsEnabled_ = notificationsEnabled;
+    trayEnabled_ = trayEnabled;
+    closeToTray_ = trayEnabled && closeToTray;
+    trayAttentionDot_ = attentionDot;
+    osIntegration_->configureTray(trayEnabled_, trayAttentionDot_);
+    if (!shouldCloseToTray()) emit showWorkspaceRequested();
     emit preferencesChanged();
     return true;
 }

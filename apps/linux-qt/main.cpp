@@ -1,4 +1,5 @@
-#include <QGuiApplication>
+#include <QApplication>
+#include <QQuickStyle>
 #include <QCoreApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
@@ -8,7 +9,8 @@
 #include "queuecontroller.h"
 
 int main(int argc, char *argv[]) {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
+    QQuickStyle::setStyle("Basic");
     app.setApplicationName(QStringLiteral("Review Radar"));
     app.setOrganizationName(QStringLiteral("Review Radar"));
     app.setWindowIcon(QIcon(QStringLiteral(":/assets/logo.svg")));
