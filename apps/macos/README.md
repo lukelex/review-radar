@@ -25,7 +25,7 @@ Set `REVIEW_RADAR_CAPTURE_DATABASE`, `REVIEW_RADAR_STATE_DATABASE`,
 `REVIEW_RADAR_STATE_COMMAND` to use another helper location or fixture setup.
 
 See [`docs/macos-client-plan.md`](../../docs/macos-client-plan.md) for the
-remaining parity, integration, testing, and release checklists.
+remaining runner-validation, release, and accessibility checklists.
 
 The `macOS SwiftUI CI` workflow runs `swift build --build-tests` and `swift test`
 on a macOS 14 runner. Its fixture test locks the versioned queue-response shape.

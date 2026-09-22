@@ -111,5 +111,10 @@ opens the associated pull request in the browser. The remaining roadmap is:
   local summary and Open/Refresh/Preferences commands. Enable it in Preferences
   and install `apps/quickshell/review-radar` into the bar configuration. Collection,
   ranking, and notification state stay in the running app/shared core.
-- [ ] **macOS client:** implement the SwiftUI shell against the shared core.
+- [x] **macOS client:** implement the SwiftUI shell against the shared core.
+  `apps/macos` consumes the same collector/queue/state helper contracts as Linux,
+  with all workspace views, rankings, local state commands, native keyboard
+  navigation, Notification Center delivery controls, and an optional menu-bar
+  integration. macOS runner confirmation, packaging, and accessibility validation
+  remain tracked in `docs/macos-client-plan.md`.
 - [ ] **Windows client:** implement the WinUI 3 shell against the shared core.
