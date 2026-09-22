@@ -203,7 +203,11 @@ impl Snapshot {
         self.ranked_since_with_feedback(ranking, predecessor, retained_feedback)
             .into_iter()
             .filter(|card| match view {
-                WorkspaceView::Tailored => true,
+                // Completed work belongs in History/Recent, not in the
+                // actionable default queue. Keep closed PRs eligible for
+                // now, since they can still represent unresolved follow-up;
+                // merged PRs have a dedicated historical view.
+                WorkspaceView::Tailored => card.lifecycle != Lifecycle::Merged,
                 WorkspaceView::Action => card.attention_required,
                 WorkspaceView::MyPrs => {
                     card.memberships.contains(&"authored".to_owned())
@@ -789,11 +793,15 @@ mod tests {
     fn workspace_views_are_filtered_from_membership_not_top_relationship() {
         let snapshot = Snapshot::from_json(SEED).unwrap();
         let action = snapshot.view(WorkspaceView::Action);
+        let tailored = snapshot.view(WorkspaceView::Tailored);
         let authored = snapshot.view(WorkspaceView::MyPrs);
         let following = snapshot.view(WorkspaceView::Following);
         let recent = snapshot.view(WorkspaceView::Recent);
 
         assert!(action.iter().all(|card| card.attention_required));
+        assert!(tailored
+            .iter()
+            .all(|card| card.lifecycle != Lifecycle::Merged));
         assert!(authored.iter().all(|card| card.lifecycle == Lifecycle::Open
             && card.memberships.contains(&"authored".into())));
         assert!(following.iter().all(|card| {
@@ -807,6 +815,7 @@ mod tests {
                 && (card.memberships.contains(&"recent".into())
                     || card.memberships.contains(&"recent_review_involved".into()))
         }));
+        assert!(recent.iter().any(|card| card.lifecycle == Lifecycle::Merged));
         assert!(WorkspaceView::parse("my-prs").is_some());
         assert!(WorkspaceView::parse("unknown").is_none());
     }

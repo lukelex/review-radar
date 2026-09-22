@@ -12,7 +12,8 @@ The default view, **Tailored to you**, prioritises:
    activity, failing checks, conflicts, or readiness to merge.
 3. Authored pull requests awaiting review.
 4. Followed pull requests with recent activity.
-5. Pull requests closed or merged in the previous 14 days.
+5. Pull requests closed in the previous 14 days. Merged pull requests are
+   kept in History instead of the default queue.
 
 Items are newest-first within each priority band.
 
