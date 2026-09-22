@@ -35,9 +35,16 @@ final class QueueStore: ObservableObject {
     @Published private(set) var capturedAt: String?
     @Published private(set) var phase: Phase = .loading
     @Published private(set) var actionError: String?
-    @Published var workspace: Workspace = .tailored { didSet { projectionChanged() } }
-    @Published var ranking: Ranking = .tailored { didSet { projectionChanged() } }
+    @Published var workspace: Workspace = .tailored {
+        didSet { if workspace != oldValue { projectionChanged() } }
+    }
+    @Published var ranking: Ranking = .tailored {
+        didSet { if ranking != oldValue { projectionChanged() } }
+    }
     @Published var selectedCardID: PullRequestCard.ID?
+    @Published var navigationCardID: PullRequestCard.ID?
+    @Published var search = ""
+    @Published var controlHeld = false
 
     private struct ProjectionKey: Hashable {
         let workspace: Workspace
@@ -60,6 +67,19 @@ final class QueueStore: ObservableObject {
 
     var selectedCard: PullRequestCard? {
         cards.first(where: { $0.id == selectedCardID })
+    }
+
+    var navigationCard: PullRequestCard? {
+        cards.first(where: { $0.id == navigationCardID })
+    }
+
+    var filteredCards: [PullRequestCard] {
+        let needle = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return cards }
+        return cards.filter { card in
+            [card.title, card.repository, String(card.number)]
+                .localizedCaseInsensitiveContains(needle)
+        }
     }
 
     func start() async {
@@ -101,8 +121,42 @@ final class QueueStore: ObservableObject {
     func copyText(_ text: String) { osIntegration.copyText(text) }
     func clearActionError() { actionError = nil }
 
+    func moveNavigation(by amount: Int) {
+        let cards = filteredCards
+        guard !cards.isEmpty else { return }
+        let current = navigationCardID.flatMap { id in cards.firstIndex(where: { $0.id == id }) }
+        let startingIndex = current ?? (amount > 0 ? -1 : cards.count)
+        let target = (startingIndex + amount).quotientAndRemainder(dividingBy: cards.count)
+        let index = target.remainder >= 0 ? target.remainder : target.remainder + cards.count
+        navigationCardID = cards[index].id
+        if selectedCardID != nil { selectedCardID = cards[index].id }
+    }
+
+    func openNavigationDetails() {
+        if let navigationCardID { selectedCardID = navigationCardID }
+    }
+
+    func closeDetails() { selectedCardID = nil }
+
+    func resetWorkspaceFocus() {
+        selectedCardID = nil
+        search = ""
+        navigationCardID = nil
+    }
+
+    func nextWorkspace() {
+        guard let index = Workspace.allCases.firstIndex(of: workspace) else { return }
+        workspace = Workspace.allCases[(index + 1) % Workspace.allCases.count]
+    }
+
+    func selectWorkspace(_ index: Int) {
+        guard Workspace.allCases.indices.contains(index) else { return }
+        workspace = Workspace.allCases[index]
+    }
+
     private func projectionChanged() {
         selectedCardID = nil
+        navigationCardID = nil
         applyCachedProjection()
         Task { await loadProjection() }
     }
@@ -158,6 +212,9 @@ final class QueueStore: ObservableObject {
         capturedAt = response.capturedAt
         if let id = selectedCardID, !cards.contains(where: { $0.id == id }) {
             selectedCardID = nil
+        }
+        if let id = navigationCardID, !cards.contains(where: { $0.id == id }) {
+            navigationCardID = nil
         }
     }
 

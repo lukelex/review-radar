@@ -2,24 +2,27 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var queue: QueueStore
-    @State private var search = ""
-    @State private var showAcknowledgement = false
+    @State private var keyboard = KeyboardMonitor()
+    @FocusState private var searchFocused: Bool
+    @State private var acknowledgementTarget: PullRequestCard?
+    @State private var snoozeTarget: PullRequestCard?
+    @State private var showShortcutHelp = false
     @State private var copied = false
 
-    private var visibleCards: [PullRequestCard] {
-        let needle = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return queue.cards }
-        return queue.cards.filter { card in
-            [card.title, card.repository, String(card.number)]
-                .localizedCaseInsensitiveContains(needle)
-        }
-    }
+    private var visibleCards: [PullRequestCard] { queue.filteredCards }
 
     var body: some View {
         NavigationSplitView {
             List(selection: workspaceSelection) {
-                ForEach(Workspace.allCases) { workspace in
-                    Label(workspace.title, systemImage: workspace.symbol).tag(workspace)
+                ForEach(Workspace.allCases.indices, id: \.self) { index in
+                    let workspace = Workspace.allCases[index]
+                    HStack(spacing: 6) {
+                        if queue.controlHeld {
+                            Text("\(index + 1)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        }
+                        Label(workspace.title, systemImage: workspace.symbol)
+                    }
+                    .tag(workspace)
                 }
             }
             .navigationTitle("Review Radar")
@@ -27,15 +30,26 @@ struct ContentView: View {
         } content: {
             VStack(spacing: 0) {
                 workspaceHeader
-                List(selection: $queue.selectedCardID) {
-                    if visibleCards.isEmpty { emptyState }
-                    ForEach(visibleCards) { card in
-                        CardRow(card: card)
-                            .tag(card.id)
-                            .contextMenu { cardActions(card) }
+                ScrollViewReader { proxy in
+                    List(selection: $queue.selectedCardID) {
+                        if visibleCards.isEmpty { emptyState }
+                        ForEach(visibleCards) { card in
+                            CardRow(card: card)
+                                .tag(card.id)
+                                .id(card.id)
+                                .listRowBackground(card.id == queue.navigationCardID ? Color.indigo.opacity(0.08) : Color.clear)
+                                .contextMenu { cardActions(card) }
+                        }
+                    }
+                    .onChange(of: queue.navigationCardID) { id in
+                        if let id { proxy.scrollTo(id, anchor: .center) }
+                    }
+                    .onChange(of: queue.selectedCardID) { id in
+                        if let id { queue.navigationCardID = id }
                     }
                 }
-                .searchable(text: $search, prompt: "Search title, repository, or PR number")
+                .searchable(text: $queue.search, prompt: "Search title, repository, or PR number")
+                .searchFocused($searchFocused)
                 .safeAreaInset(edge: .bottom) { statusLine }
             }
             .navigationTitle(queue.workspace.title)
@@ -65,25 +79,48 @@ struct ContentView: View {
         .frame(minWidth: 860, minHeight: 600)
         .confirmationDialog(
             "Mark pull request as read?",
-            isPresented: $showAcknowledgement,
+            isPresented: acknowledgementBinding,
             titleVisibility: .visible
         ) {
             Button("Mark read") {
-                if let card = queue.selectedCard { Task { _ = await queue.acknowledge(card) } }
+                if let card = acknowledgementTarget { Task { _ = await queue.acknowledge(card) } }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This pull request stays quiet until a meaningful event changes.")
+        }
+        .confirmationDialog("Snooze pull request", isPresented: snoozeBinding, titleVisibility: .visible) {
+            ForEach(SnoozePreset.allCases) { preset in
+                Button(preset.title) {
+                    if let card = snoozeTarget { Task { _ = await queue.snooze(card, preset: preset) } }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The pull request returns when this time passes or a meaningful event changes.")
         }
         .alert("Could not update local state", isPresented: actionErrorBinding) {
             Button("OK", role: .cancel) { queue.clearActionError() }
         } message: {
             Text(queue.actionError ?? "Try again.")
         }
+        .sheet(isPresented: $showShortcutHelp) { ShortcutHelp() }
+        .onAppear {
+            keyboard.start(handleKeyboardAction, controlChanged: { queue.controlHeld = $0 })
+        }
+        .onDisappear { keyboard.stop() }
     }
 
     private var actionErrorBinding: Binding<Bool> {
         Binding(get: { queue.actionError != nil }, set: { if !$0 { queue.clearActionError() } })
+    }
+
+    private var acknowledgementBinding: Binding<Bool> {
+        Binding(get: { acknowledgementTarget != nil }, set: { if !$0 { acknowledgementTarget = nil } })
+    }
+
+    private var snoozeBinding: Binding<Bool> {
+        Binding(get: { snoozeTarget != nil }, set: { if !$0 { snoozeTarget = nil } })
     }
 
     private var workspaceSelection: Binding<Workspace?> {
@@ -179,7 +216,7 @@ struct ContentView: View {
         }
         Button("Copy link") { queue.copyText(card.url) }
         Divider()
-        Button("Mark read") { queue.selectedCardID = card.id; showAcknowledgement = true }
+        Button("Mark read") { acknowledgementTarget = card }
         Menu("Snooze") {
             ForEach(SnoozePreset.allCases) { preset in
                 Button(preset.title) { Task { _ = await queue.snooze(card, preset: preset) } }
@@ -192,7 +229,7 @@ struct ContentView: View {
         case .openNextAction: openNextAction(for: card)
         case .openCanonical: if let url = URL(string: card.url) { queue.openURL(url) }
         case .copy: queue.copyText(card.url); copied = true
-        case .acknowledge: showAcknowledgement = true
+        case .acknowledge: acknowledgementTarget = card
         case .snooze(let preset): Task { _ = await queue.snooze(card, preset: preset) }
         }
     }
@@ -200,6 +237,33 @@ struct ContentView: View {
     private func openNextAction(for card: PullRequestCard) {
         let destination = card.explanation.reasons.first?.nextAction.url ?? card.url
         if let url = URL(string: destination) { queue.openURL(url) }
+    }
+
+    private func handleKeyboardAction(_ action: KeyboardAction) {
+        switch action {
+        case .moveNext: queue.moveNavigation(by: 1)
+        case .movePrevious: queue.moveNavigation(by: -1)
+        case .pageDown: queue.moveNavigation(by: 8)
+        case .pageUp: queue.moveNavigation(by: -8)
+        case .openDetails: queue.openNavigationDetails()
+        case .closeDetails: queue.closeDetails()
+        case .openCanonical:
+            if let card = queue.selectedCard ?? queue.navigationCard, let url = URL(string: card.url) { queue.openURL(url) }
+        case .acknowledge:
+            acknowledgementTarget = queue.selectedCard ?? queue.navigationCard
+        case .snooze:
+            snoozeTarget = queue.selectedCard ?? queue.navigationCard
+        case .copy:
+            if let card = queue.selectedCard ?? queue.navigationCard { queue.copyText(card.url) }
+        case .focusSearch:
+            searchFocused = true
+        case .resetWorkspace:
+            queue.resetWorkspaceFocus()
+            searchFocused = false
+        case .showHelp: showShortcutHelp = true
+        case .nextWorkspace: queue.nextWorkspace()
+        case .selectWorkspace(let index): queue.selectWorkspace(index)
+        }
     }
 }
 
@@ -354,5 +418,44 @@ private extension Text {
     func badgeStyle() -> some View {
         font(.caption).foregroundStyle(.secondary).padding(.horizontal, 7).padding(.vertical, 4)
             .background(.quaternary, in: Capsule())
+    }
+}
+
+private struct ShortcutHelp: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private struct Shortcut: Identifiable {
+        let keys: String
+        let label: String
+        var id: String { keys }
+    }
+
+    private struct ShortcutGroup: Identifiable {
+        let title: String
+        let shortcuts: [Shortcut]
+        var id: String { title }
+    }
+
+    private let groups = [
+        ShortcutGroup(title: "Move around", shortcuts: [Shortcut(keys: "J / K", label: "Next / previous pull request"), Shortcut(keys: "L / H", label: "Open / close details")]),
+        ShortcutGroup(title: "Take action", shortcuts: [Shortcut(keys: "O", label: "Open in browser"), Shortcut(keys: "A", label: "Mark as read"), Shortcut(keys: "S", label: "Snooze"), Shortcut(keys: "Y", label: "Copy link")]),
+        ShortcutGroup(title: "Workspace", shortcuts: [Shortcut(keys: "/", label: "Focus search"), Shortcut(keys: "Ctrl N", label: "Next workspace"), Shortcut(keys: "Ctrl 1–5", label: "Select workspace"), Shortcut(keys: "Ctrl D / Ctrl U", label: "Page queue"), Shortcut(keys: "Esc", label: "Close details and clear search")])
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Keyboard shortcuts").font(.title2.weight(.semibold))
+            Text("Single-key shortcuts work outside text fields.").foregroundStyle(.secondary)
+            ForEach(groups) { group in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(group.title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    ForEach(group.shortcuts) { shortcut in
+                        HStack { Text(shortcut.keys).font(.body.monospaced()).frame(width: 104, alignment: .leading); Text(shortcut.label); Spacer() }
+                    }
+                }
+            }
+            HStack { Spacer(); Button("Done") { dismiss() }.keyboardShortcut(.defaultAction) }
+        }
+        .padding(28).frame(minWidth: 440)
     }
 }

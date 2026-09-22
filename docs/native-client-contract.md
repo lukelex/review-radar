@@ -187,10 +187,13 @@ for acknowledgement and snooze with the projected current fingerprint. It stores
 helper databases under Application Support using the shared `review-radar`
 directory name. The delivery checklist is `docs/macos-client-plan.md`.
 
-The shell deliberately does not yet claim notification, menu-bar, or full keyboard
-parity. Those are explicit checklist items. Acceptance: the Swift process consumes
-stdout as one queue JSON response, leaves stderr as diagnostics, never runs GitHub
-work outside the collector helper, invokes state only through its explicit command
+The shell deliberately does not yet claim notification or menu-bar parity. Those
+are explicit checklist items. Its AppKit key monitor applies the documented
+navigation shortcuts only while the first responder is not a text editor; it
+supports local search focus, workspace cycling/direct selection, paging, shortcut
+help, and Control-held numeric hints. Acceptance: the Swift process consumes stdout
+as one queue JSON response, leaves stderr as diagnostics, never runs GitHub work
+outside the collector helper, invokes state only through its explicit command
 surface, and keeps the last successful projection visible across a failed refresh.
 Its local `MacOsIntegration` owns Application Support paths, browser opening, and
 copying; the queue view model does not call those host APIs directly.

@@ -22,7 +22,7 @@ contract; no item authorizes duplicating them in Swift.
 
 - [x] Add the Action, My PRs, Following, and Recent workspace navigation with
   stable view IDs and retain selection by PR ID across refreshes.
-- [ ] Add keyboard navigation, paging, and shortcut help using macOS conventions
+- [x] Add keyboard navigation, paging, and shortcut help using macOS conventions
   while preserving shared meanings.
 - [x] Add local search and ranking selection without moving sort policy into the
   client.
