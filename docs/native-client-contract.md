@@ -96,6 +96,10 @@ symbol. Color is supplemental and must not be the only indication of meaning.
 The shared projection remains the source of the structured health fields; shells
 may choose platform-native chip or badge layouts.
 
+Red health treatment is reserved for failing or errored checks. Changes requested
+and merge conflicts are amber follow-up states with distinct non-color symbols;
+they must not be presented as equivalent to a failed check.
+
 Review friction uses a separate semantic low/medium/high/unknown color scale.
 It communicates accumulated review difficulty, not urgency or PR health. Clients
 must retain the explicit friction label, level, and a non-color cue; insufficient

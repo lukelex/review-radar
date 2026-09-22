@@ -87,6 +87,9 @@ void WorkspaceTest::workspace() {
         QCOMPARE(healthSignals.at(0).toMap().value("value").toString(), QString("Required"));
         QCOMPARE(healthSignals.at(0).toMap().value("tone").toString(), QString("caution"));
         QCOMPARE(healthSignals.at(1).toMap().value("value").toString(), QString("Passing"));
+        const auto followUpSignals = queue.model.get(1).value("healthSignals").toList();
+        QCOMPARE(followUpSignals.at(0).toMap().value("tone").toString(), QString("caution"));
+        QCOMPARE(followUpSignals.at(1).toMap().value("tone").toString(), QString("negative"));
         QQmlApplicationEngine engine;
         QStringList warnings;
         connect(&engine, &QQmlEngine::warnings, this, [&warnings](const QList<QQmlError> &errors) {

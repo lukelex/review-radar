@@ -54,7 +54,7 @@ QVariantList healthSignals(const QJsonObject &health) {
     } else if (review == "APPROVED") {
         result.append(healthSignal("Review", "Approved", "positive", "✓"));
     } else if (review == "CHANGES_REQUESTED") {
-        result.append(healthSignal("Review", "Changes requested", "negative", "!"));
+        result.append(healthSignal("Review", "Changes requested", "caution", "↺"));
     } else if (review == "REVIEW_REQUIRED") {
         result.append(healthSignal("Review", "Required", "caution", "◷"));
     } else if (!review.isEmpty()) {
@@ -75,7 +75,7 @@ QVariantList healthSignals(const QJsonObject &health) {
     const auto mergeable = health.value("mergeable").toString().toUpper();
     const auto mergeState = health.value("mergeStateStatus").toString().toUpper();
     if (mergeable == "CONFLICTING" || mergeState == "DIRTY") {
-        result.append(healthSignal("Merge", "Conflicting", "negative", "!"));
+        result.append(healthSignal("Merge", "Conflicting", "caution", "△"));
     } else if (mergeable == "MERGEABLE") {
         result.append(healthSignal("Merge", "Mergeable", "positive", "✓"));
     } else if (!mergeable.isEmpty()) {

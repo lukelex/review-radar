@@ -89,6 +89,11 @@ neutral labels while the values use positive, caution, negative, or neutral
 foreground/background pairs. Each colored value also carries a text label and
 symbol; color is never the only indicator.
 
+Reserve the negative/red treatment for explicit check failures or errors.
+`Changes requested` and merge conflicts are amber follow-up states, using a
+revision and warning-triangle symbol respectively; they are visible without
+claiming the same urgency as a failed check.
+
 Review friction has a dedicated teal-to-burnt-orange scale, separate from health
 status colors. Its badge explicitly says `Friction`, retains the level, and uses
 one, two, or three stepped marks for low, moderate, or high. Missing or incomplete
