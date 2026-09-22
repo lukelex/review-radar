@@ -15,7 +15,9 @@ swift run ReviewRadarMac
 The shell shows all five already-ranked workspaces, cached/stale state, local
 search, ranking selection, card selection/details, browser/copy actions, and
 local mark-read/snooze commands. Keyboard shortcuts match the native-client
-contract outside text fields. It refreshes on open and every five minutes.
+contract outside text fields. Preferences include Notification Center permission,
+delivery categories, local quiet hours, and a test alert. It refreshes on open and
+every five minutes.
 It uses `~/Library/Application Support/review-radar/` for capture and state files.
 Set `REVIEW_RADAR_CAPTURE_DATABASE`, `REVIEW_RADAR_STATE_DATABASE`,
 `REVIEW_RADAR_COLLECTOR_COMMAND`, `REVIEW_RADAR_QUEUE_COMMAND`, and

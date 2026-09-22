@@ -100,7 +100,9 @@ the ranked projection. It keeps macOS-only UI/integration work out of the Rust
 core and does not make Swift a second source of GitHub/domain behavior. Its
 shell-local `MacOsIntegration` owns Application Support paths, default-browser
 opening, and clipboard effects. The shell sends acknowledgement and snooze back
-to the state helper with the projection's current fingerprint.
+to the state helper with the projection's current fingerprint. Its same adapter
+owns UserNotifications delivery/action activation; Swift only filters already
+deduplicated queue eligibility using saved local preferences.
 
 On Linux, `LinuxOsIntegration` delivers notifications through
 `org.freedesktop.Notifications`. The client receives only the queue projection's

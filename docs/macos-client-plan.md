@@ -35,13 +35,13 @@ contract; no item authorizes duplicating them in Swift.
 
 - [x] Implement `MacOsIntegration` for default-browser opening, clipboard, and
   Application Support paths behind the same OS-effect boundary.
-- [ ] Deliver state-deduplicated attention transitions through UserNotifications,
+- [x] Deliver state-deduplicated attention transitions through UserNotifications,
   with next-action and canonical-PR actions plus deep links.
 - [ ] Add a menu-bar item as an independent opt-in, including a discoverable
   Quit command and capability-aware preference state.
-- [ ] Implement native Preferences with the shared notification, category,
-  quiet-hours, and integration semantics; preserve drafts, atomic saves, and
-  failure copy.
+- [x] Implement native Preferences with the shared notification, category, and
+  quiet-hours semantics; preserve drafts, atomic saves, and failure copy.
+- [ ] Complete menu-bar preference application and last-window lifecycle behavior.
 
 ## Release and quality
 

@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var acknowledgementTarget: PullRequestCard?
     @State private var snoozeTarget: PullRequestCard?
     @State private var showShortcutHelp = false
+    @State private var showPreferences = false
     @State private var copied = false
 
     private var visibleCards: [PullRequestCard] { queue.filteredCards }
@@ -55,6 +56,9 @@ struct ContentView: View {
             .navigationTitle(queue.workspace.title)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { refreshButton }
+                ToolbarItem(placement: .automatic) {
+                    Button("Preferences", systemImage: "gear") { showPreferences = true }
+                }
                 ToolbarItem(placement: .automatic) {
                     Picker("Sort pull requests", selection: $queue.ranking) {
                         ForEach(Ranking.allCases) { ranking in Text(ranking.title).tag(ranking) }
@@ -105,6 +109,10 @@ struct ContentView: View {
             Text(queue.actionError ?? "Try again.")
         }
         .sheet(isPresented: $showShortcutHelp) { ShortcutHelp() }
+        .sheet(isPresented: $showPreferences) {
+            PreferencesDialog(testNotification: { await queue.testNotification() })
+                .environmentObject(queue.preferences)
+        }
         .onAppear {
             keyboard.start(handleKeyboardAction, controlChanged: { queue.controlHeld = $0 })
         }

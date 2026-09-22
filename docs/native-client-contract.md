@@ -187,8 +187,7 @@ for acknowledgement and snooze with the projected current fingerprint. It stores
 helper databases under Application Support using the shared `review-radar`
 directory name. The delivery checklist is `docs/macos-client-plan.md`.
 
-The shell deliberately does not yet claim notification or menu-bar parity. Those
-are explicit checklist items. Its AppKit key monitor applies the documented
+The shell deliberately does not yet claim menu-bar parity. Its AppKit key monitor applies the documented
 navigation shortcuts only while the first responder is not a text editor; it
 supports local search focus, workspace cycling/direct selection, paging, shortcut
 help, and Control-held numeric hints. Acceptance: the Swift process consumes stdout
@@ -197,6 +196,17 @@ outside the collector helper, invokes state only through its explicit command
 surface, and keeps the last successful projection visible across a failed refresh.
 Its local `MacOsIntegration` owns Application Support paths, browser opening, and
 copying; the queue view model does not call those host APIs directly.
+
+On macOS, `MacOsIntegration` uses `UNUserNotificationCenter` only after the
+shared queue response has supplied persisted `notificationEligibleIds`. The local
+preference store writes a complete `preferences.json` atomically after validating
+quiet-hour `HH:mm` values. Its master switch, four reason-code category filters,
+and local-time quiet window suppress delivery only: attention observation and
+deduplication still happen in Rust. The matching enabled reason supplies the
+notification title/body and next-action URL; the canonical PR remains a separate
+Notification Center action when it differs. Test alerts bypass delivery filters
+and carry no PR action. Activation follows the same host-browser path as card
+actions.
 
 Every PR card communicates, in order:
 
