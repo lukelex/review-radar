@@ -1,8 +1,8 @@
 import XCTest
 @testable import ReviewRadarMac
 
-@MainActor
 final class PreferencesTests: XCTestCase {
+    @MainActor
     func testOvernightQuietHoursSuppressDelivery() {
         var preferences = Preferences()
         preferences.quietHours = true
@@ -15,6 +15,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertFalse(preferences.isQuiet(at: morning))
     }
 
+    @MainActor
     func testInvalidQuietHoursDoNotReplaceSavedPreferences() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
