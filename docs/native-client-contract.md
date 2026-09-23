@@ -307,6 +307,43 @@ another child control.
 
 ## Decisions and tradeoffs
 
+### Proposed next-handoff ranking (research only)
+
+The [value-flow ranking research](value-flow-ranking-research.md) proposes an
+opt-in shared-core `flow-first-v1` strategy after validating review-request,
+review-submission, and author-revision episode evidence. It targets shorter
+request → review and review → revision turnaround without claiming that PR age,
+review friction, or diff size is business value or next-action effort. Current
+Tailored priority bands and newest-first ties remain the product default.
+
+Observable behavior **if implemented**: the selected strategy orders actionable
+PRs by an evidence-backed next-handoff heuristic with explicit wait-age protection
+and an honest unknown-input fallback. It may cross review-requested and authored-
+action bands only when opted into; it never changes workspace membership,
+attention classification, fingerprints, acknowledgement/snooze, or notification
+deduplication. Projection uses one successful capture/as-of time; failed refreshes
+retain the last ranked cards with a cached label. Ranking, feature derivation, and
+stable-ID selection live in Rust, not a native client.
+
+Tradeoff: a short-action bias can neglect long reviews; aging and tail-latency
+checks constrain it, but no static sort guarantees progress during overload.
+Impact, effort, and stage clocks need verified evidence; missing history is never
+displayed as an exact elapsed time or zero impact. The proposal is not enabled in
+the CLI, Linux Qt, macOS SwiftUI, or Windows WinUI. Windows' paused shell also
+lacks general ranking selection; record its parity follow-up before shipping a
+shared UI control. All compatible clients and the CLI/TUI contract must show the
+same ranking ID, rank order, fallback semantics, and explanatory evidence when
+this capability is introduced, or carry explicit tracked gaps under the interface
+parity rule above.
+
+Platform-neutral acceptance before enabling: repeated/partial handoffs are not
+misdated; a missing/unknown effort cannot be scored as free; aged work is not
+permanently buried by a stream of short actions; high-friction waiting work does
+not masquerade as an obligation; Recent remains historical; local state and
+notifications are identical under both sorts; stable ties and stale refreshes do
+not cause churn; offline replay and a consented rollout compare both median and
+tail turnaround plus delivery/throughput against the unchanged Tailored baseline.
+
 ### Shared modal presentation
 
 Shortcuts and confirmations share a centered, viewport-bounded modal with a

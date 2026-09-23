@@ -17,6 +17,11 @@ The default view, **Tailored to you**, prioritises:
 
 Items are newest-first within each priority band.
 
+An evidence-gated, opt-in ranking proposal for shortening review and revision
+handoffs is in [ranking PRs for faster review-to-delivery flow](value-flow-ranking-research.md).
+It does not change the default priority bands or imply that Review Radar knows a
+PR's business value from its current GitHub snapshot.
+
 ## User experience
 
 ### Views
