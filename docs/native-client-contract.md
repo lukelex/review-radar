@@ -241,6 +241,23 @@ the separate, manually dispatched `.github/workflows/macos-release.yml`. Windows
 packaging remains blocked on its WinUI shell; its required parity work and
 installer/signing acceptance criteria are tracked in `docs/windows-client-plan.md`.
 
+### Windows WinUI foundation
+
+`apps/windows` is a Windows 10+ WinUI 3 foundation shell around the same helper
+process/JSON contract. It starts with the Tailored projection, preserved cached
+cards during a refresh, explicit status text for local loading/sync/failure, and
+the shared five-minute cadence. `WindowsOsIntegration` owns `%APPDATA%\review-
+radar`, default-browser launching, and clipboard access; the queue view model does
+not call Windows APIs directly. Development overrides and packaged helper lookup
+match the other shells.
+
+The foundation intentionally does not claim full workspace, command, notification,
+preference, tray, keyboard, accessibility, or installer parity. Those gaps are
+explicitly tracked in `docs/windows-client-plan.md`. Acceptance: queue stdout is
+decoded as one schema-versioned response, stderr remains diagnostic-only, helper
+work stays outside the view model, failed refreshes preserve any usable cards, and
+no C# code queries GitHub or ranks/classifies pull requests.
+
 Every PR card communicates, in order:
 
 1. repository, PR number, and activity age;

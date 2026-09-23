@@ -106,6 +106,14 @@ deduplicated queue eligibility using saved local preferences. The SwiftUI shell
 owns its optional menu-bar scene and delegates only last-window termination policy
 to its AppKit application delegate.
 
+`apps/windows` begins the WinUI 3 implementation with the same process boundary.
+Its `QueueStore` invokes the collector and queue helpers, parses queue stdout as
+one versioned response, and renders only the ranked Tailored projection in the
+foundation slice. `WindowsOsIntegration` owns `%APPDATA%\review-radar` paths,
+browser opening, and clipboard effects. The current scope intentionally leaves
+workspace switching, state commands, notifications, and tray lifecycle to the
+tracked Windows delivery plan rather than duplicating shared logic in C#.
+
 On Linux, `LinuxOsIntegration` delivers notifications through
 `org.freedesktop.Notifications`. The client receives only the queue projection's
 persisted `notificationEligibleIds`, and its OS adapter opens the relevant PR in

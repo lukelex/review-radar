@@ -1,0 +1,38 @@
+name: Windows WinUI CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/windows/**
+      - .github/workflows/windows.yml
+      - docs/assets/logo.svg
+  pull_request:
+    paths:
+      - apps/windows/**
+      - .github/workflows/windows.yml
+      - docs/assets/logo.svg
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows client
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore apps/windows/ReviewRadar.Windows.csproj
+
+      - name: Build
+        run: dotnet build apps/windows/ReviewRadar.Windows.csproj --configuration Release --no-restore

@@ -1,15 +1,26 @@
 # Windows client and packaging plan
 
 Windows WinUI 3 is a supported interface in the native-client contract, but its
-shell has not started: `apps/windows/` intentionally contains only a placeholder.
-Do not publish an installer or signing pipeline for it before it can run the same
-collector, queue, and state-helper contract as the other clients.
+shell is deliberately being built in slices. Do not publish an installer or
+signing pipeline for it before it can run the same collector, queue, and
+state-helper contract as the other clients.
+
+## Foundation
+
+- [x] Create the Windows 10+ WinUI 3 project, app manifest, design-system mark,
+  and Windows CI build gate.
+- [x] Run collector and queue helpers as separate processes, parsing queue stdout
+  as one versioned JSON response and retaining stderr for diagnostics.
+- [x] Store capture and local-state files under `%APPDATA%\review-radar\`, with
+  development command/database overrides and an embedded-helper lookup path.
+- [x] Present the already-ranked Tailored projection with card selection, refresh
+  on open/five-minute cadence, and explicit local/cached/failure status text.
+- [ ] Run and fix the Windows CI build on a hosted Windows runner.
 
 ## Required before Windows packaging
 
-- Implement the WinUI 3 shell with the five workspace projections, ranking
-  selection, full card/details surface, keyboard access, local acknowledgement,
-  and snooze commands.
+- Implement the remaining four workspace projections, ranking selection, complete
+  card/details surface, keyboard access, local acknowledgement, and snooze commands.
 - Add Preferences and Windows notifications whose filters and quiet hours affect
   delivery only, never shared attention observation or deduplication.
 - Provide a discoverable optional tray/background lifecycle equivalent to Linux
