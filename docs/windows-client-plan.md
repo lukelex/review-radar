@@ -15,7 +15,9 @@ state-helper contract as the other clients.
   development command/database overrides and an embedded-helper lookup path.
 - [x] Present the already-ranked Tailored projection with card selection, refresh
   on open/five-minute cadence, and explicit local/cached/failure status text.
-- [ ] Run and fix the Windows CI build on a hosted Windows runner.
+- [ ] Run and fix the Windows CI build on a hosted Windows runner. Initial run
+  `35901077769` could not start because the repository Actions budget was
+  exhausted; no Windows compiler result is available yet.
 
 ## Required before Windows packaging
 
