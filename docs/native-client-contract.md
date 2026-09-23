@@ -21,6 +21,20 @@ agents. The design tokens and language remain in [`design-system.md`](design-sys
 this document records cross-platform behavior and decisions rather than replacing
 that visual source of truth.
 
+## Interface parity
+
+Every shared user-facing behavior must remain current across Linux Qt, macOS
+SwiftUI, Windows WinUI, and the CLI/TUI contract. A platform may use native
+presentation and integration APIs, but it must preserve equivalent meaning,
+discoverability, local-state effects, notification delivery semantics,
+accessibility, and lifecycle behavior. A change is not complete merely because it
+works in the shell being edited.
+
+If an interface cannot implement the behavior in the same change, document the
+gap, rationale, platform-neutral acceptance criteria, and explicit follow-up in
+its tracked plan before merging. Never silently make a shared feature available in
+only one interface.
+
 ## Collection and projection performance
 
 The queue executable writes exactly one JSON response to stdout. All tracing

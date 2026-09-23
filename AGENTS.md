@@ -18,6 +18,22 @@
 - Read `docs/github-data-spike.md` before changing `crates/github/src/query.graphql` or `schema.sql`; collection is intentionally bounded, nested truncation is retained in JSON payloads, and search memberships must remain explicit.
 - `tests/fixtures/github/github-snapshot.json` is a generalized real capture. Regenerate it only with `docker compose run --rm seed-export`; never copy or commit `data/review-radar.sqlite3`. Fixture replacement can renumber all pseudonyms and must pass the identity-field tests.
 
+## Interface parity rule
+
+- Keep every supported interface current at the same time. A shared user-facing
+  feature, command, preference, state transition, workspace, ranking option, or
+  notification behavior is incomplete until Linux Qt, macOS SwiftUI, Windows
+  WinUI, and the CLI/TUI contract expose equivalent meaning and outcomes.
+- Platform-native integrations may differ in presentation (for example, tray vs.
+  menu bar), but they must preserve the same discoverability, local-state,
+  delivery, accessibility, and lifecycle guarantees. Do not treat a completed
+  implementation in one shell as permission to leave another shell stale.
+- When an interface cannot implement a capability in the same change, update the
+  relevant cross-platform contract and its tracked plan with the gap, rationale,
+  acceptance criteria, and explicit follow-up before merging. Keep all other
+  compatible interfaces updated; do not silently narrow shared behavior to the
+  currently edited client.
+
 ## Implementation boundaries
 
 - Keep GitHub queries and normalization in `crates/github`; classification, ranking, event fingerprints, and reactivation in `crates/domain`; per-device persistence and notification deduplication in `crates/state`.
