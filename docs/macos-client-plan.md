@@ -15,7 +15,8 @@ contract; no item authorizes duplicating them in Swift.
   shared `review-radar` directory name.
 - [x] Present ranked Tailored cards, selection, an empty state, cached/stale
   status, and an explicit refresh action.
-- [ ] Confirm the macOS CI runner builds and runs the fixture-driven Swift tests.
+- [x] Confirm the macOS CI runner builds and runs the fixture-driven Swift tests
+  (GitHub Actions run `35897206706` on macOS 14).
 
 ## Workspace parity
 

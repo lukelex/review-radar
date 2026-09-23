@@ -156,7 +156,8 @@ final class QueueStore: ObservableObject {
     func start() async {
         await refresh()
         timer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { [weak self] _ in
-            Task { await self?.refresh() }
+            guard let self else { return }
+            Task { @MainActor in await self.refresh() }
         }
     }
 
