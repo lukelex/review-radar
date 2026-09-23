@@ -1,0 +1,79 @@
+name: Release macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing release tag, for example v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: macos-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sign, notarize, and upload macOS archive
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Require signing and notarization credentials
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_SIGNING_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_SIGNING_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          NOTARY_KEY: ${{ secrets.MACOS_NOTARY_API_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: |
+          test -n "$CERTIFICATE"
+          test -n "$CERTIFICATE_PASSWORD"
+          test -n "$IDENTITY"
+          test -n "$NOTARY_KEY"
+          test -n "$NOTARY_KEY_ID"
+          test -n "$NOTARY_ISSUER"
+
+      - name: Import Developer ID certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.MACOS_SIGNING_CERTIFICATE }}
+          p12-password: ${{ secrets.MACOS_SIGNING_CERTIFICATE_PASSWORD }}
+
+      - name: Store notary credentials
+        env:
+          NOTARY_KEY: ${{ secrets.MACOS_NOTARY_API_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: |
+          key="$RUNNER_TEMP/AuthKey_${NOTARY_KEY_ID}.p8"
+          printf '%s' "$NOTARY_KEY" > "$key"
+          xcrun notarytool store-credentials review-radar-notary \
+            --key "$key" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER"
+          rm -f "$key"
+
+      - name: Build, sign, and notarize archive
+        env:
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          MACOS_NOTARY_PROFILE: review-radar-notary
+          VERSION: ${{ inputs.version }}
+        run: scripts/package-macos "$VERSION"
+
+      - name: Upload archive to the existing GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION#v}"
+          gh release upload "$VERSION" \
+            "build/review-radar-macos-universal-$version.zip" \
+            "build/review-radar-macos-universal-$version.zip.sha256" \
+            --clobber

@@ -45,14 +45,14 @@ contract; no item authorizes duplicating them in Swift.
 
 ## Release and quality
 
-- [ ] Package the SwiftUI app with matching Rust helpers, icon assets, code-signing
-  inputs, and no credentials.
+- [x] Package the SwiftUI app with matching universal Rust helpers, generated
+  design-system icon assets, code-signing inputs, and no credentials.
 - [ ] Verify first-run baseline, refresh-on-open/five-minute cadence, offline
   stale state, notification/category/quiet-hour behavior, and restart persistence.
 - [ ] Audit VoiceOver labels, focus order, Dynamic Type, reduced motion, contrast,
   and keyboard access.
 - [x] Add macOS CI build/test separately from Linux packaging.
-- [ ] Prepare macOS code-signing and notarization separately from Linux packaging.
+- [x] Prepare macOS code-signing and notarization separately from Linux packaging.
 
 ## Completion criteria
 

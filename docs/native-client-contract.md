@@ -235,6 +235,12 @@ by `.github/workflows/macos.yml` on a macOS 14 runner. Linux hosts may validate
 the shared Rust queue schema but cannot substitute for SwiftUI/AppKit compilation
 or Notification Center interaction tests.
 
+The macOS release package is built by `scripts/package-macos`, verified without
+credentials in `.github/workflows/macos-package.yml`, and signed/notarized only by
+the separate, manually dispatched `.github/workflows/macos-release.yml`. Windows
+packaging remains blocked on its WinUI shell; its required parity work and
+installer/signing acceptance criteria are tracked in `docs/windows-client-plan.md`.
+
 Every PR card communicates, in order:
 
 1. repository, PR number, and activity age;

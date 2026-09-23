@@ -1,0 +1,52 @@
+name: macOS package CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/macos/**
+      - crates/**
+      - Cargo.lock
+      - Cargo.toml
+      - scripts/package-macos
+      - .github/workflows/macos-package.yml
+  pull_request:
+    paths:
+      - apps/macos/**
+      - crates/**
+      - Cargo.lock
+      - Cargo.toml
+      - scripts/package-macos
+      - .github/workflows/macos-package.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build universal macOS app bundle
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build signed universal bundle
+        run: scripts/package-macos 0.0.0-ci
+
+      - name: Verify release archive
+        run: |
+          archive=build/review-radar-macos-universal-0.0.0-ci.zip
+          shasum -a 256 --check "$archive.sha256"
+          unzip -l "$archive" | grep -F 'Review Radar.app/Contents/MacOS/ReviewRadarMac'
+          unzip -l "$archive" | grep -F 'Review Radar.app/Contents/Helpers/review-radar-state'
+
+      - name: Upload unsigned CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-radar-macos-universal
+          path: |
+            build/review-radar-macos-universal-0.0.0-ci.zip
+            build/review-radar-macos-universal-0.0.0-ci.zip.sha256
+          if-no-files-found: error
