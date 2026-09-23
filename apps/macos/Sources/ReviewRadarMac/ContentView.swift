@@ -47,7 +47,7 @@ struct ContentView: View {
                 PreferencesDialog(testNotification: { await queue.testNotification() })
                     .environmentObject(queue.preferences)
             }
-            .onChange(of: queue.preferencesRequested) { requested in
+            .onChange(of: queue.preferencesRequested) { _, requested in
                 if requested {
                     showPreferences = true
                     queue.preferencesRequested = false
@@ -87,44 +87,50 @@ struct ContentView: View {
     }
 
     private var queueColumn: some View {
-            VStack(spacing: 0) {
-                workspaceHeader
-                ScrollViewReader { proxy in
-                    List(selection: $queue.selectedCardID) {
-                        if visibleCards.isEmpty { emptyState }
-                        ForEach(visibleCards) { card in
-                            CardRow(card: card)
-                                .tag(card.id)
-                                .id(card.id)
-                                .listRowBackground(card.id == queue.navigationCardID ? Color.indigo.opacity(0.08) : Color.clear)
-                                .contextMenu { cardActions(card) }
-                        }
-                    }
-                    .onChange(of: queue.navigationCardID) { id in
-                        if let id { proxy.scrollTo(id, anchor: .center) }
-                    }
-                    .onChange(of: queue.selectedCardID) { id in
-                        if let id { queue.navigationCardID = id }
-                    }
-                }
-                .searchable(text: $queue.search, prompt: "Search title, repository, or PR number")
-                .searchFocused($searchFocused)
-                .safeAreaInset(edge: .bottom) { statusLine }
-            }
-            .navigationTitle(queue.workspace.title)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) { refreshButton }
-                ToolbarItem(placement: .automatic) {
-                    Button("Preferences", systemImage: "gear") { showPreferences = true }
-                }
-                ToolbarItem(placement: .automatic) {
-                    Picker("Sort pull requests", selection: $queue.ranking) {
-                        ForEach(Ranking.allCases) { ranking in Text(ranking.title).tag(ranking) }
-                    }
-                    .labelsHidden()
-                    .accessibilityLabel("Sort pull requests")
+        VStack(spacing: 0) {
+            workspaceHeader
+            cardList
+        }
+        .navigationTitle(queue.workspace.title)
+        .toolbar(content: queueToolbar)
+    }
+
+    private var cardList: some View {
+        ScrollViewReader { proxy in
+            List(selection: $queue.selectedCardID) {
+                if visibleCards.isEmpty { emptyState }
+                ForEach(visibleCards) { card in
+                    CardRow(card: card)
+                        .tag(card.id)
+                        .id(card.id)
+                        .listRowBackground(card.id == queue.navigationCardID ? Color.indigo.opacity(0.08) : Color.clear)
+                        .contextMenu { cardActions(card) }
                 }
             }
+            .onChange(of: queue.navigationCardID) { _, id in
+                if let id { proxy.scrollTo(id, anchor: .center) }
+            }
+            .onChange(of: queue.selectedCardID) { _, id in
+                if let id { queue.navigationCardID = id }
+            }
+        }
+        .searchable(text: $queue.search, prompt: "Search title, repository, or PR number")
+        .searchFocused($searchFocused)
+        .safeAreaInset(edge: .bottom) { statusLine }
+    }
+
+    @ToolbarContentBuilder private func queueToolbar() -> some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) { refreshButton }
+        ToolbarItem(placement: .automatic) {
+            Button("Preferences", systemImage: "gear") { showPreferences = true }
+        }
+        ToolbarItem(placement: .automatic) {
+            Picker("Sort pull requests", selection: $queue.ranking) {
+                ForEach(Ranking.allCases) { ranking in Text(ranking.title).tag(ranking) }
+            }
+            .labelsHidden()
+            .accessibilityLabel("Sort pull requests")
+        }
     }
 
     @ViewBuilder private var detailColumn: some View {
