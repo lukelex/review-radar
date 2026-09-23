@@ -149,7 +149,7 @@ final class QueueStore: ObservableObject {
         guard !needle.isEmpty else { return cards }
         return cards.filter { card in
             [card.title, card.repository, String(card.number)]
-                .localizedCaseInsensitiveContains(needle)
+                .contains { $0.localizedCaseInsensitiveContains(needle) }
         }
     }
 
@@ -359,9 +359,9 @@ enum SnoozePreset: CaseIterable, Identifiable {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         switch self {
-        case .laterToday: now.addingTimeInterval(4 * 60 * 60)
-        case .tomorrow: calendar.date(bySettingHour: 9, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: 1, to: now)!)!
-        case .nextWeek: calendar.date(bySettingHour: 9, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: 7, to: now)!)!
+        case .laterToday: return now.addingTimeInterval(4 * 60 * 60)
+        case .tomorrow: return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: 1, to: now)!)!
+        case .nextWeek: return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: 7, to: now)!)!
         }
     }
 }

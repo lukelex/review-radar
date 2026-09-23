@@ -13,7 +13,63 @@ struct ContentView: View {
     private var visibleCards: [PullRequestCard] { queue.filteredCards }
 
     var body: some View {
+        mainLayout
+            .frame(minWidth: 860, minHeight: 600)
+            .confirmationDialog(
+                "Mark pull request as read?",
+                isPresented: acknowledgementBinding,
+                titleVisibility: .visible
+            ) {
+                Button("Mark read") {
+                    if let card = acknowledgementTarget { Task { _ = await queue.acknowledge(card) } }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This pull request stays quiet until a meaningful event changes.")
+            }
+            .confirmationDialog("Snooze pull request", isPresented: snoozeBinding, titleVisibility: .visible) {
+                ForEach(SnoozePreset.allCases) { preset in
+                    Button(preset.title) {
+                        if let card = snoozeTarget { Task { _ = await queue.snooze(card, preset: preset) } }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The pull request returns when this time passes or a meaningful event changes.")
+            }
+            .alert("Could not update local state", isPresented: actionErrorBinding) {
+                Button("OK", role: .cancel) { queue.clearActionError() }
+            } message: {
+                Text(queue.actionError ?? "Try again.")
+            }
+            .sheet(isPresented: $showShortcutHelp) { ShortcutHelp() }
+            .sheet(isPresented: $showPreferences) {
+                PreferencesDialog(testNotification: { await queue.testNotification() })
+                    .environmentObject(queue.preferences)
+            }
+            .onChange(of: queue.preferencesRequested) { requested in
+                if requested {
+                    showPreferences = true
+                    queue.preferencesRequested = false
+                }
+            }
+            .onAppear {
+                keyboard.start(handleKeyboardAction, controlChanged: { queue.controlHeld = $0 })
+            }
+            .onDisappear { keyboard.stop() }
+    }
+
+    private var mainLayout: some View {
         NavigationSplitView {
+            workspaceNavigation
+        } content: {
+            queueColumn
+        } detail: {
+            detailColumn
+        }
+    }
+
+    private var workspaceNavigation: some View {
             List(selection: workspaceSelection) {
                 ForEach(Workspace.allCases.indices, id: \.self) { index in
                     let workspace = Workspace.allCases[index]
@@ -28,7 +84,9 @@ struct ContentView: View {
             }
             .navigationTitle("Review Radar")
             .safeAreaInset(edge: .bottom) { localStateSummary }
-        } content: {
+    }
+
+    private var queueColumn: some View {
             VStack(spacing: 0) {
                 workspaceHeader
                 ScrollViewReader { proxy in
@@ -67,7 +125,9 @@ struct ContentView: View {
                     .accessibilityLabel("Sort pull requests")
                 }
             }
-        } detail: {
+    }
+
+    @ViewBuilder private var detailColumn: some View {
             if let card = queue.selectedCard {
                 DetailView(card: card, copied: $copied) { action in
                     perform(action, for: card)
@@ -79,50 +139,6 @@ struct ContentView: View {
                     description: Text("The ranked queue remains visible while you inspect details.")
                 )
             }
-        }
-        .frame(minWidth: 860, minHeight: 600)
-        .confirmationDialog(
-            "Mark pull request as read?",
-            isPresented: acknowledgementBinding,
-            titleVisibility: .visible
-        ) {
-            Button("Mark read") {
-                if let card = acknowledgementTarget { Task { _ = await queue.acknowledge(card) } }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This pull request stays quiet until a meaningful event changes.")
-        }
-        .confirmationDialog("Snooze pull request", isPresented: snoozeBinding, titleVisibility: .visible) {
-            ForEach(SnoozePreset.allCases) { preset in
-                Button(preset.title) {
-                    if let card = snoozeTarget { Task { _ = await queue.snooze(card, preset: preset) } }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The pull request returns when this time passes or a meaningful event changes.")
-        }
-        .alert("Could not update local state", isPresented: actionErrorBinding) {
-            Button("OK", role: .cancel) { queue.clearActionError() }
-        } message: {
-            Text(queue.actionError ?? "Try again.")
-        }
-        .sheet(isPresented: $showShortcutHelp) { ShortcutHelp() }
-        .sheet(isPresented: $showPreferences) {
-            PreferencesDialog(testNotification: { await queue.testNotification() })
-                .environmentObject(queue.preferences)
-        }
-        .onChange(of: queue.preferencesRequested) { requested in
-            if requested {
-                showPreferences = true
-                queue.preferencesRequested = false
-            }
-        }
-        .onAppear {
-            keyboard.start(handleKeyboardAction, controlChanged: { queue.controlHeld = $0 })
-        }
-        .onDisappear { keyboard.stop() }
     }
 
     private var actionErrorBinding: Binding<Bool> {
@@ -302,7 +318,7 @@ private struct CardRow: View {
             HealthSummary(health: card.explanation.health)
             HStack(spacing: 7) {
                 Text(card.actionLabel).font(.caption.weight(.semibold)).padding(.horizontal, 7).padding(.vertical, 4)
-                    .background(card.attentionRequired ? .indigo.opacity(0.12) : .quaternary, in: Capsule())
+                    .background(card.attentionRequired ? Color.indigo.opacity(0.12) : Color.gray.opacity(0.12), in: Capsule())
                 Text(Display.humanize(card.lifecycle)).font(.caption).foregroundStyle(.secondary)
                 FrictionLabel(friction: card.reviewFriction)
             }
