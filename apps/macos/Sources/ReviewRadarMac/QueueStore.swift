@@ -414,7 +414,16 @@ enum Helpers {
     }
 
     private static func command(_ name: String, fallback: String) -> URL {
-        let path = ProcessInfo.processInfo.environment[name] ?? fallback
+        if let override = ProcessInfo.processInfo.environment[name], !override.isEmpty {
+            return URL(fileURLWithPath: override)
+        }
+        let embedded = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers", isDirectory: true)
+            .appendingPathComponent(fallback)
+        if FileManager.default.isExecutableFile(atPath: embedded.path) {
+            return embedded
+        }
+        let path = fallback
         if path.contains("/") { return URL(fileURLWithPath: path) }
         let directories = (ProcessInfo.processInfo.environment["PATH"] ?? "")
             .split(separator: ":")

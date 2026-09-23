@@ -23,6 +23,9 @@ It uses `~/Library/Application Support/review-radar/` for capture and state file
 Set `REVIEW_RADAR_CAPTURE_DATABASE`, `REVIEW_RADAR_STATE_DATABASE`,
 `REVIEW_RADAR_COLLECTOR_COMMAND`, `REVIEW_RADAR_QUEUE_COMMAND`, and
 `REVIEW_RADAR_STATE_COMMAND` to use another helper location or fixture setup.
+Packaged apps prefer the matching signed helpers embedded in
+`Review Radar.app/Contents/Helpers/`; those command overrides remain available
+for development and diagnostics.
 
 See [`docs/macos-client-plan.md`](../../docs/macos-client-plan.md) for the
 remaining runner-validation, release, and accessibility checklists.
