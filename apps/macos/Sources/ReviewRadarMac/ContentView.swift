@@ -114,8 +114,6 @@ struct ContentView: View {
                 if let id { queue.navigationCardID = id }
             }
         }
-        .searchable(text: $queue.search, prompt: "Search title, repository, or PR number")
-        .searchFocused($searchFocused)
         .safeAreaInset(edge: .bottom) { statusLine }
     }
 
@@ -176,6 +174,11 @@ struct ContentView: View {
                 Text(queue.workspace.subtitle).font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
+            TextField("Search title, repository, or PR number", text: $queue.search)
+                .textFieldStyle(.roundedBorder)
+                .focused($searchFocused)
+                .frame(width: 260)
+                .accessibilityLabel("Search pull requests")
             Text("\(visibleCards.count) \(visibleCards.count == 1 ? "pull request" : "pull requests")")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
