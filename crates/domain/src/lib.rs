@@ -367,8 +367,6 @@ pub struct Comment {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewThread {
-    pub id: String,
-    pub is_resolved: bool,
     #[serde(default)]
     pub comments: Connection<Comment>,
 }
@@ -766,6 +764,25 @@ mod tests {
         assert!(queue.iter().any(|card| card.action == Action::Draft));
         assert!(queue.iter().any(|card| card.action == Action::Merged));
         assert!(queue.iter().any(|card| card.action == Action::Closed));
+    }
+
+    #[test]
+    fn snapshot_accepts_hydrated_review_threads_without_unused_fields() {
+        let snapshot = serde_json::json!({
+            "viewer": { "login": "viewer" },
+            "searches": [],
+            "pullRequests": [{
+                "id": "PR_1", "number": 1, "title": "Example",
+                "url": "https://github.com/example/repository/pull/1",
+                "state": "OPEN", "isDraft": false,
+                "repository": { "nameWithOwner": "example/repository" },
+                "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+                "updatedAt": "2026-09-23T12:00:00Z",
+                "reviewThreads": { "nodes": [{ "comments": { "nodes": [] } }] }
+            }]
+        });
+
+        Snapshot::from_json(&snapshot.to_string()).unwrap();
     }
 
     #[test]
