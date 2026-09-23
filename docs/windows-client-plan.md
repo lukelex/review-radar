@@ -16,8 +16,11 @@ state-helper contract as the other clients.
 - [x] Present the already-ranked Tailored projection with card selection, refresh
   on open/five-minute cadence, and explicit local/cached/failure status text.
 - [ ] Run and fix the Windows CI build on a hosted Windows runner. Initial run
-  `35901077769` could not start because the repository Actions budget was
-  exhausted; no Windows compiler result is available yet.
+`35901077769` could not start because the repository Actions budget was
+exhausted; no Windows compiler result is available yet.
+
+The approved self-hosted-runner setup, security boundaries, workflow changes, and
+LLM handoff instructions are in [`windows-local-ci-plan.md`](windows-local-ci-plan.md).
 
 ## Required before Windows packaging
 
