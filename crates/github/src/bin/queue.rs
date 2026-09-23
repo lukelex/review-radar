@@ -425,14 +425,27 @@ fn load_searches(connection: &Connection, capture_id: i64) -> Result<Vec<Value>>
 }
 
 fn load_pull_requests(connection: &Connection, capture_id: i64) -> Result<Vec<Value>> {
-    let mut statement = connection
-        .prepare("SELECT payload FROM pull_requests WHERE capture_id = ? ORDER BY node_id")?;
+    let mut statement = connection.prepare(
+        "SELECT node_id, payload FROM pull_requests WHERE capture_id = ? ORDER BY node_id",
+    )?;
     let payloads = statement
-        .query_map([capture_id], |row| row.get::<_, String>(0))?
+        .query_map([capture_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     payloads
         .into_iter()
-        .map(|payload| serde_json::from_str(&payload).context("invalid stored PR payload"))
+        .map(|(node_id, payload)| {
+            let mut payload: Value =
+                serde_json::from_str(&payload).context("invalid stored PR payload")?;
+            let object = payload
+                .as_object_mut()
+                .context("stored PR payload is not an object")?;
+            // The database primary key is canonical. Restore it for captures
+            // written by older collectors that did not retain `id` in JSON.
+            object.insert("id".into(), Value::String(node_id));
+            Ok(payload)
+        })
         .collect()
 }
 
@@ -466,6 +479,26 @@ mod tests {
             ranking("highest-friction").unwrap().id(),
             "highest-friction"
         );
+    }
+
+    #[test]
+    fn restores_id_from_database_key_for_legacy_payloads() {
+        let connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE pull_requests (capture_id INTEGER, node_id TEXT, payload TEXT);",
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO pull_requests VALUES (1, 'PR_1', '{\"title\":\"Legacy PR\"}')",
+                [],
+            )
+            .unwrap();
+
+        let pull_requests = load_pull_requests(&connection, 1).unwrap();
+
+        assert_eq!(pull_requests[0]["id"], "PR_1");
     }
 
     #[test]

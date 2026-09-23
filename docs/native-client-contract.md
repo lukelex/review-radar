@@ -146,6 +146,28 @@ Clients distinguish these states:
 The latest successful capture time must remain distinct from ongoing work or an
 error. An idle process is not evidence that data is current.
 
+A failed request must never replace, clear, or otherwise invalidate the last
+successful projection, including a successful projection with zero cards. The
+client marks that projection cached after failure and opens a modal for every
+failed refresh, projection, or local command request. The modal identifies the
+failed operation, retains readable diagnostic detail (such as process output,
+exit status, or response parse error), and allows the user to select or scroll
+that detail. This favors preserving an actionable workspace over presenting a
+potentially misleading empty state; detailed diagnostics may expose technical
+information, so they remain in the in-app modal rather than a transient alert.
+
+Acceptance criteria:
+
+- After a successful projection, a later failed request leaves the same cards,
+  selection, counts, and latest successful capture time intact.
+- A failed request opens one modal with a specific operation title and its full
+  available error detail; closing it does not discard the cached projection.
+- If no successful projection exists, the failure modal still appears and the
+  normal no-data loading/error treatment remains available.
+
+Linux reference: `QueueController::reportRequestFailure` and the
+`request-failure-dialog` in `apps/linux-qt/qml/Main.qml`.
+
 The reference shell uses skeleton parent cards only when no cached list exists,
 keeps cached cards visible during sync, shows an updating treatment on cached
 cards, and defers the activity timeline briefly after opening details. This is

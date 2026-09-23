@@ -113,6 +113,7 @@ signals:
     void staleChanged();
     void controlHeldChanged();
     void countsChanged();
+    void requestFailed(const QString &title, const QString &details);
 
 private:
     QString applicationDataFile(const QString &name) const;
@@ -125,6 +126,7 @@ private:
     void startCollection();
     void runStateCommand(const QStringList &arguments);
     void sendNotifications(const QJsonArray &cards, const QJsonArray &eligibleIds);
+    void reportRequestFailure(const QString &title, const QString &details);
     void setStatus(const QString &status);
 
 private:
@@ -143,6 +145,8 @@ private:
     bool loading_ = false;
     bool refreshing_ = false;
     bool stale_ = false;
+    // A successful empty workspace is still a usable cached projection.
+    bool hasProjection_ = false;
     bool collectAfterProjection_ = false;
     int sourceCount_ = 0;
     int suppressedCount_ = 0;

@@ -19,6 +19,11 @@ ApplicationWindow {
         function onShowWorkspaceRequested() { root.restoreWindow() }
         function onShowPreferencesRequested() { root.restoreWindow(); preferencesDialog.open() }
         function onQuitRequested() { Qt.quit() }
+        function onRequestFailed(title, details) {
+            requestFailureDialog.failureTitle = title
+            requestFailureDialog.details = details
+            requestFailureDialog.open()
+        }
     }
     title: "Review Radar"
     color: Style.canvas
@@ -196,6 +201,30 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+    RadarModal {
+        id: requestFailureDialog
+        objectName: "request-failure-dialog"
+        property string failureTitle: "Request failed"
+        property string details: ""
+        title: failureTitle
+        subtitle: queue.stale ? "Showing cached data. You can try refreshing again." : "Try again when you are ready."
+        actionText: "Done"
+        preferredWidth: 680
+        TextArea {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(260, implicitHeight + 20)
+            readOnly: true
+            selectByMouse: true
+            text: requestFailureDialog.details
+            textFormat: TextEdit.PlainText
+            wrapMode: TextEdit.Wrap
+            color: Style.ink
+            font.family: root.font.family
+            font.pixelSize: 12
+            Accessible.name: "Request failure details"
+            background: Rectangle { color: Style.canvas; radius: 8; border.color: Style.line }
         }
     }
     Connections {

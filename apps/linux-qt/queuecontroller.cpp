@@ -236,17 +236,28 @@ void QueueController::initialize() {
     modifierTimer_.start();
     connect(osIntegration_, &ReviewRadar::OsIntegration::notificationActivated, this,
             [this](const QUrl &url) { openUrl(url.toString()); });
-    connect(&collectorProcess_, &QProcess::finished, this,
-             [this](int exitCode, QProcess::ExitStatus exitStatus) {
+     connect(&collectorProcess_, &QProcess::finished, this,
+              [this](int exitCode, QProcess::ExitStatus exitStatus) {
+          refreshing_ = false;
+          emit refreshingChanged();
+           if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+               barError_ = true;
+               publishBarSnapshot();
+               reportRequestFailure("Could not refresh GitHub",
+                                    QStringLiteral("Exit code: %1\n\n%2")
+                                        .arg(exitCode)
+                                        .arg(QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed()));
+              return;
+          }
+          loadProjection();
+      });
+     connect(&collectorProcess_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+         if (error != QProcess::FailedToStart) return;
          refreshing_ = false;
          emit refreshingChanged();
-          if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-              barError_ = true;
-              publishBarSnapshot();
-              setStatus("Could not refresh GitHub: " + QString::fromUtf8(collectorProcess_.readAllStandardError()).trimmed());
-             return;
-         }
-         loadProjection();
+         barError_ = true;
+         publishBarSnapshot();
+         reportRequestFailure("Could not refresh GitHub", collectorProcess_.errorString());
      });
      connect(&collectorProcess_, &QProcess::readyReadStandardOutput, this, [this]() {
          const auto output = QString::fromUtf8(collectorProcess_.readAllStandardOutput());
@@ -260,25 +271,29 @@ void QueueController::initialize() {
          emit loadingChanged();
          const bool shouldCollect = collectAfterProjection_;
          collectAfterProjection_ = false;
-          if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-              barError_ = true;
-              publishBarSnapshot();
-              setStatus("Could not load workspace: " + QString::fromUtf8(queueProcess_.readAllStandardError()).trimmed());
-             if (shouldCollect) startCollection();
-             return;
-        }
+           if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+               barError_ = true;
+               publishBarSnapshot();
+               reportRequestFailure("Could not load workspace",
+                                    QStringLiteral("Exit code: %1\n\n%2")
+                                        .arg(exitCode)
+                                        .arg(QString::fromUtf8(queueProcess_.readAllStandardError()).trimmed()));
+              if (shouldCollect) startCollection();
+              return;
+         }
         QJsonParseError error;
         const auto response = QJsonDocument::fromJson(queueProcess_.readAllStandardOutput(), &error);
           if (error.error != QJsonParseError::NoError || !response.isObject()) {
-              barError_ = true;
-              publishBarSnapshot();
-             setStatus("Could not read queue response: " + error.errorString());
-             if (shouldCollect) startCollection();
-             return;
+               barError_ = true;
+               publishBarSnapshot();
+              reportRequestFailure("Could not read queue response", error.errorString());
+              if (shouldCollect) startCollection();
+              return;
         }
         const auto result = response.object();
         const auto cards = result.value("pullRequests").toArray();
-         model_.replace(cards);
+          model_.replace(cards);
+          hasProjection_ = true;
          int attentionCount = 0;
          for (const auto &card : cards)
              if (card.toObject().value("attentionRequired").toBool()) ++attentionCount;
@@ -299,14 +314,32 @@ void QueueController::initialize() {
           setStatus("Updated " + result.value("capturedAt").toString());
           publishBarSnapshot();
          if (shouldCollect) startCollection();
-    });
-    connect(&stateProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
-         if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-            setStatus("Could not update local state: " + QString::fromUtf8(stateProcess_.readAllStandardError()).trimmed());
-            return;
-        }
-         loadProjection();
-    });
+     });
+     connect(&queueProcess_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+         if (error != QProcess::FailedToStart) return;
+         loading_ = false;
+         emit loadingChanged();
+         const bool shouldCollect = collectAfterProjection_;
+         collectAfterProjection_ = false;
+         barError_ = true;
+         publishBarSnapshot();
+         reportRequestFailure("Could not load workspace", queueProcess_.errorString());
+         if (shouldCollect) startCollection();
+     });
+     connect(&stateProcess_, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
+          if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+             reportRequestFailure("Could not update local state",
+                                  QStringLiteral("Exit code: %1\n\n%2")
+                                      .arg(exitCode)
+                                      .arg(QString::fromUtf8(stateProcess_.readAllStandardError()).trimmed()));
+             return;
+         }
+          loadProjection();
+     });
+     connect(&stateProcess_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+         if (error == QProcess::FailedToStart)
+             reportRequestFailure("Could not update local state", stateProcess_.errorString());
+     });
 }
 
 PullRequestModel *QueueController::pullRequests() { return &model_; }
@@ -446,6 +479,16 @@ void QueueController::sendNotifications(const QJsonArray &cards, const QJsonArra
         osIntegration_->showNotification({card.value("currentFingerprint").toString(), title, body,
                                            pullRequestUrl, actions});
     }
+}
+void QueueController::reportRequestFailure(const QString &title, const QString &details) {
+    if (hasProjection_ && !stale_) {
+        stale_ = true;
+        emit staleChanged();
+    }
+    const auto message = details.trimmed();
+    setStatus(title + (message.isEmpty() ? QString{} : QStringLiteral(": ") + message));
+    emit requestFailed(title, message.isEmpty() ? QStringLiteral("No additional diagnostic output was provided.")
+                                                  : message);
 }
 void QueueController::setStatus(const QString &status) { if (status_ != status) { status_ = status; emit statusChanged(); } }
 

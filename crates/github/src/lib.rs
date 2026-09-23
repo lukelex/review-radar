@@ -690,7 +690,14 @@ fn load_cache(database: &PathBuf) -> Result<BTreeMap<String, Value>> {
     let mut cache = BTreeMap::new();
     for row in rows {
         let (id, payload) = row?;
-        cache.insert(id, serde_json::from_str(&payload)?);
+        let mut payload: Value = serde_json::from_str(&payload)?;
+        let object = payload
+            .as_object_mut()
+            .context("stored PR payload is not an object")?;
+        // `node_id` is the database's canonical identity. Older captures may
+        // not have retained the redundant field in their JSON payload.
+        object.insert("id".into(), Value::String(id.clone()));
+        cache.insert(id, payload);
     }
     Ok(cache)
 }

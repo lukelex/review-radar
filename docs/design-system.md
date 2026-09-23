@@ -237,6 +237,10 @@ Rendered references (illustrative data, 860 × 640):
   A refresh should not blank useful cached content.
 - Separate local loading from background syncing. With no usable data, show a
   waiting state; with cached data, keep it usable and disclose refresh failures.
+- Open a modal whenever a refresh, projection, or local command request fails.
+  Give it a specific operation title and selectable, scrollable error detail;
+  retain the cached workspace behind it rather than replacing it with an error
+  view.
 - Show the latest successful capture time separately from ongoing work or errors.
   Do not imply “up to date” merely because a process is idle.
 - Clear detail selection when the selected PR leaves the rendered dataset, and

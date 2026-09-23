@@ -11,6 +11,7 @@
 #include <QQuickWindow>
 #include <QTest>
 #include <QDir>
+#include <QFile>
 #include <QTemporaryDir>
 
 // Presentation contract only: no network, SQLite, notifications, or host actions.
@@ -72,6 +73,7 @@ signals:
     void preferencesChanged();
     void viewChanged();
     void rankingChanged();
+    void requestFailed(const QString &, const QString &);
 };
 
 class RecordingOsIntegration final : public ReviewRadar::OsIntegration {
@@ -107,6 +109,7 @@ class WorkspaceTest final : public QObject {
     Q_OBJECT
 private slots:
     void osIntegrationBoundary();
+    void failedRefreshRetainsCachedProjection();
     void workspace();
 };
 
@@ -170,6 +173,53 @@ void WorkspaceTest::osIntegrationBoundary() {
     osIntegration.directory.remove();
     QVERIFY(!restarted.savePreferences(true));
     QVERIFY(!restarted.notificationsEnabled());
+}
+
+void WorkspaceTest::failedRefreshRetainsCachedProjection() {
+    RecordingOsIntegration osIntegration;
+    QTemporaryDir commands;
+    QVERIFY(commands.isValid());
+    const auto queueCommand = commands.filePath("queue-success");
+    const auto collectorCommand = commands.filePath("collector-failure");
+    {
+        QFile file(queueCommand);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("#!/bin/sh\nprintf '%s\\n' '{\"capturedAt\":\"2026-09-21T12:00:00Z\",\"sourceCount\":1,\"suppressedCount\":0,\"notificationEligibleIds\":[],\"pullRequests\":[{\"id\":\"pr-1\",\"repository\":\"example/repository\",\"number\":1,\"title\":\"Cached pull request\",\"url\":\"https://github.com/example/repository/pull/1\",\"lifecycle\":\"open\",\"attentionRequired\":false,\"explanation\":{\"heading\":\"Cached\",\"reasons\":[],\"health\":{}},\"reviewFriction\":{},\"events\":[]}]}'\n");
+        file.close();
+        QVERIFY(file.setPermissions(QFile::permissions(queueCommand)
+                                    | QFileDevice::ExeOwner | QFileDevice::ExeGroup | QFileDevice::ExeOther));
+    }
+    {
+        QFile file(collectorCommand);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("#!/bin/sh\necho 'Network unavailable' >&2\nexit 1\n");
+        file.close();
+        QVERIFY(file.setPermissions(QFile::permissions(collectorCommand)
+                                    | QFileDevice::ExeOwner | QFileDevice::ExeGroup | QFileDevice::ExeOther));
+    }
+
+    const auto originalQueue = qgetenv("REVIEW_RADAR_QUEUE_COMMAND");
+    const auto originalCollector = qgetenv("REVIEW_RADAR_COLLECTOR_COMMAND");
+    const auto originalSkip = qgetenv("REVIEW_RADAR_SKIP_COLLECTION");
+    const bool skipWasSet = qEnvironmentVariableIsSet("REVIEW_RADAR_SKIP_COLLECTION");
+    qputenv("REVIEW_RADAR_QUEUE_COMMAND", queueCommand.toUtf8());
+    qputenv("REVIEW_RADAR_COLLECTOR_COMMAND", collectorCommand.toUtf8());
+    qunsetenv("REVIEW_RADAR_SKIP_COLLECTION");
+
+    QueueController controller(&osIntegration, nullptr);
+    QSignalSpy failures(&controller, &QueueController::requestFailed);
+    controller.start();
+    QTRY_COMPARE(controller.pullRequests()->rowCount(), 1);
+    QTRY_COMPARE(failures.count(), 1);
+    QCOMPARE(controller.pullRequests()->get(0).value("title").toString(), QString("Cached pull request"));
+    QVERIFY(controller.stale());
+    QCOMPARE(failures.at(0).at(0).toString(), QString("Could not refresh GitHub"));
+    QVERIFY(failures.at(0).at(1).toString().contains("Network unavailable"));
+
+    qputenv("REVIEW_RADAR_QUEUE_COMMAND", originalQueue);
+    qputenv("REVIEW_RADAR_COLLECTOR_COMMAND", originalCollector);
+    if (skipWasSet) qputenv("REVIEW_RADAR_SKIP_COLLECTION", originalSkip);
+    else qunsetenv("REVIEW_RADAR_SKIP_COLLECTION");
 }
 
 void WorkspaceTest::workspace() {
@@ -326,8 +376,15 @@ void WorkspaceTest::workspace() {
         QTest::qWait(50);
         QVERIFY(shortcuts->property("height").toReal() <= window->height() - 40);
         screenshot("shortcuts-modal");
-        QVERIFY(QMetaObject::invokeMethod(shortcuts, "close"));
-        auto *confirmation = window->findChild<QObject *>("acknowledge-dialog");
+         QVERIFY(QMetaObject::invokeMethod(shortcuts, "close"));
+         emit queue.requestFailed("Could not refresh GitHub", "Exit code: 1\n\nNetwork unavailable");
+         auto *requestFailure = window->findChild<QObject *>("request-failure-dialog");
+         QVERIFY(requestFailure);
+         QTRY_VERIFY(requestFailure->property("visible").toBool());
+         QCOMPARE(requestFailure->property("failureTitle").toString(), QString("Could not refresh GitHub"));
+         QCOMPARE(requestFailure->property("details").toString(), QString("Exit code: 1\n\nNetwork unavailable"));
+         QVERIFY(QMetaObject::invokeMethod(requestFailure, "close"));
+         auto *confirmation = window->findChild<QObject *>("acknowledge-dialog");
         QVERIFY(confirmation);
         QVERIFY(QMetaObject::invokeMethod(confirmation, "open"));
         QTRY_VERIFY(confirmation->property("visible").toBool());
