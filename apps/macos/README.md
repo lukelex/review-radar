@@ -42,7 +42,9 @@ identity is configured. Set `MACOS_CODESIGN_IDENTITY` for Developer ID signing a
 also set `MACOS_NOTARY_PROFILE` to submit, staple, and archive a notarized build.
 The app and helpers contain no GitHub token, capture, or local-state database.
 
-`macOS package CI` builds and verifies an ad-hoc-signed archive on macOS 14.
+`macOS package CI` builds and verifies an ad-hoc-signed archive on macOS 14. It
+also attempts to retain that archive as a CI artifact; an exhausted GitHub Actions
+artifact quota does not invalidate the completed package verification.
 `Release macOS` is manually dispatched only after the corresponding GitHub release
 tag exists. It requires these repository secrets: a base64 Developer ID Application
 `.p12` (`MACOS_SIGNING_CERTIFICATE`), its password
