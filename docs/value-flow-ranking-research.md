@@ -127,16 +127,20 @@ observations; an initial capture is not a zero-minute request.
 | Revision/re-request → next review | Changed head SHA, renewed request where observable, next submitted review. | No re-request means do not label waiting as reviewer latency. Concurrent reviewers need separate clocks or an explicit first-response aggregation. |
 | Approval → merge | Review submission/decision and `mergedAt`, considering later dismissals/revisions. | Merges depend on checks, permission, and other actors; do not blame reviewers for this interval. |
 
-The collector now requests bounded review-requested, review-request-removed, and
-head-force-pushed timeline events in `crates/github/src/hydrate.graphql`; they are
-retained in the immutable raw PR payload. The first increment intentionally does
-not normalize them or change rank behavior. Next validate the query and measure
-API cost/pagination on a bounded capture, including user/team/mannequin shapes and
-before/after head OIDs. Then add a separate normalized episode contract and
-capture-interval estimates for head changes first observed between polls. Preserve
-source evidence and explicit retention/versioning, separate from per-device
-attention state. Never use commit-author time as an exact push time or copy private
-captures into fixtures.
+The collector requests bounded review-requested, review-request-removed, and
+head-force-pushed events in a separate `handoffItems` timeline connection; raw
+payloads retain the source evidence and its independent pagination flag. After
+rebuilding the collector image, a bounded live query passed validation at 9
+points for 3 hydrated PRs (20 event limit; 13,351 response bytes) and returned
+request, request-removal, and force-push events with no handoff pagination gaps.
+A direct, one-PR `reviewRequests(first: 100)` lookup returned one user reviewer at
+cost 1. This verifies user event/current-state identity paths, but not
+team/mannequin attribution or broad-history coverage. Do not build a ranking input
+from this small sample. Next validate representative user/team request histories,
+then add a normalized episode contract and capture-interval estimates for head
+changes first observed between polls. Preserve source evidence and explicit
+retention/versioning separately from per-device attention state. Never use
+commit-author time as an exact push time or copy private captures into fixtures.
 
 ## Candidate ranking contract (after evidence validation)
 

@@ -228,10 +228,18 @@ searches for recent completions.
   mergeability transitions between captures are unavailable. The collector now
   retains bounded `ReviewRequestedEvent`, `ReviewRequestRemovedEvent`, and
   `HeadRefForcePushedEvent` evidence (including reviewer type/identity where
-  exposed and before/after head OIDs). This is raw bounded evidence only: there is
-  not yet an episode normalizer, individual-user/team attribution policy, or
-  capture-interval estimate for head changes first seen between polls. Do not
-  interpret this collection as a turnaround metric or ranking input.
+  exposed and before/after head OIDs) in a separate `handoffItems` connection, so
+  the existing lifecycle connection retains an independent completeness flag. A
+  bounded live query validated the expanded GraphQL selection at a cost of 9
+  points for 3 hydrated PRs (`event_limit=20`; 13,351 response bytes). Its
+  generalized aggregate contained 5 user review-request events, 1 user
+  review-request removal, and 2 force-push events; the handoff connection was not
+  truncated on these PRs. A separate one-PR lookup of the current request
+  connection returned one user reviewer (cost 1). This confirms the queried user
+  event shapes, but does not establish team/mannequin attribution or broad-history
+  coverage. There is not yet an episode normalizer or capture-interval estimate
+  for head changes first observed between polls. Do not interpret raw collection
+  as a turnaround metric or ranking input.
 - **Commit tails are not churn measurements.** The collector preserves bounded
   commit IDs/dates for later comparison but does not treat cumulative commit totals
   as per-revision rework. Until targeted parent-diff comparisons provide a

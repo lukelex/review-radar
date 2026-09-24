@@ -795,6 +795,8 @@ mod tests {
         assert!(HYDRATE_QUERY.contains("REVIEW_REQUESTED_EVENT"));
         assert!(HYDRATE_QUERY.contains("REVIEW_REQUEST_REMOVED_EVENT"));
         assert!(HYDRATE_QUERY.contains("HEAD_REF_FORCE_PUSHED_EVENT"));
+        assert!(HYDRATE_QUERY.contains("handoffItems: timelineItems"));
+        assert!(HYDRATE_QUERY.contains("timelineItems(last: $eventLimit, itemTypes: [READY_FOR_REVIEW_EVENT"));
         assert!(HYDRATE_QUERY.contains("requestedReviewer"));
         assert!(HYDRATE_QUERY.contains("afterCommit { oid }"));
         assert!(!HYDRATE_QUERY.contains("isResolved"));
