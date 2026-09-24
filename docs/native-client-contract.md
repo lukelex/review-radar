@@ -84,6 +84,15 @@ individual check-context nodes. They retain the bounded review, comment,
 review-thread comment, lifecycle, commit-diff, and aggregate check evidence
 needed to produce the same complete shared projection.
 
+The bounded PR timeline also retains review-requested, review-request-removed,
+and head-force-pushed events (reviewer type/identity where available, and before/
+after head OIDs). This is raw source evidence for future handoff-episode
+normalization; it is not yet a turnaround metric or ranking input. The existing
+friction normalizer ignores these event kinds without downgrading otherwise
+complete friction coverage. No client infers exact request age or head-push time
+from `updatedAt` or commit-author dates. Query cost and representative reviewer
+identity shapes must be validated before episode metrics are enabled.
+
 During refresh it also emits progress for each search/page and hydration batch.
 Native clients should surface that as concise progress copy (for example,
 “Searching 3 of 6 · page 2 of 4” or “Hydrating batch 4 of 9”), while retaining

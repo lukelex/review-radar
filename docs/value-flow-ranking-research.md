@@ -127,13 +127,16 @@ observations; an initial capture is not a zero-minute request.
 | Revision/re-request → next review | Changed head SHA, renewed request where observable, next submitted review. | No re-request means do not label waiting as reviewer latency. Concurrent reviewers need separate clocks or an explicit first-response aggregation. |
 | Approval → merge | Review submission/decision and `mergedAt`, considering later dismissals/revisions. | Merges depend on checks, permission, and other actors; do not blame reviewers for this interval. |
 
-Prototype the missing events with bounded, rate-limited queries in `crates/github`
-after reading [the GitHub data spike](github-data-spike.md); inspect API cost,
-pagination, identity matching, and representative *sanitized* histories before
-editing production GraphQL or SQL. Preserve immutable source evidence and explicit
-retention/versioning, separate from per-device attention state. If a head push is
-not timestamped by an API event, record its capture interval rather than using
-commit-author time as an exact push. Do not copy private captures into fixtures.
+The collector now requests bounded review-requested, review-request-removed, and
+head-force-pushed timeline events in `crates/github/src/hydrate.graphql`; they are
+retained in the immutable raw PR payload. The first increment intentionally does
+not normalize them or change rank behavior. Next validate the query and measure
+API cost/pagination on a bounded capture, including user/team/mannequin shapes and
+before/after head OIDs. Then add a separate normalized episode contract and
+capture-interval estimates for head changes first observed between polls. Preserve
+source evidence and explicit retention/versioning, separate from per-device
+attention state. Never use commit-author time as an exact push time or copy private
+captures into fixtures.
 
 ## Candidate ranking contract (after evidence validation)
 

@@ -225,7 +225,13 @@ searches for recent completions.
   an unacknowledged event as an outstanding queue reason across later captures.
   That needs an explicit local-state design, separate from notification baselines.
 - **Current state is not history.** Request/removal times and intermediate CI or
-  mergeability transitions between captures are unavailable.
+  mergeability transitions between captures are unavailable. The collector now
+  retains bounded `ReviewRequestedEvent`, `ReviewRequestRemovedEvent`, and
+  `HeadRefForcePushedEvent` evidence (including reviewer type/identity where
+  exposed and before/after head OIDs). This is raw bounded evidence only: there is
+  not yet an episode normalizer, individual-user/team attribution policy, or
+  capture-interval estimate for head changes first seen between polls. Do not
+  interpret this collection as a turnaround metric or ranking input.
 - **Commit tails are not churn measurements.** The collector preserves bounded
   commit IDs/dates for later comparison but does not treat cumulative commit totals
   as per-revision rework. Until targeted parent-diff comparisons provide a

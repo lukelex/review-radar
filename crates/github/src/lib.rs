@@ -792,6 +792,11 @@ mod tests {
         assert!(!HYDRATE_QUERY.contains("... on CheckRun"));
         assert!(!HYDRATE_QUERY.contains("... on StatusContext"));
         assert!(!HYDRATE_QUERY.contains("reviewRequests"));
+        assert!(HYDRATE_QUERY.contains("REVIEW_REQUESTED_EVENT"));
+        assert!(HYDRATE_QUERY.contains("REVIEW_REQUEST_REMOVED_EVENT"));
+        assert!(HYDRATE_QUERY.contains("HEAD_REF_FORCE_PUSHED_EVENT"));
+        assert!(HYDRATE_QUERY.contains("requestedReviewer"));
+        assert!(HYDRATE_QUERY.contains("afterCommit { oid }"));
         assert!(!HYDRATE_QUERY.contains("isResolved"));
         assert!(!HYDRATE_QUERY.contains("reviews(last: $eventLimit) {\n        totalCount"));
     }

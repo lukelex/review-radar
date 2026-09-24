@@ -236,6 +236,13 @@ fn normalize_review_history(
             "ConvertToDraftEvent" => (HistoryEventKind::Draft, node.get("createdAt")),
             "ClosedEvent" => (HistoryEventKind::Closed, node.get("createdAt")),
             "ReopenedEvent" => (HistoryEventKind::Reopened, node.get("createdAt")),
+            // These newly collected events are handoff evidence, not friction
+            // transitions. Preserve them in the raw capture without making the
+            // existing friction assessment partial merely because it can ignore
+            // them.
+            "ReviewRequestedEvent"
+            | "ReviewRequestRemovedEvent"
+            | "HeadRefForcePushedEvent" => continue,
             _ => {
                 valid = false;
                 continue;
@@ -551,7 +558,10 @@ mod tests {
             "timelineItems": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
                 { "__typename": "ReadyForReviewEvent", "id": "ready-1", "createdAt": "2026-09-03T00:00:00Z" },
                 { "__typename": "ConvertToDraftEvent", "id": "draft-1", "createdAt": "2026-09-04T00:00:00Z" },
-                { "__typename": "ReadyForReviewEvent", "id": "ready-2", "createdAt": "2026-09-05T00:00:00Z" }
+                { "__typename": "ReadyForReviewEvent", "id": "ready-2", "createdAt": "2026-09-05T00:00:00Z" },
+                { "__typename": "ReviewRequestedEvent", "id": "request-1", "createdAt": "2026-09-05T12:00:00Z", "requestedReviewer": { "__typename": "User", "login": "reviewer-001" } },
+                { "__typename": "ReviewRequestRemovedEvent", "id": "request-removed-1", "createdAt": "2026-09-06T01:00:00Z", "requestedReviewer": { "__typename": "Team", "slug": "team-001" } },
+                { "__typename": "HeadRefForcePushedEvent", "id": "push-1", "createdAt": "2026-09-06T02:00:00Z", "beforeCommit": { "oid": "old-head" }, "afterCommit": { "oid": "new-head" } }
             ] },
             "reviews": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
                 { "id": "review-1", "author": { "login": "reviewer-001", "__typename": "User" }, "state": "COMMENTED", "submittedAt": "2026-09-06T00:00:00Z", "updatedAt": "2026-09-06T00:00:00Z" }
