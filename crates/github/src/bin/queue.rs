@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use review_radar_domain::PullRequestCard;
 use review_radar_domain::{
     friction::{Coverage, HistoryEvent, HistoryEventKind, ReviewHistory},
+    handoff::{self, Event as HandoffEvent, EventKind as HandoffEventKind},
     RankingStrategy, Snapshot, WorkspaceView,
 };
 use review_radar_github::projection::apply_local_state;
@@ -169,14 +170,179 @@ fn load_snapshot(
     } else {
         BTreeMap::new()
     };
+    let handoff_histories = if include_review_history {
+        normalize_handoff_histories(&pull_requests, &captured_at)?
+    } else {
+        BTreeMap::new()
+    };
     let snapshot = Snapshot::from_json(&serde_json::to_string(&json!({
         "capturedAt": captured_at.clone(),
         "viewer": { "login": viewer_login },
         "searches": searches,
         "pullRequests": pull_requests,
         "reviewHistories": review_histories,
+        "handoffHistories": handoff_histories,
     }))?)?;
     Ok((captured_at, snapshot))
+}
+
+/// Normalize the bounded request/review/head-change evidence into explicit
+/// response episodes. Exact response durations are available only when both
+/// request and review connections are complete and the reviewer is an exact user.
+fn normalize_handoff_histories(
+    pull_requests: &[Value],
+    captured_at: &str,
+) -> Result<BTreeMap<String, handoff::History>> {
+    let observed_until = unix_seconds(captured_at)?;
+    let mut histories = BTreeMap::new();
+    for pull_request in pull_requests {
+        let Some(id) = pull_request.get("id").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(started_at) = pull_request
+            .get("createdAt")
+            .and_then(Value::as_str)
+            .and_then(|at| unix_seconds(at).ok())
+        else {
+            continue;
+        };
+        let (Some(timeline), Some(reviews)) = (
+            pull_request.get("handoffItems"),
+            pull_request.get("reviews"),
+        ) else {
+            continue;
+        };
+        let mut complete = connection_complete(timeline).unwrap_or(false)
+            && connection_nodes(timeline).is_some()
+            && connection_complete(reviews).unwrap_or(false)
+            && connection_nodes(reviews).is_some();
+        let mut events = Vec::new();
+        let mut valid = started_at <= observed_until;
+        let pull_request_author = pull_request.pointer("author.login").and_then(Value::as_str);
+
+        for node in connection_nodes(timeline).into_iter().flatten() {
+            let typename = node.get("__typename").and_then(Value::as_str);
+            let kind = match typename {
+                Some("ReviewRequestedEvent") => Some(HandoffEventKind::Requested(
+                    requested_reviewer(node.get("requestedReviewer")),
+                )),
+                Some("ReviewRequestRemovedEvent") => Some(HandoffEventKind::Removed(
+                    requested_reviewer(node.get("requestedReviewer")),
+                )),
+                Some("HeadRefForcePushedEvent") => Some(HandoffEventKind::ForcePushed {
+                    before_oid: node
+                        .get("beforeCommit")
+                        .and_then(|value| value.get("oid"))
+                        .and_then(Value::as_str)
+                        .map(str::to_owned),
+                    after_oid: node
+                        .get("afterCommit")
+                        .and_then(|value| value.get("oid"))
+                        .and_then(Value::as_str)
+                        .map(str::to_owned),
+                }),
+                _ => {
+                    valid = false;
+                    None
+                }
+            };
+            if let Some(kind) = kind {
+                let Some(event) = handoff_source_event(node, kind) else {
+                    valid = false;
+                    continue;
+                };
+                events.push(event);
+            }
+        }
+
+        for node in connection_nodes(reviews).into_iter().flatten() {
+            let Some(state) = node.get("state").and_then(Value::as_str) else {
+                valid = false;
+                continue;
+            };
+            if state == "PENDING" {
+                continue;
+            }
+            let author = node.get("author").and_then(Value::as_object);
+            let (Some(login), Some(typename)) = (
+                author
+                    .and_then(|actor| actor.get("login"))
+                    .and_then(Value::as_str),
+                author
+                    .and_then(|actor| actor.get("__typename"))
+                    .and_then(Value::as_str),
+            ) else {
+                valid = false;
+                continue;
+            };
+            if pull_request_author.is_some_and(|author| author.eq_ignore_ascii_case(login))
+                || typename == "Bot"
+            {
+                continue;
+            }
+            let timestamp = node.get("submittedAt").and_then(Value::as_str);
+            let Some(at) = timestamp.and_then(|value| unix_seconds(value).ok()) else {
+                valid = false;
+                continue;
+            };
+            events.push(HandoffEvent {
+                id: node
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
+                at,
+                kind: HandoffEventKind::Review {
+                    reviewer: Some(login.to_owned()),
+                },
+            });
+        }
+
+        if !valid {
+            complete = false;
+        }
+        let mut history = handoff::History {
+            policy_version: handoff::POLICY_VERSION.into(),
+            coverage: if complete {
+                Coverage::Complete
+            } else {
+                Coverage::Partial
+            },
+            started_at,
+            observed_until,
+            episodes: Vec::new(),
+            force_pushes: Vec::new(),
+            limitations: Vec::new(),
+        };
+        handoff::complete(&mut history, events);
+        histories.insert(id.to_owned(), history);
+    }
+    Ok(histories)
+}
+
+fn handoff_source_event(node: &Value, kind: HandoffEventKind) -> Option<HandoffEvent> {
+    Some(HandoffEvent {
+        id: node.get("id")?.as_str()?.to_owned(),
+        at: unix_seconds(node.get("createdAt")?.as_str()?).ok()?,
+        kind,
+    })
+}
+
+fn requested_reviewer(value: Option<&Value>) -> Option<handoff::Reviewer> {
+    let reviewer = value?;
+    let kind = match reviewer.get("__typename").and_then(Value::as_str) {
+        Some("User") => handoff::ReviewerKind::User,
+        Some("Team") => handoff::ReviewerKind::Team,
+        Some("Mannequin") => handoff::ReviewerKind::Mannequin,
+        _ => handoff::ReviewerKind::Unknown,
+    };
+    let identifier = match kind {
+        handoff::ReviewerKind::Team => reviewer.get("slug"),
+        _ => reviewer.get("login"),
+    }
+    .and_then(Value::as_str)
+    .map(str::to_owned);
+    Some(handoff::Reviewer { kind, identifier })
 }
 
 fn load_predecessor_snapshot(connection: &Connection, capture_id: i64) -> Result<Option<Snapshot>> {
@@ -626,6 +792,61 @@ mod tests {
     }
 
     #[test]
+    fn normalizes_request_response_episodes_and_requires_complete_connections() {
+        let pull_request = json!({
+            "id": "pr-episode", "createdAt": "2026-09-01T00:00:00Z",
+            "author": { "login": "author-001" },
+            "handoffItems": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
+                { "__typename": "ReviewRequestedEvent", "id": "request-001", "createdAt": "2026-09-02T00:00:00Z", "requestedReviewer": { "__typename": "User", "login": "reviewer-001" } },
+                { "__typename": "ReviewRequestedEvent", "id": "request-team", "createdAt": "2026-09-02T01:00:00Z", "requestedReviewer": { "__typename": "Team", "slug": "team-001" } },
+                { "__typename": "ReviewRequestRemovedEvent", "id": "removed-team", "createdAt": "2026-09-04T00:00:00Z", "requestedReviewer": { "__typename": "Team", "slug": "team-001" } },
+                { "__typename": "HeadRefForcePushedEvent", "id": "push-001", "createdAt": "2026-09-05T00:00:00Z", "beforeCommit": { "oid": "head-a" }, "afterCommit": { "oid": "head-b" } }
+            ] },
+            "reviews": { "pageInfo": { "hasPreviousPage": false }, "nodes": [
+                { "id": "review-001", "author": { "login": "reviewer-001", "__typename": "User" }, "state": "COMMENTED", "submittedAt": "2026-09-03T00:00:00Z" },
+                { "id": "self-review", "author": { "login": "author-001", "__typename": "User" }, "state": "APPROVED", "submittedAt": "2026-09-03T01:00:00Z" },
+                { "id": "bot-review", "author": { "login": "bot-001", "__typename": "Bot" }, "state": "APPROVED", "submittedAt": "2026-09-03T02:00:00Z" }
+            ] }
+        });
+        let histories = normalize_handoff_histories(
+            std::slice::from_ref(&pull_request),
+            "2026-09-06T00:00:00Z",
+        )
+        .unwrap();
+        let history = &histories["pr-episode"];
+        assert_eq!(history.coverage, Coverage::Complete);
+        assert_eq!(history.episodes.len(), 2);
+        assert_eq!(history.episodes[0].outcome, handoff::Outcome::Reviewed);
+        assert_eq!(history.episodes[0].response_seconds, Some(86_400));
+        assert_eq!(
+            history.episodes[0].resolution_event_id.as_deref(),
+            Some("review-001")
+        );
+        assert_eq!(history.episodes[1].outcome, handoff::Outcome::Removed);
+        assert_eq!(history.episodes[1].response_seconds, None);
+        assert_eq!(history.force_pushes.len(), 1);
+        assert_eq!(
+            history.force_pushes[0].before_oid.as_deref(),
+            Some("head-a")
+        );
+        assert_eq!(history.force_pushes[0].after_oid.as_deref(), Some("head-b"));
+
+        let mut partial = pull_request;
+        partial["reviews"]["pageInfo"]["hasPreviousPage"] = json!(true);
+        let partial_history =
+            normalize_handoff_histories(&[partial], "2026-09-06T00:00:00Z").unwrap();
+        assert_eq!(partial_history["pr-episode"].coverage, Coverage::Partial);
+        assert_eq!(
+            partial_history["pr-episode"].episodes[0].outcome,
+            handoff::Outcome::Inconclusive
+        );
+        assert_eq!(
+            partial_history["pr-episode"].episodes[0].response_seconds,
+            None
+        );
+    }
+
+    #[test]
     fn parent_diff_requires_a_parent_and_explicit_counters() {
         assert_eq!(
             parent_diff_lines(&json!({
@@ -663,6 +884,7 @@ mod tests {
             review_friction: review_radar_domain::friction::Assessment::unavailable(
                 review_radar_domain::Lifecycle::Open,
             ),
+            handoff_history: None,
             explanation: review_radar_domain::attention::Explanation {
                 heading: "Why this needs your attention",
                 reasons: Vec::new(),

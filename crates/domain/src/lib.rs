@@ -43,6 +43,7 @@ stable_string_id!(EventFingerprint);
 
 pub mod attention;
 pub mod friction;
+pub mod handoff;
 pub mod ranking;
 
 pub use ranking::{
@@ -64,6 +65,9 @@ pub struct Snapshot {
     /// Optional normalized history; raw bounded GitHub snapshots omit it.
     #[serde(default)]
     pub review_histories: BTreeMap<String, friction::ReviewHistory>,
+    /// Optional normalized handoff evidence; older captures omit it.
+    #[serde(default)]
+    pub handoff_histories: BTreeMap<String, handoff::History>,
     /// Capture completion time used only to compare with a predecessor. It is
     /// absent from fixture-only snapshots, which deliberately yields no delta.
     #[serde(default)]
@@ -164,6 +168,7 @@ impl Snapshot {
                         pr,
                         memberships.get(pr.id.as_str()),
                         self.review_histories.get(pr.id.as_str()),
+                        self.handoff_histories.get(pr.id.as_str()),
                         &feedback,
                     )
                 })
@@ -498,6 +503,7 @@ pub struct PullRequestCard {
     pub attention_required: bool,
     pub explanation: attention::Explanation,
     pub review_friction: friction::Assessment,
+    pub handoff_history: Option<handoff::History>,
     /// Stable for unchanged captured signals; changes when the current action,
     /// review, check, merge, or latest-activity signal changes.
     pub current_fingerprint: EventFingerprint,
@@ -530,6 +536,7 @@ fn project(
     pr: &PullRequest,
     membership: Option<&BTreeSet<String>>,
     history: Option<&friction::ReviewHistory>,
+    handoff_history: Option<&handoff::History>,
     new_feedback: &[Event],
 ) -> PullRequestCard {
     let membership = membership.cloned().unwrap_or_default();
@@ -631,6 +638,7 @@ fn project(
         attention_required,
         explanation: attention::explain(pr, action, authored, attention_required, checks),
         review_friction: friction::assess(history, lifecycle(&pr.state), pr.is_draft),
+        handoff_history: handoff_history.cloned(),
         current_fingerprint: current_fingerprint.into(),
         feedback_fingerprints: new_feedback
             .iter()

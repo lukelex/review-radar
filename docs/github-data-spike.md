@@ -237,9 +237,12 @@ searches for recent completions.
   truncated on these PRs. A separate one-PR lookup of the current request
   connection returned one user reviewer (cost 1). This confirms the queried user
   event shapes, but does not establish team/mannequin attribution or broad-history
-  coverage. There is not yet an episode normalizer or capture-interval estimate
-  for head changes first observed between polls. Do not interpret raw collection
-  as a turnaround metric or ranking input.
+  coverage. Queue projection normalizes complete exact-user request→submitted-
+  review pairs into per-card `handoffHistory` response episodes; it marks
+  incomplete evidence inconclusive and does not match team requests to individual
+  reviewers. Ordinary head changes first seen between polls still lack
+  capture-interval evidence. These values are elapsed wall time, not active effort
+  or business value, and are not a ranking input.
 - **Commit tails are not churn measurements.** The collector preserves bounded
   commit IDs/dates for later comparison but does not treat cumulative commit totals
   as per-revision rework. Until targeted parent-diff comparisons provide a

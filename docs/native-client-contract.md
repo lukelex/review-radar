@@ -97,6 +97,16 @@ Team/mannequin identity coverage and broader history coverage remain unvalidated
 Do not enable episode metrics until representative histories are observed and API
 cost/coverage are characterized.
 
+The queue projection includes optional per-card `handoffHistory` episodes. An
+exact request→submitted-review wall-clock duration or pending age is emitted only
+when both relevant connections are complete and all event bounds/IDs validate.
+Team requests remain unattributed to individual responders; removals, pending
+requests, and incomplete histories have distinct outcomes. Force-push events are
+reported separately from ordinary revision commits. This evidence is diagnostic
+only: it does not affect ranking, attention fingerprints, local state, or
+notifications. Native clients must not turn it into a value/effort score or imply
+that elapsed time is active review effort.
+
 During refresh it also emits progress for each search/page and hydration batch.
 Native clients should surface that as concise progress copy (for example,
 “Searching 3 of 6 · page 2 of 4” or “Hydrating batch 4 of 9”), while retaining

@@ -1,8 +1,9 @@
 # Ranking PRs for faster review-to-delivery flow
 
-Status: research and implementation proposal, **not a shipped ranking policy**.
-Windows implementation is paused. This document does not change the default
-Tailored order, any notification, or any client behavior.
+Status: handoff evidence collection and conservative response-episode projection
+are implemented; **Flow first remains a research proposal, not a shipped ranking
+policy**. Windows implementation is paused. The new evidence does not change the
+default Tailored order or notification behavior.
 
 ## The decision to optimize
 
@@ -129,18 +130,27 @@ observations; an initial capture is not a zero-minute request.
 
 The collector requests bounded review-requested, review-request-removed, and
 head-force-pushed events in a separate `handoffItems` timeline connection; raw
-payloads retain the source evidence and its independent pagination flag. After
-rebuilding the collector image, a bounded live query passed validation at 9
+payloads retain the source evidence and its independent pagination flag. The queue
+normalizer emits optional per-card `handoffHistory` with exact-user
+request→submitted-review episodes, removed/pending/inconclusive outcomes, pending
+wall-clock age, and separate force-push OIDs. Response and pending durations are
+suppressed unless both request-event and review connections are complete and all
+evidence is valid. Team requests are retained but not matched to individual
+reviewers without an attribution source. This evidence does not drive ranking or
+attention.
+
+After rebuilding the collector image, a bounded live query passed validation at 9
 points for 3 hydrated PRs (20 event limit; 13,351 response bytes) and returned
 request, request-removal, and force-push events with no handoff pagination gaps.
 A direct, one-PR `reviewRequests(first: 100)` lookup returned one user reviewer at
 cost 1. This verifies user event/current-state identity paths, but not
 team/mannequin attribution or broad-history coverage. Do not build a ranking input
 from this small sample. Next validate representative user/team request histories,
-then add a normalized episode contract and capture-interval estimates for head
-changes first observed between polls. Preserve source evidence and explicit
-retention/versioning separately from per-device attention state. Never use
-commit-author time as an exact push time or copy private captures into fixtures.
+add capture-interval evidence for ordinary head changes first observed between
+polls, and calibrate effort separately from elapsed waiting. Preserve source
+evidence and explicit retention/versioning separately from per-device attention
+state. Never use commit-author time as an exact push time or copy private captures
+into fixtures.
 
 ## Candidate ranking contract (after evidence validation)
 
