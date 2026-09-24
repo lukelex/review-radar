@@ -28,6 +28,11 @@ LLM handoff instructions are in [`windows-local-ci-plan.md`](windows-local-ci-pl
   card/details surface, keyboard access, local acknowledgement, and snooze commands.
 - Add Preferences and Windows notifications whose filters and quiet hours affect
   delivery only, never shared attention observation or deduplication.
+- Add Account & sync preferences backed by Windows Credential Manager. Never write
+  the GitHub token to preference files, capture/state databases, logs, or process
+  arguments; pass it only to the collector process and preserve inherited
+  `GH_TOKEN` support for CLI/automation. Match the Linux/macOS saved-token
+  precedence, redaction, remove, and unavailable-vault behavior.
 - Provide a discoverable optional tray/background lifecycle equivalent to Linux
   and macOS, using Windows-native presentation.
 - Bundle the Windows-native Rust helper executables with the app; use local data

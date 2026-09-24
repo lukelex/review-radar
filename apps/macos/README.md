@@ -5,6 +5,10 @@ This is the initial native SwiftUI shell. It consumes the existing
 query GitHub, classify/rank pull requests, or persist acknowledgement/snooze
 state.
 
+Configure GitHub access in Preferences → Account & sync. The token is stored in
+macOS Keychain and passed only to the collector process; `GH_TOKEN` remains
+available for CLI and automated runs.
+
 On macOS 14 or later, with matching helper executables on `PATH`:
 
 ```sh

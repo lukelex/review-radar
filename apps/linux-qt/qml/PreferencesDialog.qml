@@ -19,9 +19,11 @@ Dialog {
     property string draftQuietEnd: "09:00"
     property string errorMessage: ""
     property string testMessage: ""
+    property string githubTokenDraft: ""
+    property string githubTokenMessage: ""
     property bool testSucceeded: false
     property string section: "Notifications"
-    readonly property bool dirty: draftNotifications !== controller.notificationsEnabled
+    readonly property bool preferenceDirty: draftNotifications !== controller.notificationsEnabled
         || draftTray !== controller.trayEnabled || draftCloseToTray !== controller.closeToTray
         || draftAttentionDot !== controller.trayAttentionDot
         || draftBar !== controller.barEnabled
@@ -31,6 +33,7 @@ Dialog {
         || draftConflicts !== controller.notifyConflicts
         || draftQuietHours !== controller.quietHours || draftQuietStart !== controller.quietHoursStart
         || draftQuietEnd !== controller.quietHoursEnd
+    readonly property bool dirty: preferenceDirty || githubTokenDraft.length > 0
     readonly property bool compact: width < 900
     readonly property var sections: ["General", "Workspace", "Notifications", "Desktop integration", "Appearance", "Keyboard", "Account & sync", "Local data", "Advanced"]
     readonly property var descriptions: ({
@@ -40,7 +43,7 @@ Dialog {
         "Desktop integration": "Choose where Review Radar appears on your desktop.",
         "Appearance": "A calm workspace that feels like yours.",
         "Keyboard": "Keep your hands on the keyboard.",
-        "Account & sync": "Stay connected without losing your place.",
+         "Account & sync": "Connect securely to your GitHub account.",
         "Local data": "Your workspace history, stored on this device.",
         "Advanced": "Tools for understanding how Review Radar is running."
     })
@@ -78,7 +81,7 @@ Dialog {
         draftQuietHours = controller.quietHours
         draftQuietStart = controller.quietHoursStart
         draftQuietEnd = controller.quietHoursEnd
-        errorMessage = ""; testMessage = ""; section = "Notifications"
+        errorMessage = ""; testMessage = ""; githubTokenDraft = ""; githubTokenMessage = ""; section = "Notifications"
     }
     onOpened: toggle.forceActiveFocus()
     function requestClose() { if (dirty) discard.open(); else close() }
@@ -327,7 +330,63 @@ Dialog {
                     }
                 }
                 ColumnLayout {
-                    visible: preferences.section !== "Notifications" && preferences.section !== "Desktop integration"
+                    visible: preferences.section === "Account & sync"
+                    Layout.fillWidth: true; Layout.leftMargin: 30; Layout.rightMargin: 30; spacing: 12
+                    Label { text: "GITHUB CONNECTION"; color: Style.secondary; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1.2 }
+                    Label {
+                        Layout.fillWidth: true; wrapMode: Text.Wrap; color: Style.secondary; font.pixelSize: 12
+                        text: preferences.controller.githubTokenSaved
+                            ? "A GitHub token is saved in your system keyring and takes precedence over GH_TOKEN from the launch environment."
+                            : preferences.controller.githubTokenConfigured
+                                ? "GH_TOKEN is available from the launch environment. You can save a separate token in your system keyring to take precedence."
+                                : "No GitHub token is configured. Add a personal access token with access to the pull requests you want to review."
+                    }
+                    TextField {
+                        id: githubTokenField
+                        objectName: "github-token-field"
+                        Layout.fillWidth: true
+                        placeholderText: "GitHub personal access token"
+                        echoMode: TextInput.Password
+                        text: preferences.githubTokenDraft
+                        onTextChanged: { preferences.githubTokenDraft = text; preferences.githubTokenMessage = "" }
+                        Accessible.name: "GitHub personal access token"
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 10
+                        RadarButton {
+                            objectName: "save-github-token"
+                            text: "Save token securely"; primary: true
+                            enabled: preferences.githubTokenDraft.trim().length > 0
+                            onClicked: {
+                                if (preferences.controller.saveGithubToken(preferences.githubTokenDraft)) {
+                                    preferences.githubTokenDraft = ""
+                                    githubTokenField.clear()
+                                    preferences.githubTokenMessage = "Token saved in your system keyring. Refresh started."
+                                } else {
+                                    preferences.githubTokenMessage = "Could not access the Linux Secret Service. Unlock or enable your desktop keyring, then try again. The token was not saved."
+                                }
+                            }
+                        }
+                        RadarButton {
+                            text: "Remove saved token"
+                            enabled: preferences.controller.githubTokenSaved
+                            onClicked: preferences.githubTokenMessage = preferences.controller.clearGithubToken()
+                                ? "Saved token removed. GH_TOKEN from the launch environment may still be used."
+                                : "Could not access the Linux Secret Service. The saved token was not changed."
+                        }
+                    }
+                    Label {
+                        Layout.fillWidth: true; visible: preferences.githubTokenMessage.length > 0
+                        text: preferences.githubTokenMessage; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap
+                        Accessible.name: text
+                    }
+                    Label {
+                        Layout.fillWidth: true; text: "The token is stored in your desktop keyring, not preferences.json or the capture database. It is passed only to the collector process. You can also use GH_TOKEN for CLI and automated runs.";
+                        color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap; lineHeight: 1.5
+                    }
+                }
+                ColumnLayout {
+                    visible: preferences.section !== "Notifications" && preferences.section !== "Desktop integration" && preferences.section !== "Account & sync"
                     Layout.fillWidth: true; Layout.leftMargin: 30; Layout.rightMargin: 30; spacing: 12
                     Label { Layout.fillWidth: true; text: "Planned preferences · These options are not configurable yet."; color: Style.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
                     Repeater {
@@ -368,7 +427,7 @@ Dialog {
             Label { Layout.fillWidth: true; text: preferences.dirty ? "Unsaved changes" : "Changes apply to this device."; color: Style.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
             RadarButton { text: "Cancel"; onClicked: preferences.requestClose() }
             RadarButton {
-                objectName: "save-preferences"; text: "Save changes"; primary: true; enabled: preferences.dirty
+                objectName: "save-preferences"; text: "Save changes"; primary: true; enabled: preferences.preferenceDirty && preferences.githubTokenDraft.trim().length === 0
                 onClicked: {
                     if (preferences.controller.saveAllPreferences(preferences.draftNotifications, preferences.draftTray, preferences.draftCloseToTray, preferences.draftAttentionDot, preferences.draftBar, preferences.draftReviewRequests, preferences.draftFeedback, preferences.draftChecks, preferences.draftConflicts, preferences.draftQuietHours, preferences.draftQuietStart, preferences.draftQuietEnd)) preferences.close()
                     else preferences.errorMessage = "Could not save preferences. Your changes have not been applied. Try again."

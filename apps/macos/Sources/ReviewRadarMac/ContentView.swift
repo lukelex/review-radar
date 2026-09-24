@@ -44,7 +44,10 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showShortcutHelp) { ShortcutHelp() }
             .sheet(isPresented: $showPreferences) {
-                PreferencesDialog(testNotification: { await queue.testNotification() })
+                PreferencesDialog(
+                    testNotification: { await queue.testNotification() },
+                    refresh: { await queue.refresh() }
+                )
                     .environmentObject(queue.preferences)
             }
             .onChange(of: queue.preferencesRequested) { _, requested in

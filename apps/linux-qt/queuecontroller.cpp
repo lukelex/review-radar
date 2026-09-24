@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QFile>
 #include <QSaveFile>
+#include <QProcessEnvironment>
 #include <QTime>
 #include <QTimeZone>
 
@@ -200,6 +201,8 @@ QueueController::QueueController(ReviewRadar::OsIntegration *osIntegration, QObj
 }
 
 void QueueController::initialize() {
+    githubTokenSaved_ = osIntegration_->hasGithubToken();
+    githubTokenConfigured_ = githubTokenSaved_ || !qEnvironmentVariable("GH_TOKEN").isEmpty();
     QFile preferences(applicationDataFile("preferences.json"));
     if (preferences.open(QIODevice::ReadOnly)) {
         const auto object = QJsonDocument::fromJson(preferences.readAll()).object();
@@ -396,6 +399,10 @@ void QueueController::startCollection() {
     setStatus("Refreshing GitHub in the background…");
     collectorProcess_.setProgram(commandFromEnvironment("REVIEW_RADAR_COLLECTOR_COMMAND", "review-radar-github"));
     collectorProcess_.setArguments({"--database", captureDatabase()});
+    auto environment = QProcessEnvironment::systemEnvironment();
+    const auto savedToken = osIntegration_->githubToken();
+    if (!savedToken.isEmpty()) environment.insert("GH_TOKEN", savedToken);
+    collectorProcess_.setProcessEnvironment(environment);
     collectorProcess_.start();
 }
 
@@ -571,6 +578,23 @@ bool QueueController::testNotification() {
     return osIntegration_->showNotification({
         "preferences-test", "Review Radar test notification",
         "Desktop notifications are working. Your preferences have not changed.", {}, {}});
+}
+
+bool QueueController::saveGithubToken(const QString &token) {
+    if (!osIntegration_->saveGithubToken(token)) return false;
+    githubTokenSaved_ = true;
+    githubTokenConfigured_ = true;
+    emit preferencesChanged();
+    refresh();
+    return true;
+}
+
+bool QueueController::clearGithubToken() {
+    if (!osIntegration_->clearGithubToken()) return false;
+    githubTokenSaved_ = false;
+    githubTokenConfigured_ = !qEnvironmentVariable("GH_TOKEN").isEmpty();
+    emit preferencesChanged();
+    return true;
 }
 
 void QueueController::publishBarSnapshot() {

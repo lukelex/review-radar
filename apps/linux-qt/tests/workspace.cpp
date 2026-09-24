@@ -40,6 +40,8 @@ class PreviewQueue final : public QObject {
     Q_PROPERTY(bool quietHours MEMBER quietHours NOTIFY preferencesChanged)
     Q_PROPERTY(QString quietHoursStart MEMBER quietHoursStart NOTIFY preferencesChanged)
     Q_PROPERTY(QString quietHoursEnd MEMBER quietHoursEnd NOTIFY preferencesChanged)
+    Q_PROPERTY(bool githubTokenConfigured MEMBER githubTokenConfigured NOTIFY preferencesChanged)
+    Q_PROPERTY(bool githubTokenSaved MEMBER githubTokenSaved NOTIFY preferencesChanged)
 public:
     PullRequestModel model;
     QString view = "tailored", ranking = "tailored", status = "Cached on this device · Updated just now";
@@ -51,6 +53,7 @@ public:
     bool barEnabled = false;
     bool notifyReviewRequests = true, notifyFeedback = true, notifyChecks = true, notifyConflicts = true;
     bool quietHours = false;
+    bool githubTokenConfigured = false, githubTokenSaved = false;
     QString quietHoursStart = "18:00", quietHoursEnd = "09:00";
     Q_INVOKABLE bool saveAllPreferences(bool notifications, bool tray, bool background, bool dot, bool bar,
                                         bool review, bool feedback, bool checks, bool conflicts, bool quiet,
@@ -73,6 +76,8 @@ public:
     bool saveSucceeds = true;
     bool notificationSucceeds = true;
     Q_INVOKABLE bool testNotification() { return notificationSucceeds; }
+    Q_INVOKABLE bool saveGithubToken(const QString &token) { githubTokenConfigured = githubTokenSaved = !token.isEmpty(); emit preferencesChanged(); return !token.isEmpty(); }
+    Q_INVOKABLE bool clearGithubToken() { githubTokenConfigured = githubTokenSaved = false; emit preferencesChanged(); return true; }
     Q_INVOKABLE bool savePreferences(bool enabled) {
         if (!saveSucceeds) return false;
         notificationsEnabled = enabled; emit preferencesChanged(); return true;
@@ -120,6 +125,11 @@ public:
     bool notificationSucceeds = true;
     QUrl opened;
     QString copied;
+    QString token;
+    bool hasGithubToken() const override { return !token.isEmpty(); }
+    QString githubToken() const override { return token; }
+    bool saveGithubToken(const QString &value) override { token = value; return !token.isEmpty(); }
+    bool clearGithubToken() override { token.clear(); return true; }
 };
 
 class WorkspaceTest final : public QObject {
@@ -445,6 +455,15 @@ void WorkspaceTest::workspace() {
         preferences->setProperty("section", "Desktop integration");
         screenshot("preferences-integrations");
         QVERIFY(preferences->property("dirty").toBool());
+        preferences->setProperty("section", "Account & sync");
+        auto *tokenField = window->findChild<QObject *>("github-token-field");
+        auto *saveToken = window->findChild<QObject *>("save-github-token");
+        QVERIFY(tokenField);
+        QVERIFY(saveToken);
+        tokenField->setProperty("text", "ghp-example-test-token");
+        QVERIFY(QMetaObject::invokeMethod(saveToken, "clicked"));
+        QVERIFY(queue.githubTokenConfigured);
+        QCOMPARE(tokenField->property("text").toString(), QString{});
         preferences->setProperty("section", "Notifications");
         QVERIFY(!preferences->property("draftNotifications").toBool());
         auto *save = window->findChild<QObject *>("save-preferences");

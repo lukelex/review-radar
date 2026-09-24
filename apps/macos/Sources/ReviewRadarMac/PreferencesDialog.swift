@@ -4,11 +4,14 @@ struct PreferencesDialog: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var preferences: PreferencesStore
     let testNotification: () async -> Bool
+    let refresh: () async -> Void
 
     @State private var draft = Preferences()
     @State private var section = "Notifications"
     @State private var error: String?
     @State private var testResult: String?
+    @State private var githubTokenDraft = ""
+    @State private var githubTokenMessage: String?
     @State private var confirmDiscard = false
 
     private let sections = ["General", "Workspace", "Notifications", "Desktop integration", "Appearance", "Keyboard", "Account & sync", "Local data", "Advanced"]
@@ -36,6 +39,7 @@ struct PreferencesDialog: View {
                         Text(description).foregroundStyle(.secondary)
                         if section == "Notifications" { notificationSettings }
                         else if section == "Desktop integration" { desktopSettings }
+                        else if section == "Account & sync" { accountSettings }
                         else { plannedSettings }
                         if let error { Text(error).foregroundStyle(.red).accessibilityLabel(error) }
                     }
@@ -44,11 +48,12 @@ struct PreferencesDialog: View {
             }
             Divider()
             HStack {
-                Text(draft == preferences.value ? "Changes apply to this device." : "Unsaved changes")
+                Text(draft == preferences.value && githubTokenDraft.isEmpty ? "Changes apply to this device." : "Unsaved changes")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Cancel") { requestClose() }
-                Button("Save changes") { save() }.buttonStyle(.borderedProminent).disabled(draft == preferences.value)
+                Button("Save changes") { save() }.buttonStyle(.borderedProminent)
+                    .disabled(draft == preferences.value || !githubTokenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(18)
         }
@@ -66,6 +71,7 @@ struct PreferencesDialog: View {
         switch section {
         case "Notifications": "Useful updates, with room to focus."
         case "Desktop integration": "Choose where Review Radar appears on your desktop."
+        case "Account & sync": "Connect securely to your GitHub account."
         default: "This setting is planned and does not change Review Radar yet."
         }
     }
@@ -126,6 +132,54 @@ struct PreferencesDialog: View {
         }
     }
 
+    private var accountSettings: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            GroupBox("GitHub connection") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(preferences.githubTokenSaved
+                         ? "A GitHub token is saved in your macOS Keychain and takes precedence over GH_TOKEN from the launch environment."
+                         : (!(ProcessInfo.processInfo.environment["GH_TOKEN"] ?? "").isEmpty
+                            ? "GH_TOKEN is available from the launch environment. You can save a separate token in Keychain to take precedence."
+                            : "No GitHub token is configured. Add a personal access token with access to the pull requests you want to review."))
+                        .font(.caption).foregroundStyle(.secondary)
+                    SecureField("GitHub personal access token", text: $githubTokenDraft)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("GitHub personal access token")
+                    HStack {
+                        Button("Save token securely") {
+                            do {
+                                try preferences.saveGitHubToken(githubTokenDraft)
+                                githubTokenDraft = ""
+                                githubTokenMessage = "Token saved in Keychain. Refreshing GitHub…"
+                                Task { await refresh() }
+                            } catch {
+                                githubTokenMessage = error.localizedDescription
+                            }
+                        }
+                        .disabled(githubTokenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .buttonStyle(.borderedProminent)
+                        Button("Remove saved token") {
+                            do {
+                                try preferences.clearGitHubToken()
+                                githubTokenMessage = "Saved token removed. GH_TOKEN from the launch environment may still be used."
+                            } catch {
+                                githubTokenMessage = error.localizedDescription
+                            }
+                        }
+                        .disabled(!preferences.githubTokenSaved)
+                    }
+                    if let githubTokenMessage {
+                        Text(githubTokenMessage).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Text("The token is stored in Keychain, not preferences.json or the capture database. It is passed only to the collector process. GH_TOKEN remains available for CLI and automated runs.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .onAppear { githubTokenDraft = ""; githubTokenMessage = nil }
+    }
+
     private var plannedSettings: some View {
         GroupBox("Planned") {
             Text("This option is a design preview only. It cannot change local state, GitHub settings, ranking, or notification eligibility.")
@@ -134,7 +188,7 @@ struct PreferencesDialog: View {
     }
 
     private func requestClose() {
-        if draft == preferences.value { dismiss() } else { confirmDiscard = true }
+        if draft == preferences.value && githubTokenDraft.isEmpty { dismiss() } else { confirmDiscard = true }
     }
 
     private func save() {

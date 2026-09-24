@@ -8,9 +8,14 @@ It renders every domain-provided reason, health summary, friction contributor or
 limitation, and ranking selection; it never derives those values locally.
 
 On open and every five minutes, the client runs `review-radar-github` followed by
-the queue with attention observation recording. `GH_TOKEN` must be available to
-the process. Capture and local-state databases use Qt's standard app-data
-directory; `REVIEW_RADAR_CAPTURE_DATABASE` can override the capture path.
+the queue with attention observation recording. Configure a GitHub token in
+Preferences → Account & sync; Linux stores it in the desktop Secret Service
+keyring and passes it only to the collector process. A token saved there takes
+precedence over `GH_TOKEN`. If no token is saved, the process environment remains
+supported. Secret Service/keyring access must be available to use the preference;
+tokens are never written to preferences or capture databases. Capture and
+local-state databases use Qt's standard app-data directory;
+`REVIEW_RADAR_CAPTURE_DATABASE` can override the capture path.
 `REVIEW_RADAR_COLLECTOR_COMMAND`, `REVIEW_RADAR_QUEUE_COMMAND`, and
 `REVIEW_RADAR_STATE_COMMAND` override executable paths. Set
 `REVIEW_RADAR_SKIP_COLLECTION=true` to inspect an existing capture without a
@@ -60,6 +65,9 @@ assemble it. It does not copy credentials into the build output. Set
 `REVIEW_RADAR_NATIVE_IMAGE` to choose the temporary Docker image tag. The host
 only needs a graphical Wayland or X11 session and compatible system graphics,
 font, and display libraries.
+Preferences-based token storage also requires `secret-tool` and an unlocked
+freedesktop Secret Service keyring; without it, use `GH_TOKEN` in the launch
+environment.
 
 On Linux, native capture and local-state files are stored in
 `$XDG_DATA_HOME/review-radar/` (normally `~/.local/share/review-radar/`).

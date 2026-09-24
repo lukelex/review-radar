@@ -15,6 +15,7 @@
 #include <QPainter>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
 
 namespace ReviewRadar {
 
@@ -166,6 +167,35 @@ QString LinuxOsIntegration::applicationDataFile(const QString &name) const {
     const auto directory = QDir(dataRoot).filePath(QStringLiteral("review-radar"));
     QDir().mkpath(directory);
     return QDir(directory).filePath(name);
+}
+
+QString LinuxOsIntegration::githubToken() const {
+    QProcess process;
+    process.start("secret-tool", {"lookup", "service", "review-radar", "account", "github-token"});
+    if (!process.waitForStarted(3000) || !process.waitForFinished(10000) || process.exitCode() != 0) return {};
+    return QString::fromUtf8(process.readAllStandardOutput()).trimmed();
+}
+
+bool LinuxOsIntegration::hasGithubToken() const { return !githubToken().isEmpty(); }
+
+bool LinuxOsIntegration::saveGithubToken(const QString &token) {
+    const auto normalized = token.trimmed();
+    if (normalized.isEmpty()) return false;
+    QProcess process;
+    process.start("secret-tool", {"store", "--label=Review Radar GitHub token",
+                                   "service", "review-radar", "account", "github-token"});
+    if (!process.waitForStarted(3000)) return false;
+    process.write(normalized.toUtf8());
+    process.closeWriteChannel();
+    return process.waitForFinished(30000) && process.exitStatus() == QProcess::NormalExit
+        && process.exitCode() == 0;
+}
+
+bool LinuxOsIntegration::clearGithubToken() {
+    QProcess process;
+    process.start("secret-tool", {"clear", "service", "review-radar", "account", "github-token"});
+    return process.waitForStarted(3000) && process.waitForFinished(10000)
+        && process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0;
 }
 
 void LinuxOsIntegration::notificationActionInvoked(uint notificationId, const QString &action) {

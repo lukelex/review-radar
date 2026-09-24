@@ -321,7 +321,7 @@ final class QueueStore: ObservableObject {
 
     private func collect() async -> Bool {
         do {
-            try await Helpers.collect(osIntegration: osIntegration)
+            try await Helpers.collect(osIntegration: osIntegration, token: preferences.githubToken())
             return true
         } catch {
             phase = cards.isEmpty ? .failed(error.localizedDescription) : .stale(error.localizedDescription)
@@ -380,10 +380,10 @@ enum Helpers {
         return try JSONDecoder().decode(QueueResponse.self, from: output.stdout)
     }
 
-    static func collect(osIntegration: OsIntegration) async throws {
+    static func collect(osIntegration: OsIntegration, token: String? = nil) async throws {
         _ = try await run(command("REVIEW_RADAR_COLLECTOR_COMMAND", fallback: "review-radar-github"), [
             "--database", captureDatabase(osIntegration).path
-        ])
+        ], environment: token.map { ["GH_TOKEN": $0] } ?? [:])
     }
 
     static func state(_ commandName: String, card: PullRequestCard, until: Date?,
@@ -438,13 +438,14 @@ enum Helpers {
 
     struct Output { let stdout: Data; let stderr: Data }
 
-    static func run(_ executable: URL, _ arguments: [String]) async throws -> Output {
+    static func run(_ executable: URL, _ arguments: [String], environment: [String: String] = [:]) async throws -> Output {
         try await withCheckedThrowingContinuation { continuation in
             let process = Process(), stdout = Pipe(), stderr = Pipe()
             let stdoutReader = Task.detached { stdout.fileHandleForReading.readDataToEndOfFile() }
             let stderrReader = Task.detached { stderr.fileHandleForReading.readDataToEndOfFile() }
             process.executableURL = executable
             process.arguments = arguments
+            process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
             process.standardOutput = stdout
             process.standardError = stderr
             process.terminationHandler = { completed in

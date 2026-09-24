@@ -64,6 +64,12 @@ text settings and never replace the shared attention explanation.
 Quiet hours appear directly beneath those filters as a local-time control, with
 the continued-observation behavior stated in its supporting copy.
 
+The Account & sync section provides a masked GitHub token field, secure-save and
+remove actions, and configured-state copy that never reveals the saved value.
+Explain the active credential source and offer an actionable message when the OS
+credential service is unavailable. The secret is never stored with ordinary
+preferences or displayed again after saving.
+
 The compact Quickshell entry shows “Radar” and the current workspace's attention
 count, plus non-ready sync state in text. Disconnected is “Radar —”, not zero.
 Its tooltip supplies the workspace name and capture timestamp. It uses the same
@@ -227,9 +233,9 @@ the existing interaction model without introducing new shortcuts.
 22px title, subdued overlay, scrollable body, and persistent action footer.
 Shortcuts use grouped keycaps and Done; confirmations use Cancel and a specific
 action label, initially focusing Cancel. Escape dismisses without applying an
-action. Future preferences should reuse this shell with grouped settings and
-explicit Save/Cancel semantics when editing a draft; preferences are not yet
-implemented. Keep the header and footer visible when the body needs scrolling.
+action. Preferences reuse this shell with grouped settings and explicit Save/Cancel
+semantics for draft edits. Keep the header and footer visible when the body needs
+scrolling.
 
 Rendered references (illustrative data, 860 × 640):
 [shortcuts](mockups/high/shortcuts-modal.png) and

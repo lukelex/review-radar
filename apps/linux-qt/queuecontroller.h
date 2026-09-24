@@ -69,6 +69,8 @@ class QueueController final : public QObject {
     Q_PROPERTY(bool quietHours READ quietHours NOTIFY preferencesChanged)
     Q_PROPERTY(QString quietHoursStart READ quietHoursStart NOTIFY preferencesChanged)
     Q_PROPERTY(QString quietHoursEnd READ quietHoursEnd NOTIFY preferencesChanged)
+    Q_PROPERTY(bool githubTokenConfigured READ githubTokenConfigured NOTIFY preferencesChanged)
+    Q_PROPERTY(bool githubTokenSaved READ githubTokenSaved NOTIFY preferencesChanged)
 
 public:
     explicit QueueController(QObject *parent = nullptr);
@@ -102,12 +104,16 @@ public:
     bool quietHours() const { return quietHours_; }
     QString quietHoursStart() const { return quietHoursStart_; }
     QString quietHoursEnd() const { return quietHoursEnd_; }
+    bool githubTokenConfigured() const { return githubTokenConfigured_; }
+    bool githubTokenSaved() const { return githubTokenSaved_; }
     bool trayEnabled() const { return trayEnabled_; }
     bool closeToTray() const { return closeToTray_; }
     bool trayAttentionDot() const { return trayAttentionDot_; }
     bool trayAvailable() const { return osIntegration_->trayAvailable(); }
     Q_INVOKABLE bool shouldCloseToTray() const { return trayEnabled_ && closeToTray_ && trayAvailable(); }
     Q_INVOKABLE bool testNotification();
+    Q_INVOKABLE bool saveGithubToken(const QString &token);
+    Q_INVOKABLE bool clearGithubToken();
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void start();
@@ -158,6 +164,8 @@ private:
     bool notifyChecks_ = true;
     bool notifyConflicts_ = true;
     bool quietHours_ = false;
+    bool githubTokenConfigured_ = false;
+    bool githubTokenSaved_ = false;
     QString quietHoursStart_ = QStringLiteral("18:00");
     QString quietHoursEnd_ = QStringLiteral("09:00");
     bool barError_ = false;

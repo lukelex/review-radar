@@ -48,6 +48,10 @@ public:
     virtual void configureBar(bool enabled) = 0;
     virtual bool barActive() const = 0;
     virtual void publishBarSnapshot(const BarSnapshot &snapshot) = 0;
+    virtual QString githubToken() const { return {}; }
+    virtual bool hasGithubToken() const { return false; }
+    virtual bool saveGithubToken(const QString &) { return false; }
+    virtual bool clearGithubToken() { return false; }
 
 signals:
     void notificationActivated(const QUrl &url);

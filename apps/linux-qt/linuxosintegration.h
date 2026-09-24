@@ -27,6 +27,10 @@ public:
     void configureBar(bool enabled) override;
     bool barActive() const override { return barActive_; }
     void publishBarSnapshot(const BarSnapshot &snapshot) override;
+    QString githubToken() const override;
+    bool hasGithubToken() const override;
+    bool saveGithubToken(const QString &token) override;
+    bool clearGithubToken() override;
 
 private slots:
     void notificationActionInvoked(uint notificationId, const QString &action);

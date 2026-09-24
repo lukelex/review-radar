@@ -554,6 +554,42 @@ Acceptance criteria:
 
 Linux reference: `OsIntegration` and `LinuxOsIntegration` in `apps/linux-qt/`.
 
+### GitHub credential preferences
+
+Linux Qt exposes **Preferences → Account & sync** for entering and removing the
+GitHub API token. macOS exposes the equivalent control in its SwiftUI preferences.
+Credentials are stored only in the operating system's encrypted credential store
+(Linux Secret Service or macOS Keychain), never in `preferences.json`, capture
+SQLite, logs, queue JSON, or command-line arguments. The saved token is supplied
+only through `GH_TOKEN` in the collector process environment; a saved credential
+takes precedence over an inherited environment value. Removing the saved token
+does not erase or override a separately configured `GH_TOKEN`. CLI/TUI and
+automated collection continue to use `GH_TOKEN` directly.
+
+Saving from Preferences starts a refresh so authentication can be checked promptly.
+An unavailable/locked credential service or failed write must leave the existing
+saved credential unchanged and show an actionable error; the UI must never echo a
+saved token back into a text field. Token editing is independent of other draft
+preference saves and does not change GitHub notification-read state.
+
+Windows preference UI and secure credential integration are not implemented while
+the WinUI shell is paused; track the parity follow-up in
+`docs/windows-client-plan.md`. Before enabling token entry there, use Windows
+Credential Manager (or another OS credential vault), preserve the same precedence
+and redaction rules, and do not store a token in `%APPDATA%` JSON or databases.
+
+Acceptance criteria:
+
+- Linux and macOS can add, replace, and remove a token using their OS credential
+  store, and report when secure storage cannot be used.
+- No token is serialized into app preference files, captures, queue output, logs,
+  or process arguments.
+- A saved credential reaches only the collector process; CLI/TUI continues to
+  support `GH_TOKEN` without requiring a GUI or credential-vault session.
+- Restart restores only configured/not-configured status, never the secret itself
+  into UI state; Refresh after save uses the new credential.
+- Windows parity is explicitly tracked until its secure settings surface ships.
+
 ### Atomic projections over progressive classification
 
 Progressive visual loading is allowed, but progressive domain classification is

@@ -34,8 +34,9 @@ RUN apt-get update \
         ca-certificates \
         cmake \
         g++ \
-        libgl1-mesa-dri \
-        libqt6svg6 \
+         libgl1-mesa-dri \
+         libsecret-tools \
+         libqt6svg6 \
         make \
         qt6-base-dev \
         qt6-declarative-dev \
